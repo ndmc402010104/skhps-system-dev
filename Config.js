@@ -115,12 +115,12 @@ const ROLE_ENTRY_ID =
 
 
 // ========================================
-// Calendar
-// 行事曆來源: hospital1868裡面的住院醫師calendar
+// Hospital Calendar
+// 行事曆來源
 // ========================================
 
-const CALENDAR_ID =
-'c25b1d017823114707a1edf8d8491894b063fe07b48e1d9fdc627c6b03b8a76b@group.calendar.google.com';
+const CALENDAR_NAME =
+'住院醫師行事曆';
 
 
 
@@ -172,6 +172,16 @@ const QR_EVENT_LOOKAHEAD_DAYS =
 45;
 
 
+// ========================================
+// Admin Meeting Query
+// 後台會議顯示範圍
+// ========================================
+
+// 往後抓幾天
+const ADMIN_EVENT_LOOKAHEAD_DAYS =
+45;
+
+
 
 // ========================================
 // Meeting Active Window
@@ -184,11 +194,11 @@ const QR_EVENT_LOOKAHEAD_DAYS =
 
 // 會議開始前可簽到（分鐘）
 const MEETING_RUNNING_BEFORE_MIN =
-10;
+30;
 
 // 會議結束後仍可簽到（分鐘）
 const MEETING_RUNNING_AFTER_MIN =
-30;
+10;
 
 
 

@@ -370,10 +370,10 @@ function addBackendStatusMeetingsToMap(meetingMap){
 function addUpcomingCalendarMeetingsToMap(meetingMap){
 
   const calendar =
-  CalendarApp
-    .getCalendarById(
-      CALENDAR_ID
-    );
+    CalendarApp
+      .getCalendarsByName(
+        CALENDAR_NAME
+      )[0];
 
   if(!calendar){
     return;
@@ -608,9 +608,9 @@ function findMeetingYearFromCalendar(course, date){
 
   const calendar =
     CalendarApp
-      .getCalendarById(
-        CALENDAR_ID
-      );
+      .getCalendarsByName(
+        CALENDAR_NAME
+      )[0];
 
   if(!calendar){
     return null;
@@ -902,7 +902,8 @@ function getUpcomingCalendarDateRange(){
     );
 
   end.setDate(
-    end.getDate() + 14
+    end.getDate() +
+    ADMIN_EVENT_LOOKAHEAD_DAYS
   );
 
   return {

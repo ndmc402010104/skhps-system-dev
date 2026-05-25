@@ -36,9 +36,9 @@ function getSignQRMeetingOptions() {
 
   const calendar =
     CalendarApp
-    .getCalendarById(
-      CALENDAR_ID
-    );
+      .getCalendarsByName(
+        CALENDAR_NAME
+      )[0];
 
   if (!calendar) {
     return '';

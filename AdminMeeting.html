@@ -296,6 +296,77 @@
       background:#ffe4e6;
     }
 
+    .deleteRawBtn{
+      background:#f3fff5;
+      color:#22a447;
+      border-color:#c8f1d3;
+    }
+
+    .deleteRawBtn:hover{
+      background:#dcfce7;
+    }
+
+    .recorderCell{
+      width:58px;
+      min-width:58px;
+      max-width:58px;
+      text-align:center;
+    }
+
+    .recorderRadio{
+      appearance:none;
+      -webkit-appearance:none;
+      width:42px;
+      height:42px;
+      border-radius:999px;
+      border:2px solid #b8c2d0;
+      margin:auto;
+      padding:0;
+      display:block;
+      background:white;
+      cursor:pointer;
+      pointer-events:none;
+      position:relative;
+      transition:.18s;
+      box-shadow:none;
+    }
+
+    .editingPeople .recorderRadio{
+      pointer-events:auto;
+    }
+
+    .recorderRadio:hover{
+      transform:scale(1.04);
+    }
+
+    .recorderRadio::after{
+      content:"";
+      position:absolute;
+      left:50%;
+      top:50%;
+      width:0;
+      height:0;
+      border-radius:999px;
+      background:transparent;
+      transform:translate(-50%,-50%);
+    }
+
+    .recorderRadio:checked{
+      background:#5a79ff;
+      border-color:#5a79ff;
+    }
+
+    .recorderRadio:checked::after{
+      content:"✓";
+      width:auto;
+      height:auto;
+      color:white;
+      background:transparent;
+      font-size:22px;
+      font-weight:900;
+      line-height:1;
+    }
+
     .newRow{
       background:#fafcff;
     }
@@ -360,8 +431,17 @@
       animation:spin .8s linear infinite;
     }
 
+    body.saving{
+      pointer-events:none;
+    }
+
+    body.saving .loadingBox{
+      pointer-events:auto;
+    }
+
     .deleteRowBtn:disabled,
-    #addPeopleRowBtn:disabled{
+    #addPeopleRowBtn:disabled,
+    .recorderRadio:disabled{
 
       opacity: 0.35;
 
@@ -374,7 +454,8 @@
     }
 
     .deleteRowBtn:disabled:hover,
-    #addPeopleRowBtn:disabled:hover{
+    #addPeopleRowBtn:disabled:hover,
+    .recorderRadio:disabled:hover{
 
       background: inherit;
 
@@ -435,6 +516,14 @@
       onclick="openSignEditor()"
     >
       📄 跳轉到簽到單編輯
+    </button>
+
+    <button
+      id="signPdfBtn"
+      class="secondaryBtn"
+      onclick="downloadSignPdf()"
+    >
+      📄 下載簽到單 PDF
     </button>
 
     <button
