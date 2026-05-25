@@ -354,9 +354,17 @@ function isSignTimeValid(
     );
 
   return (
-    signTime >= new Date(start.getTime() - 30 * 60 * 1000)
+    signTime >= new Date(
+      start.getTime()
+      -
+      MEETING_RUNNING_BEFORE_MIN * 60 * 1000
+    )
     &&
-    signTime <= new Date(end.getTime() + 10 * 60 * 1000)
+    signTime <= new Date(
+      end.getTime()
+      +
+      MEETING_RUNNING_AFTER_MIN * 60 * 1000
+    )
   );
 
 }
