@@ -490,30 +490,31 @@
 
     let html =
       `
-      <div class="peopleToolbar">
-        <button
-          id="peopleEditBtn"
-          class="secondaryBtn"
-          onclick="togglePeopleEdit()"
-        >
-          編輯
-        </button>
-      </div>
+      <div class="card peopleStatusCard">
+        <div class="peopleToolbar">
+          <button
+            id="peopleEditBtn"
+            class="secondaryBtn"
+            onclick="togglePeopleEdit()"
+          >
+            編輯
+          </button>
+        </div>
 
-      <div class="statusTableWrap">
-        <table class="statusTable">
-          <thead>
-            <tr>
-              <th style="width:70px;"></th>
-              <th>紀錄者</th>
-              <th>職級</th>
-              <th>姓名</th>
-              <th>員工編號</th>
-              <th>簽到時間</th>
-              <th>狀態</th>
-            </tr>
-          </thead>
-          <tbody id="peopleTableBody">
+        <div class="statusTableWrap">
+          <table class="statusTable">
+            <thead>
+              <tr>
+                <th></th>
+                <th>紀錄者</th>
+                <th>職級</th>
+                <th>姓名</th>
+                <th>員工編號</th>
+                <th>簽到時間</th>
+                <th>狀態</th>
+              </tr>
+            </thead>
+            <tbody id="peopleTableBody">
       `;
 
     rows.forEach(function(row){
@@ -525,12 +526,14 @@
 
     html +=
       `
-          </tbody>
-        </table>
+            </tbody>
+          </table>
+        </div>
+
         <button
           id="addPeopleRowBtn"
           class="secondaryBtn"
-          style="display:none;margin-top:12px;"
+          style="display:none;"
           onclick="addPeopleRow()"
         >
           ＋ 新增一列

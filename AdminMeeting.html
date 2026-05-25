@@ -169,6 +169,10 @@
       margin-bottom:18px;
     }
 
+    .peopleStatusCard{
+      overflow:hidden;
+    }
+
     .statusList{
       display:flex;
       flex-direction:column;
@@ -193,16 +197,22 @@
     }
     .statusTableWrap{
       overflow-x:auto;
-      margin-bottom:18px;
+      max-width:100%;
+      margin-bottom:12px;
+      border:1px solid #e2e8f0;
+      border-radius:16px;
+      background:white;
     }
 
     .statusTable{
 
       width:100%;
 
-      min-width:1200px;
+      min-width:0;
 
       border-collapse:collapse;
+
+      table-layout:fixed;
 
     }
 
@@ -210,6 +220,69 @@
     .statusTable th{
 
       white-space:nowrap;
+
+      overflow:hidden;
+
+      text-overflow:ellipsis;
+
+    }
+
+    .statusTable th{
+      padding:12px 10px;
+      background:#f8fafc;
+      border-bottom:1px solid #e2e8f0;
+      color:#0f172a;
+      font-size:15px;
+      font-weight:700;
+      text-align:left;
+    }
+
+    .statusTable td{
+      padding:4px 4px;
+      border-bottom:1px solid #e2e8f0;
+      background:white;
+      vertical-align:middle;
+    }
+
+    .statusTable tr:last-child td{
+      border-bottom:0;
+    }
+
+    .statusTable th:nth-child(1),
+    .statusTable td:nth-child(1){
+      width:5%;
+      text-align:center;
+    }
+
+    .statusTable th:nth-child(2),
+    .statusTable td:nth-child(2){
+      width:7%;
+      text-align:center;
+    }
+
+    .statusTable th:nth-child(3),
+    .statusTable td:nth-child(3){
+      width:14%;
+    }
+
+    .statusTable th:nth-child(4),
+    .statusTable td:nth-child(4){
+      width:19%;
+    }
+
+    .statusTable th:nth-child(5),
+    .statusTable td:nth-child(5){
+      width:17%;
+    }
+
+    .statusTable th:nth-child(6),
+    .statusTable td:nth-child(6){
+      width:21%;
+    }
+
+    .statusTable th:nth-child(7),
+    .statusTable td:nth-child(7){
+      width:17%;
 
     }
 
@@ -252,7 +325,17 @@
 
     .statusTable input,
     .statusTable select{
-      min-width:100px;
+      min-width:0;
+    }
+
+    #addPeopleRowBtn{
+      width:100%;
+      margin-top:0;
+      padding:17px 18px;
+      border-radius:16px;
+      border:1px solid #e2e8f0;
+      background:#f8fafc;
+      box-shadow:none;
     }
 
     /* 刪除欄 */
@@ -307,17 +390,19 @@
     }
 
     .recorderCell{
-      width:58px;
-      min-width:58px;
-      max-width:58px;
+      width:auto;
+      min-width:0;
+      max-width:none;
       text-align:center;
     }
 
-    .recorderRadio{
+    .statusTable input.recorderRadio{
       appearance:none;
       -webkit-appearance:none;
       width:42px;
+      min-width:42px;
       height:42px;
+      box-sizing:border-box;
       border-radius:999px;
       border:2px solid #b8c2d0;
       margin:auto;
@@ -335,7 +420,7 @@
       pointer-events:auto;
     }
 
-    .recorderRadio:hover{
+    .statusTable input.recorderRadio:hover{
       transform:scale(1.04);
     }
 
@@ -351,7 +436,7 @@
       transform:translate(-50%,-50%);
     }
 
-    .recorderRadio:checked{
+    .statusTable input.recorderRadio:checked{
       background:#5a79ff;
       border-color:#5a79ff;
     }
@@ -458,6 +543,41 @@
     .recorderRadio:disabled:hover{
 
       background: inherit;
+
+    }
+
+    @media(max-width:720px){
+
+      body{
+        padding:14px;
+      }
+
+      .header{
+        align-items:flex-start;
+        flex-direction:column;
+      }
+
+      .header h1{
+        font-size:28px;
+      }
+
+      .homeBtn{
+        width:100%;
+      }
+
+      .card{
+        padding:22px;
+        border-radius:18px;
+      }
+
+      .statusTable{
+        min-width:760px;
+      }
+
+      .statusTable input,
+      .statusTable select{
+        font-size:14px;
+      }
 
     }
   </style>
