@@ -42,7 +42,7 @@ function getMeetingPeopleStatus(course,date){
       2,
       1,
       raw.getLastRow()-1,
-      9
+      10
     )
 
     .getDisplayValues()
@@ -77,6 +77,13 @@ function getMeetingPeopleStatus(course,date){
           ||
           row[7],
 
+        recorder:
+          String(
+            row[9]
+          )
+          ===
+          'TRUE',
+
         source:
           row[6]==='後台驗證'
           ? 'backend'
@@ -110,12 +117,19 @@ function saveBackendPeopleStatus(
       BACKEND_STATUS_SHEET_NAME
     );
 
-  const values =
-    sheet
-      .getDataRange()
-      .getValues();
-
   people.forEach(function(person){
+
+    const values =
+      sheet
+        .getDataRange()
+        .getValues();
+
+    const lookupName =
+      String(
+        person.originalName ||
+        person.name ||
+        ''
+      ).trim();
 
     let rowIndex =
       -1;
@@ -158,7 +172,7 @@ function saveBackendPeopleStatus(
           ===
 
           String(
-            person.name
+            lookupName
           ).trim()
 
         ){
@@ -173,8 +187,32 @@ function saveBackendPeopleStatus(
     if(person.delete){
 
       if(
-        rowIndex>0
+        person.source === 'form'
+        ||
+        rowIndex <= 0
       ){
+
+        const deleted =
+          deleteFormResponsePerson(
+            course,
+            date,
+            person
+          );
+
+        if(!deleted){
+
+          throw new Error(
+            '找不到要刪除的表單回覆 1 資料：' +
+            'course=' + course +
+            ', date=' + date +
+            ', name=' + person.name +
+            ', emp=' + person.emp +
+            ', source=' + person.source
+          );
+
+        }
+
+      }else{
 
         sheet.deleteRow(
           rowIndex
@@ -188,6 +226,37 @@ function saveBackendPeopleStatus(
 
     const signTime =
       person.signTime || '';
+
+
+
+    if(
+
+      rowIndex > 0
+
+      &&
+
+      person.source === 'form'
+
+      &&
+
+      person.recorder !== true
+
+      &&
+
+      backendRowSameAsPerson(
+        values[rowIndex - 1],
+        person
+      )
+
+    ){
+
+      sheet.deleteRow(
+        rowIndex
+      );
+
+      return;
+
+    }
 
 
 
@@ -205,11 +274,23 @@ function saveBackendPeopleStatus(
 
       person.role,
 
-      '後台驗證',
+      person.source === 'backend'
+      ||
+      (
+        person.recorder
+        &&
+        rowIndex <= 0
+      )
+      ? '後台驗證'
+      : '',
 
       person.status,
 
-      new Date()
+      new Date(),
+
+      person.recorder === true
+      ? 'TRUE'
+      : ''
 
     ];
 
@@ -300,6 +381,109 @@ function deleteBackendPerson(
       }
 
     ]
+
+  );
+
+}
+
+
+
+function deleteFormResponsePerson(
+  course,
+  date,
+  person
+){
+
+  const ss =
+    SpreadsheetApp.openById(
+      SHEET_ID
+    );
+
+  const sheet =
+    ss.getSheetByName(
+      RESPONSE_SHEET_NAME
+    );
+
+  const values =
+    sheet
+      .getDataRange()
+      .getValues();
+
+  for(
+    let i = values.length - 1;
+    i >= 1;
+    i--
+  ){
+
+    const row =
+      values[i];
+
+    if(
+      normalizeCourse(row[1])
+      ===
+      normalizeCourse(course)
+      &&
+      normalizeText(row[2])
+      ===
+      normalizeText(date)
+      &&
+      String(row[3] || '').trim()
+      ===
+      String(person.name || '').trim()
+      &&
+      (
+        !person.emp
+        ||
+        String(row[5] || '').trim()
+        ===
+        String(person.emp || '').trim()
+      )
+    ){
+
+      sheet.deleteRow(
+        i + 1
+      );
+
+      return true;
+
+    }
+
+  }
+
+  return false;
+
+}
+
+
+
+function backendRowSameAsPerson(
+  row,
+  person
+){
+
+  return (
+
+    String(row[3] || '').trim()
+    ===
+    String(person.name || '').trim()
+
+    &&
+
+    String(row[4] || '').trim()
+    ===
+    String(person.emp || '').trim()
+
+    &&
+
+    String(row[5] || '').trim()
+    ===
+    String(person.role || '').trim()
+
+    &&
+
+    String(row[7] || '').trim()
+    ===
+    String(person.status || '').trim()
 
   );
 

@@ -3,17 +3,29 @@ $ErrorActionPreference = 'Stop'
 $configPath = Join-Path $PSScriptRoot 'Config.js'
 $version = Get-Date -Format 'yyyyMMddHHmm'
 
-$content = Get-Content -Raw -Encoding UTF8 $configPath
-$pattern = "const APP_VERSION\s*=\s*'[^']*';"
-$replacement = "const APP_VERSION =`r`n'$version';"
-$regex = [regex]$pattern
+. (Join-Path $PSScriptRoot 'clasp-tools.ps1')
 
-if (-not $regex.IsMatch($content)) {
-  throw 'Cannot find APP_VERSION in Config.js'
+$appConfig = Sync-AppVersion -RootPath $PSScriptRoot -Version $version -DefaultEnv 'prod'
+
+if (-not $appConfig.DeploymentId) {
+  throw 'Cannot find DEPLOYMENT_ID in Config.js; refusing to create a new deployment.'
 }
 
-$updatedContent = $regex.Replace($content, $replacement, 1)
-$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
-[System.IO.File]::WriteAllText($configPath, $updatedContent, $utf8NoBom)
+Write-Host "APP_VERSION updated to version $($appConfig.Version)"
+Write-Host "Synced .clasp.json scriptId to $($appConfig.ScriptId)"
+Write-Host "Pushing source files to Apps Script"
 
-Write-Host "APP_VERSION updated to version $version"
+Invoke-Clasp -Arguments @('push')
+
+Write-Host "Updating existing deployment $($appConfig.DeploymentId) with description $($appConfig.Description)"
+Invoke-Clasp -Arguments @('update-deployment', $appConfig.DeploymentId, '--description', $appConfig.Description)
+
+Write-Host 'Current deployments:'
+Invoke-Clasp -Arguments @('list-deployments')
+
+Write-Host "Deployment completed with description $($appConfig.Description)"
+
+Write-Host 'Restoring HEAD default environment to dev'
+$devConfig = Sync-AppVersion -RootPath $PSScriptRoot -Version $version -DefaultEnv 'dev'
+Invoke-Clasp -Arguments @('push')
+Write-Host "HEAD restored to $($devConfig.DefaultEnv) with version $($devConfig.Description)"

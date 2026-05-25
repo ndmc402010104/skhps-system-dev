@@ -182,10 +182,25 @@ function buildUploadDataFromRawValues(rawValues){
         ? rawSignTime
         : '';
 
-      const uploadStatus =
+      let uploadStatus =
+        '缺席';
+
+      if(
         status === '簽到成功'
-        ? '出席'
-        : '缺席';
+      ){
+
+        uploadStatus =
+          '出席';
+
+      }
+      else if(
+        status === '請假'
+      ){
+
+        uploadStatus =
+          '請假';
+
+      }
 
       output.push([
         emp,
@@ -388,7 +403,20 @@ function exportRawSignData(course, date){
   const values =
     rawSheet
       .getDataRange()
-      .getDisplayValues();
+      .getDisplayValues()
+      .map(function(row){
+
+      return row.filter(function(cell,index){
+
+        return ![
+          6, // 驗證碼
+          7, // 狀態
+          9  // 紀錄者
+        ].includes(index);
+
+      });
+
+      });
 
   const meeting =
     ss
@@ -409,6 +437,95 @@ function exportRawSignData(course, date){
     ok:true,
     filename:filename,
     values:values
+  };
+
+}
+
+//產生PDF
+function exportMeetingSignSheetPdf(course, date){
+
+  const ok =
+    prepareSignSheet(
+      course,
+      date
+    );
+
+  if(!ok){
+
+    return {
+      ok:false,
+      message:'找不到會議'
+    };
+
+  }
+
+  SpreadsheetApp.flush();
+
+  Utilities.sleep(
+    1500
+  );
+
+  const ss =
+    SpreadsheetApp.openById(
+      SHEET_ID
+    );
+
+  const sheet =
+    ss.getSheetByName(
+      SIGN_SHEET_NAME
+    );
+
+  const meeting =
+    ss
+      .getSheetByName(
+        VERIFY_SHEET_NAME
+      )
+      .getRange('A2')
+      .getDisplayValue();
+
+  const filename =
+    meeting
+      .replace(/\//g,'')
+      .replace(/\s/g,'')
+    +
+    '課程簽到單.pdf';
+
+  const url =
+    'https://docs.google.com/spreadsheets/d/' +
+    SHEET_ID +
+    '/export?' +
+    'format=pdf' +
+    '&gid=' + sheet.getSheetId() +
+    '&size=A4' +
+    '&portrait=true' +
+    '&fitw=true' +
+    '&sheetnames=false' +
+    '&printtitle=false' +
+    '&pagenumbers=false' +
+    '&gridlines=false' +
+    '&fzr=false';
+
+  const token =
+    ScriptApp.getOAuthToken();
+
+  const response =
+    UrlFetchApp.fetch(
+      url,
+      {
+        headers:{
+          Authorization:
+            'Bearer ' + token
+        }
+      }
+    );
+
+  return {
+    ok:true,
+    filename:filename,
+    base64:
+      Utilities.base64Encode(
+        response.getBlob().getBytes()
+      )
   };
 
 }

@@ -26,7 +26,9 @@ function showAdminIndexPage(){
   return template
   .evaluate()
   .setTitle(
+  getAppPageTitle(
   '管理後台'
+  )
   );
 
 }
@@ -46,7 +48,9 @@ function showAdminMeetingPage(){
   return template
   .evaluate()
   .setTitle(
+  getAppPageTitle(
   '會議管理'
+  )
   );
 
 }

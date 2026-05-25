@@ -71,7 +71,9 @@ function showSignMeetingPage(e){
   return template
     .evaluate()
     .setTitle(
-      '會議簽到'
+      getAppPageTitle(
+        '會議簽到'
+      )
     );
 
 }

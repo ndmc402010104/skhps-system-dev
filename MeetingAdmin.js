@@ -902,7 +902,8 @@ function getUpcomingCalendarDateRange(){
     );
 
   end.setDate(
-    end.getDate() + 14
+    end.getDate() +
+    ADMIN_EVENT_LOOKAHEAD_DAYS
   );
 
   return {

@@ -25,7 +25,9 @@ function showFrontIndex(){
   return template
     .evaluate()
     .setTitle(
-      '科室系統首頁'
+      getAppPageTitle(
+        '科室系統首頁'
+      )
     );
 
 }
@@ -107,7 +109,9 @@ function showHospitalSignInPage(){
     .evaluate()
 
     .setTitle(
-      '醫院系統登入'
+      getAppPageTitle(
+        '醫院系統登入'
+      )
     );
 
 }

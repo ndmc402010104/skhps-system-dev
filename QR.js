@@ -27,7 +27,11 @@ function showSignQRGeneratorPage(){
 
   return template
     .evaluate()
-    .setTitle('會議 QR 產生');
+    .setTitle(
+      getAppPageTitle(
+        '會議 QR 產生'
+      )
+    );
 
 }
 

@@ -26,7 +26,19 @@ const TIME_ZONE =
 // ========================================
 
 const APP_ENTRY_URL =
-'https://script.google.com/macros/s/AKfycbzbMguO3DVRTFqtQupOlcAT7_u-o8V0YJV-xfrE3LJ7OthV_Tm65nDO4cmWoBwonH7G/exec';
+'https://script.google.com/macros/s/AKfycbwbz8pXfU68j2aFeF_AaDmmG6Vco3JsPSw-PGyYeLu0AF3vCfzaZJQFOjORnwSw8Xp4/exec';
+const APP_DEV_URL =
+'https://script.google.com/macros/s/AKfycbwySlDY2aAbYpy5OSi85vHz1pk5g1FQfopcaCfVneE/dev';
+const DEPLOYMENT_ID =
+'AKfycbwbz8pXfU68j2aFeF_AaDmmG6Vco3JsPSw-PGyYeLu0AF3vCfzaZJQFOjORnwSw8Xp4';
+const APP_DEV_DEPLOYMENT_ID =
+'AKfycbwySlDY2aAbYpy5OSi85vHz1pk5g1FQfopcaCfVneE';
+const APP_DEFAULT_ENV =
+'dev';
+const SCRIPT_ID =
+'1TN6XHQNLXN6_x4780WEZbEf8IKGaY2t0MQu_F9jT1b2dbo7L3cRV2asQ';
+const APP_VERSION =
+'202605260204';
 
 
 
@@ -165,6 +177,17 @@ const QR_EVENT_LOOKBACK_DAYS =
 
 // 往後抓幾天
 const QR_EVENT_LOOKAHEAD_DAYS =
+45;
+
+
+
+// ========================================
+// Admin Meeting Query
+// 後台會議顯示範圍
+// ========================================
+
+// 往後抓幾天
+const ADMIN_EVENT_LOOKAHEAD_DAYS =
 45;
 
 

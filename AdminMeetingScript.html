@@ -505,6 +505,7 @@
           <thead>
             <tr>
               <th style="width:70px;"></th>
+              <th>紀錄者</th>
               <th>職級</th>
               <th>姓名</th>
               <th>員工編號</th>
@@ -526,16 +527,15 @@
       `
           </tbody>
         </table>
+        <button
+          id="addPeopleRowBtn"
+          class="secondaryBtn"
+          style="display:none;margin-top:12px;"
+          onclick="addPeopleRow()"
+        >
+          ＋ 新增一列
+        </button>
       </div>
-
-      <button
-        id="addPeopleRowBtn"
-        class="secondaryBtn"
-        style="display:none;margin-top:12px;"
-        onclick="addPeopleRow()"
-      >
-        ＋ 新增一列
-      </button>
       `;
 
     return html;
@@ -544,22 +544,31 @@
 
   function buildPeopleRowHtml(row){
 
-    const deleteButton =
-      row.source === 'backend'
-      ? `
+    const deleteButton = `
         <button
-          class="deleteRowBtn"
+          class="deleteRowBtn ${row.source === 'form' ? 'deleteRawBtn' : ''}"
+          data-source="${escapeHtml(row.source || '')}"
           onclick="deletePeopleRow(this)"
         >
           ✕
         </button>
-      `
-      : '';
+      `;
 
     return `
-      <tr>
+      <tr data-source="${escapeHtml(row.source || '')}">
         <td class="rowDeleteCell">
           ${deleteButton}
+        </td>
+
+        <td class="recorderCell">
+          <input
+            type="radio"
+            name="recorderPerson"
+            class="recorderRadio"
+            ${row.recorder ? 'checked' : ''}
+            ${row.recorder ? 'data-checked="1"' : ''}
+            disabled
+          >
         </td>
 
         <td>
@@ -595,7 +604,7 @@
         </td>
 
         <td>
-          ${buildStatusSelect(row.status)}
+          ${buildStatusSelect(row.status || '')}
         </td>
       </tr>
     `;
@@ -665,6 +674,12 @@
         input.disabled = false;
       });
 
+      document
+        .querySelectorAll('.recorderRadio')
+        .forEach(function(radio){
+          radio.disabled = false;
+        });
+
       addBtn.style.display =
         'block';
 
@@ -698,6 +713,14 @@
         >
           ✕
         </button>
+      </td>
+
+      <td class="recorderCell">
+        <input
+          type="radio"
+          name="recorderPerson"
+          class="recorderRadio"
+        >
       </td>
 
       <td>
@@ -750,11 +773,28 @@
     const tr =
       button.closest('tr');
 
+    const source =
+      tr.dataset.source ||
+      button.dataset.source ||
+      '';
+
     const inputs =
       tr.querySelectorAll('.peopleInput');
 
+    const radios =
+      tr.querySelectorAll('.recorderRadio');
+
     const marked =
       tr.classList.contains('markedDelete');
+
+    if(
+      tr.classList.contains('newRow')
+      &&
+      !marked
+    ){
+      tr.remove();
+      return;
+    }
 
     if(marked){
 
@@ -767,10 +807,32 @@
         input.disabled = false;
       });
 
+      radios.forEach(function(radio){
+        radio.disabled = false;
+      });
+
       button.textContent =
         '✕';
 
       return;
+
+    }
+
+    if(source === 'form'){
+
+      const name =
+        inputs[1]?.value?.trim() || '';
+
+      const ok =
+        confirm(
+          '這筆是「原始簽到資料」，不是後台補登資料。\n\n' +
+          '確定要刪除「' + name + '」這筆原始資料嗎？\n\n' +
+          '用途：從後台移除這筆表單回覆資料。'
+        );
+
+      if(!ok){
+        return;
+      }
 
     }
 
@@ -783,10 +845,14 @@
       input.disabled = true;
     });
 
+    radios.forEach(function(radio){
+      radio.disabled = true;
+    });
+
     button.disabled =
       false;
 
-    button.textContent =
+    button.innerHTML =
       '復原';
 
   }
@@ -891,7 +957,21 @@
       const inputs =
         tr.querySelectorAll('.peopleInput');
 
+      const recorder =
+        tr.querySelector('.recorderRadio');
+
+      const old =
+        originalPeopleStatus[index];
+
       const data = {
+        originalName:
+          old && old.name
+          ? old.name
+          : '',
+        source:
+          tr.dataset.source || '',
+        recorder:
+          recorder ? recorder.checked : false,
         role: inputs[0]?.value?.trim() || '',
         name: inputs[1]?.value?.trim() || '',
         emp: inputs[2]?.value?.trim() || '',
@@ -933,9 +1013,6 @@
 
       }
 
-      const old =
-        originalPeopleStatus[index];
-
       if(
         tr.classList.contains('newRow') ||
         !old ||
@@ -943,7 +1020,8 @@
         data.name !== old.name ||
         data.emp !== old.emp ||
         data.signTime !== old.time ||
-        data.status !== old.status
+        data.status !== old.status ||
+        data.recorder !== Boolean(old.recorder)
       ){
 
         changed.push(data);
@@ -975,6 +1053,12 @@
     inputs.forEach(function(input){
       input.disabled = true;
     });
+
+    document
+      .querySelectorAll('.recorderRadio')
+      .forEach(function(radio){
+        radio.disabled = true;
+      });
 
     addBtn.style.display =
       'none';
@@ -1060,9 +1144,21 @@
   function setPeopleEditLocked(locked){
 
     document
+      .querySelectorAll('.peopleInput')
+      .forEach(function(input){
+        input.disabled = locked;
+      });
+
+    document
       .querySelectorAll('.deleteRowBtn')
       .forEach(function(btn){
         btn.disabled = locked;
+      });
+
+    document
+      .querySelectorAll('.recorderRadio')
+      .forEach(function(radio){
+        radio.disabled = locked;
       });
 
     const addBtn =
@@ -1071,6 +1167,16 @@
     if(addBtn){
       addBtn.disabled = locked;
     }
+
+    document
+      .body
+      .classList[
+        locked
+        ? 'add'
+        : 'remove'
+      ](
+        'saving'
+      );
 
   }
 
@@ -1087,6 +1193,162 @@
     }
 
     return value;
+
+  }
+
+  document.addEventListener(
+    'click',
+    function(e){
+
+      const radio =
+        e.target.closest(
+          '.recorderRadio'
+        );
+
+      if(
+        !radio
+        ||
+        radio.disabled
+      ){
+        return;
+      }
+
+      if(
+        radio.dataset.checked
+        ===
+        '1'
+      ){
+
+        radio.checked =
+          false;
+
+        radio.dataset.checked =
+          '';
+
+        return;
+
+      }
+
+      document
+        .querySelectorAll(
+          '.recorderRadio'
+        )
+        .forEach(function(r){
+          r.dataset.checked =
+            '';
+        });
+
+      radio.dataset.checked =
+        '1';
+
+    }
+  );
+
+  document.addEventListener(
+    'change',
+    function(e){
+
+      if(
+        !e.target.matches(
+          '.recorderRadio'
+        )
+      ){
+        return;
+      }
+
+      document
+        .querySelectorAll(
+          '.recorderRadio'
+        )
+        .forEach(function(r){
+          r.dataset.checked =
+            '';
+        });
+
+      e.target.dataset.checked =
+        '1';
+
+    }
+  );
+
+  function downloadSignPdf(){
+
+    const item =
+      getSelectedMeeting();
+
+    if(!item){
+      return;
+    }
+
+    const btn =
+      document.getElementById(
+        'signPdfBtn'
+      );
+
+    setButtonLoading(
+      btn,
+      true,
+      '產生 PDF 中...'
+    );
+
+    google.script.run
+
+      .withSuccessHandler(function(res){
+
+        setButtonLoading(
+          btn,
+          false,
+          '📄 下載簽到單 PDF'
+        );
+
+        if(!res.ok){
+
+          alert(
+            res.message ||
+            '產生 PDF 失敗'
+          );
+
+          return;
+
+        }
+
+        const a =
+          document.createElement('a');
+
+        a.href =
+          'data:application/pdf;base64,' +
+          res.base64;
+
+        a.download =
+          res.filename;
+
+        document.body.appendChild(a);
+
+        a.click();
+
+        a.remove();
+
+      })
+
+      .withFailureHandler(function(err){
+
+        setButtonLoading(
+          btn,
+          false,
+          '📄 下載簽到單 PDF'
+        );
+
+        alert(
+          '後端錯誤：' +
+          err.message
+        );
+
+      })
+
+      .exportMeetingSignSheetPdf(
+        item.course,
+        item.date
+      );
 
   }
 </script>

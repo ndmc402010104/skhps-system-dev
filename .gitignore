@@ -2,7 +2,8 @@
 
 node_modules/
 
-.vscode/
+.vscode/*
+!.vscode/tasks.json
 
 Config.local.gs
 
