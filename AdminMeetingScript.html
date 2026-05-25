@@ -891,7 +891,14 @@
       const inputs =
         tr.querySelectorAll('.peopleInput');
 
+      const old =
+        originalPeopleStatus[index];
+
       const data = {
+        originalName:
+          old && old.name
+          ? old.name
+          : '',
         role: inputs[0]?.value?.trim() || '',
         name: inputs[1]?.value?.trim() || '',
         emp: inputs[2]?.value?.trim() || '',
@@ -932,9 +939,6 @@
         return;
 
       }
-
-      const old =
-        originalPeopleStatus[index];
 
       if(
         tr.classList.contains('newRow') ||

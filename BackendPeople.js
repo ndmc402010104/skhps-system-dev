@@ -115,76 +115,66 @@ function saveBackendPeopleStatus(
       .getDataRange()
       .getValues();
 
-  people.forEach(function(person){
-
-    let rowIndex =
-      -1;
-
-    values
-      .slice(1)
-
-      .forEach(function(row,i){
-
-        if(
-
-          String(
-            row[1]
-          ).trim()
-
-          ===
-
-          String(
-            course
-          ).trim()
-
-          &&
-
-          String(
-            row[2]
-          ).trim()
-
-          ===
-
-          String(
-            date
-          ).trim()
-
-          &&
-
-          String(
-            row[3]
-          ).trim()
-
-          ===
-
-          String(
-            person.name
-          ).trim()
-
-        ){
-
-          rowIndex =
-            i+2;
-
-        }
-
+  const deleteRowIndexes =
+    people
+      .filter(function(person){
+        return person.delete;
+      })
+      .map(function(person){
+        return findBackendPersonRowIndex(
+          values,
+          course,
+          date,
+          getBackendPersonLookupName(
+            person
+          )
+        );
+      })
+      .filter(function(rowIndex){
+        return rowIndex > 0;
+      })
+      .sort(function(a,b){
+        return b - a;
       });
 
-    if(person.delete){
+  deleteRowIndexes
+    .forEach(function(rowIndex,index){
 
       if(
-        rowIndex>0
+        index > 0
+        &&
+        rowIndex === deleteRowIndexes[index - 1]
       ){
-
-        sheet.deleteRow(
-          rowIndex
-        );
-
+        return;
       }
 
-      return;
+      sheet.deleteRow(
+        rowIndex
+      );
 
-    }
+    });
+
+  people
+    .filter(function(person){
+      return !person.delete;
+    })
+    .forEach(function(person){
+
+    const currentValues =
+      sheet
+        .getDataRange()
+        .getValues();
+
+    const rowIndex =
+      findBackendPersonRowIndex(
+        currentValues,
+        course,
+        date,
+        getBackendPersonLookupName(
+          person
+        )
+      );
+
 
     const signTime =
       person.signTime || '';
@@ -242,7 +232,7 @@ function saveBackendPeopleStatus(
 
     }
 
-  });
+    });
 
 
 
@@ -265,6 +255,84 @@ function saveBackendPeopleStatus(
 
 
   return true;
+
+}
+
+
+
+function findBackendPersonRowIndex(
+  values,
+  course,
+  date,
+  name
+){
+
+  let rowIndex =
+    -1;
+
+  values
+    .slice(1)
+
+    .forEach(function(row,i){
+
+      if(
+
+        String(
+          row[1]
+        ).trim()
+
+        ===
+
+        String(
+          course
+        ).trim()
+
+        &&
+
+        String(
+          row[2]
+        ).trim()
+
+        ===
+
+        String(
+          date
+        ).trim()
+
+        &&
+
+        String(
+          row[3]
+        ).trim()
+
+        ===
+
+        String(
+          name
+        ).trim()
+
+      ){
+
+        rowIndex =
+          i+2;
+
+      }
+
+    });
+
+  return rowIndex;
+
+}
+
+
+
+function getBackendPersonLookupName(person){
+
+  return String(
+    person.originalName ||
+    person.name ||
+    ''
+  ).trim();
 
 }
 
