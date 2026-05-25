@@ -29,6 +29,10 @@ const APP_ENTRY_URL =
 'https://script.google.com/macros/s/AKfycbzbMguO3DVRTFqtQupOlcAT7_u-o8V0YJV-xfrE3LJ7OthV_Tm65nDO4cmWoBwonH7G/exec';
 
 
+const APP_VERSION =
+'202605252044';
+
+
 
 // ========================================
 // Page Names
