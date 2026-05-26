@@ -369,21 +369,11 @@ function addBackendStatusMeetingsToMap(meetingMap){
 
 function addUpcomingCalendarMeetingsToMap(meetingMap){
 
-  const calendar =
-    CalendarApp
-      .getCalendarsByName(
-        CALENDAR_NAME
-      )[0];
-
-  if(!calendar){
-    return;
-  }
-
   const range =
     getUpcomingCalendarDateRange();
 
   const events =
-    calendar.getEvents(
+    getConfiguredCalendarEvents(
       range.start,
       range.end
     );
@@ -606,21 +596,11 @@ function findMeetingYearFromBackendStatus(course, date){
 
 function findMeetingYearFromCalendar(course, date){
 
-  const calendar =
-    CalendarApp
-      .getCalendarsByName(
-        CALENDAR_NAME
-      )[0];
-
-  if(!calendar){
-    return null;
-  }
-
   const range =
     getUpcomingCalendarDateRange();
 
   const events =
-    calendar.getEvents(
+    getConfiguredCalendarEvents(
       range.start,
       range.end
     );

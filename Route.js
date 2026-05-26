@@ -121,17 +121,16 @@ function include(filename){
 
 function getAppPageTitle(title){
 
-  const mode =
-    APP_REQUEST_ENV === 'dev'
-    ? '測試版'
-    : '正式版';
+  return title;
 
-  return title +
-    ' [' +
-    mode +
-    ' v.' +
-    APP_VERSION +
-    ']';
+}
+
+
+function getAppEntryUrl(){
+
+  return APP_REQUEST_ENV === 'dev'
+    ? APP_DEV_URL
+    : APP_ENTRY_URL;
 
 }
 
@@ -183,6 +182,10 @@ function getVersionBadgeHtml(){
     '.appVersionBadgeMode{',
     'font-weight:700;',
     '}',
+    '.appVersionBadgeSource{',
+    'font-weight:600;',
+    'color:#64748b;',
+    '}',
     '@media(max-width:600px){',
     '.appVersionBadge{',
     'right:8px;',
@@ -209,6 +212,9 @@ function getVersionBadgeHtml(){
     '<span class="appVersionBadgeMode" data-version-mode>正式版</span>',
     '<span>v.',
     APP_VERSION,
+    '</span>',
+    '<span class="appVersionBadgeSource">行事曆來源: ',
+    getCalendarSourceLabel(),
     '</span>',
     '</a>',
     '<script>',
@@ -242,7 +248,7 @@ function getVersionBadgeHtml(){
     'if(mode){mode.textContent=label;}',
     'badge.href=buildTargetUrl(isDev?prodUrl:devUrl,getAppQuery(),isDev?"prod":"dev",window.location.hash||"");',
     'badge.title=isDev?"切換到正式版":"切換到目前測試版";',
-    'document.title=baseTitle+" ["+label+" v."+version+"]";',
+    'document.title=baseTitle;',
     'badge.setAttribute("data-current-env",env);',
     '}',
     'function buildTargetUrl(baseUrl,query,env,hash){',

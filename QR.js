@@ -23,7 +23,7 @@ function showSignQRGeneratorPage(){
     getSignQRMeetingOptions();
 
   template.appEntryUrl =
-    APP_ENTRY_URL;
+    getAppEntryUrl();
 
   return template
     .evaluate()
@@ -37,16 +37,6 @@ function showSignQRGeneratorPage(){
 
 //叫出calendar裡面前後Config.gs裡面設定的天數的會議
 function getSignQRMeetingOptions() {
-
-  const calendar =
-    CalendarApp
-      .getCalendarsByName(
-        CALENDAR_NAME
-      )[0];
-
-  if (!calendar) {
-    return '';
-  }
 
   const now =
     new Date();
@@ -78,7 +68,7 @@ function getSignQRMeetingOptions() {
   );
 
   const events =
-    calendar.getEvents(
+    getConfiguredCalendarEvents(
       first,
       last
     );

@@ -61,7 +61,7 @@ function showSignMeetingPage(e){
     ROLE_ENTRY_ID;
 
   template.appEntryUrl =
-    APP_ENTRY_URL;
+    getAppEntryUrl();
 
   template.staffList =
     JSON.stringify(
@@ -81,23 +81,6 @@ function showSignMeetingPage(e){
 
 function getCurrentSignMeetingForPage(){
 
-  const calendar =
-    CalendarApp
-      .getCalendarsByName(
-        CALENDAR_NAME
-      )[0];
-
-  if(!calendar){
-
-    return {
-      course:'',
-      tokenCourse:'',
-      date:'',
-      token:''
-    };
-
-  }
-
   const now =
     new Date();
 
@@ -116,7 +99,7 @@ function getCurrentSignMeetingForPage(){
     );
 
   const events =
-    calendar.getEvents(
+    getConfiguredCalendarEvents(
       rangeStart,
       rangeEnd
     );

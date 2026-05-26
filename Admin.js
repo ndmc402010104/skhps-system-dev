@@ -14,7 +14,7 @@ function showAdminIndexPage(){
   );
 
   template.appEntryUrl =
-  APP_ENTRY_URL;
+  getAppEntryUrl();
 
   template.adminPageKey =
   ADMIN_PAGE_PREFIX
@@ -43,7 +43,7 @@ function showAdminMeetingPage(){
   );
 
   template.appEntryUrl =
-  APP_ENTRY_URL;
+  getAppEntryUrl();
 
   return template
   .evaluate()

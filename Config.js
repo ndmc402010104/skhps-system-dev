@@ -38,7 +38,7 @@ const APP_DEFAULT_ENV =
 const SCRIPT_ID =
 '1TN6XHQNLXN6_x4780WEZbEf8IKGaY2t0MQu_F9jT1b2dbo7L3cRV2asQ';
 const APP_VERSION =
-'202605260222';
+'202605260813';
 
 
 
@@ -126,6 +126,12 @@ const ROLE_ENTRY_ID =
 // Calendar
 // 行事曆來源
 // ========================================
+
+const CALENDAR_ID =
+'c25b1d017823114707a1edf8d8491894b063fe07b48e1d9fdc627c6b03b8a76b@group.calendar.google.com';
+
+const CALENDAR_ICAL_URL =
+'https://calendar.google.com/calendar/ical/c25b1d017823114707a1edf8d8491894b063fe07b48e1d9fdc627c6b03b8a76b%40group.calendar.google.com/private-c6c57c9fada61831021204afc2f2d594/basic.ics';
 
 const CALENDAR_NAME =
 '住院醫師行事曆';

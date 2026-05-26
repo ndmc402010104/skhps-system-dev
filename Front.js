@@ -20,7 +20,7 @@ function showFrontIndex(){
     );
 
   template.appEntryUrl =
-    APP_ENTRY_URL;
+    getAppEntryUrl();
 
   return template
     .evaluate()
@@ -87,7 +87,7 @@ function showHospitalSignInPage(){
 
 
   template.appEntryUrl =
-    APP_ENTRY_URL;
+    getAppEntryUrl();
 
 
   template.staffList =
