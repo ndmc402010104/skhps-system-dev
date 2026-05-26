@@ -1,0 +1,7 @@
+**/**
+!appsscript.json
+!**/*.js
+!**/*.html
+node_modules/**
+.git/**
+.vscode/**

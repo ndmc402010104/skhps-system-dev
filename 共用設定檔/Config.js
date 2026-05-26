@@ -38,7 +38,7 @@ const APP_DEFAULT_ENV =
 const SCRIPT_ID =
 '1TN6XHQNLXN6_x4780WEZbEf8IKGaY2t0MQu_F9jT1b2dbo7L3cRV2asQ';
 const APP_VERSION =
-'202605261153';
+'1.2.3-202605270001';
 
 
 
@@ -50,24 +50,24 @@ const APP_VERSION =
 
 // 前台
 const FRONT_PAGE_NAME =
-'FrontIndex';
+'科室系統用戶端/FrontIndex';
 
 const QR_PAGE_NAME =
-'SignQRGenerator';
+'科室系統用戶端/SignQRGenerator';
 
 const HOSPITAL_SIGNIN_PAGE_NAME =
-'HospitalSignIn';
+'科室系統用戶端/HospitalSignIn';
 
 const SIGN_MEETING_PAGE_NAME =
-'SignMeeting';
+'科室系統用戶端/SignMeeting';
 
 
 // 後台
 const ADMIN_INDEX_PAGE_NAME =
-'AdminIndex';
+'後台/後台簽到管理/AdminIndex';
 
 const ADMIN_MEETING_PAGE_NAME =
-'AdminMeeting';
+'後台/後台簽到管理/AdminMeeting';
 
 
 

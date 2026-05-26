@@ -107,7 +107,24 @@ function copyRawData(course, date){
           ? '驗證失敗'
           : reasons.join('；'),
         recorder: false,
-        updatedAt: 0
+        updatedAt: 0,
+        hasRawData: true,
+        hasBackendData: false,
+        rawData:
+          buildRawDataSnapshot({
+            signTime:
+              normalizeRawSignTime(
+                row[0]
+              ),
+            name:
+              row[3],
+            emp:
+              row[5],
+            role:
+              row[6],
+            status:
+              status
+          })
       };
 
     });
@@ -177,6 +194,13 @@ function copyRawData(course, date){
           current.recorder =
             true;
 
+          current.hasBackendData =
+            true;
+
+          current.rawData =
+            current.rawData ||
+            buildRawDataSnapshot(current);
+
           return;
 
         }
@@ -188,6 +212,15 @@ function copyRawData(course, date){
         ){
           return;
         }
+
+        const rawData =
+          current &&
+          current.hasRawData
+          ? (
+              current.rawData ||
+              buildRawDataSnapshot(current)
+            )
+          : null;
 
         merged[name] = {
           signTime:
@@ -213,7 +246,16 @@ function copyRawData(course, date){
           recorder:
             recorder,
           updatedAt:
-            updatedAt || Date.now()
+            updatedAt || Date.now(),
+          hasRawData:
+            Boolean(
+              current &&
+              current.hasRawData
+            ),
+          hasBackendData:
+            true,
+          rawData:
+            rawData
         };
 
       });
@@ -231,12 +273,26 @@ function copyRawData(course, date){
     '驗證碼',
     '狀態',
     '失敗原因',
-    '紀錄者'
+    '紀錄者',
+    '來源代碼(1原始資料2後台資料3都有)',
+    '原始簽到時間',
+    '原始姓名',
+    '原始員工編號',
+    '原始職級',
+    '原始狀態'
   ]];
 
   Object
     .values(merged)
     .forEach(function(p){
+
+      const rawData =
+        p.rawData ||
+        (
+          p.hasRawData
+          ? buildRawDataSnapshot(p)
+          : null
+        );
 
       output.push([
         p.signTime,
@@ -248,12 +304,30 @@ function copyRawData(course, date){
         p.token,
         p.status,
         p.reason,
-        p.recorder ? 'TRUE' : ''
+        p.recorder ? 'TRUE' : '',
+        buildRawDataSourceCode(p),
+        rawData ? rawData.time : '',
+        rawData ? rawData.name : '',
+        rawData ? rawData.emp : '',
+        rawData ? rawData.role : '',
+        rawData ? rawData.status : ''
       ]);
 
     });
 
   target.clear();
+
+  if(
+    target.getMaxColumns() <
+    output[0].length
+  ){
+
+    target.insertColumnsAfter(
+      target.getMaxColumns(),
+      output[0].length - target.getMaxColumns()
+    );
+
+  }
 
   target
     .getRange(
@@ -266,17 +340,67 @@ function copyRawData(course, date){
 
   target.setFrozenRows(1);
 
-  for(let c = 1; c <= 10; c++){
+  for(let c = 1; c <= 16; c++){
     target.setColumnWidth(c,150);
   }
 
   target.setColumnWidth(1,180);
   target.setColumnWidth(9,260);
   target.setColumnWidth(10,120);
+  target.setColumnWidth(11,170);
+  target.hideColumns(12,5);
 
   SpreadsheetApp.flush();
 
   return output.length > 1;
+
+}
+
+
+function buildRawDataSnapshot(person){
+
+  return {
+    time:
+      person.signTime || person.time || '',
+    name:
+      person.name || '',
+    emp:
+      person.emp || '',
+    role:
+      person.role || '',
+    status:
+      (
+        person.status === '簽到成功'
+        ? person.status
+        : (
+            person.reason ||
+            person.status ||
+            ''
+          )
+      )
+  };
+
+}
+
+
+function buildRawDataSourceCode(person){
+
+  if(
+    person.hasRawData &&
+    person.hasBackendData
+  ){
+    return 3;
+  }
+
+  if(person.hasBackendData){
+    return 2;
+  }
+
+  if(person.hasRawData){
+    return 1;
+  }
+
+  return '';
 
 }
 

@@ -18,11 +18,27 @@ function Test-WatchFile {
     return $false
   }
 
+  if ($File.FullName -like '*\.git\*') {
+    return $false
+  }
+
+  if ($File.FullName -like '*\.vscode\*') {
+    return $false
+  }
+
   if ($File.Name -eq 'appsscript.json') {
     return $true
   }
 
-  return $File.Extension -in @('.js', '.html')
+  if ($File.Name -eq 'README.md') {
+    return $false
+  }
+
+  return $File.Extension -in @(
+    '.js',
+    '.html',
+    '.json'
+  )
 }
 
 function Get-WatchSnapshot {
@@ -33,7 +49,7 @@ function Get-WatchSnapshot {
 
   $snapshot = @{}
 
-  Get-ChildItem -Path $Path -File |
+  Get-ChildItem -Path $Path -File -Recurse |
     Where-Object { Test-WatchFile -File $_ } |
     ForEach-Object {
       $snapshot[$_.FullName] = '{0}|{1}' -f $_.LastWriteTimeUtc.Ticks, $_.Length
@@ -69,15 +85,19 @@ function Test-SnapshotChanged {
 }
 
 function Invoke-VersionedPush {
-  $version = Get-Date -Format 'yyyyMMddHHmm'
+  $version = New-AppVersion -RootPath $rootPath -Bump 'patch'
   $appConfig = Sync-AppVersion -RootPath $rootPath -Version $version -DefaultEnv 'dev'
+  $readmeUpdated = Update-ReadmeVersionLog -RootPath $rootPath -Version $version -ReleaseType 'dev' -Notes @()
 
   Write-Host "[$(Get-Date -Format 'HH:mm:ss')] APP_VERSION updated to $($appConfig.Description)"
-  Invoke-Clasp -Arguments @('push')
+  if ($readmeUpdated) {
+    Write-Host "[$(Get-Date -Format 'HH:mm:ss')] README version log updated"
+  }
+  Invoke-Clasp -Arguments @('push') -WorkingDirectory $rootPath
   Write-Host "[$(Get-Date -Format 'HH:mm:ss')] Push completed"
 }
 
-Write-Host 'Watching source files. Save a .js/.html/appsscript.json file to update APP_VERSION and push.'
+Write-Host 'Watching project files. Save a .js, .html, .json, or appsscript file to update APP_VERSION and push.'
 
 $snapshot = Get-WatchSnapshot -Path $rootPath
 

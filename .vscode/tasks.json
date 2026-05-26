@@ -11,9 +11,6 @@
         "-File",
         "${workspaceFolder}\\watch-push.ps1"
       ],
-      "runOptions": {
-        "runOn": "folderOpen"
-      },
       "presentation": {
         "reveal": "silent",
         "panel": "dedicated",
@@ -29,7 +26,9 @@
         "-ExecutionPolicy",
         "Bypass",
         "-File",
-        "${workspaceFolder}\\push.ps1"
+        "${workspaceFolder}\\push.ps1",
+        "-Note",
+        "${input:pushNote}"
       ],
       "presentation": {
         "reveal": "always",
@@ -46,7 +45,9 @@
         "-ExecutionPolicy",
         "Bypass",
         "-File",
-        "${workspaceFolder}\\update-version.ps1"
+        "${workspaceFolder}\\update-version.ps1",
+        "-Note",
+        "${input:deployNote}"
       ],
       "group": {
         "kind": "build",
@@ -86,6 +87,20 @@
         "clear": true
       },
       "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {
+      "id": "pushNote",
+      "type": "promptString",
+      "description": "這次測試版具體改了什麼？留空則使用自動摘要",
+      "default": ""
+    },
+    {
+      "id": "deployNote",
+      "type": "promptString",
+      "description": "這次正式部署具體改了什麼？留空則使用自動摘要",
+      "default": ""
     }
   ]
 }

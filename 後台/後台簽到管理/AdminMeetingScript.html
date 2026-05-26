@@ -1,0 +1,2365 @@
+<script>
+  /*
+  ========================================
+  設定 / 全域狀態
+  ========================================
+  */
+
+  const APP_ENTRY_URL =
+    '<?= appEntryUrl ?>';
+
+  const SIGN_SHEET_URL =
+    'https://docs.google.com/spreadsheets/d/184zUBhApg5CJnk7To_6FqlPcV1r-LK1kZUt2yyasD68/edit#gid=1049157062';
+
+  let meetings = [];
+  let staffList = [];
+  let originalPeopleStatus = [];
+
+
+  /*
+  ========================================
+  初始化
+  ========================================
+  */
+
+  window.addEventListener(
+    'DOMContentLoaded',
+    initPage
+  );
+
+  function initPage(){
+
+    document
+      .getElementById('meetingSelect')
+      .addEventListener(
+        'change',
+        handleMeetingChange
+      );
+
+    loadStaffList();
+
+  }
+
+
+  /*
+  ========================================
+  導覽 / 選取會議
+  ========================================
+  */
+
+  function goHome(){
+
+    window.top.location.href =
+      APP_ENTRY_URL;
+
+  }
+
+  function getSelectedMeeting(){
+
+    const index =
+      document
+        .getElementById('meetingSelect')
+        .value;
+
+    if(index === ''){
+
+      alert('請先選擇會議');
+
+      return null;
+
+    }
+
+    return meetings[index];
+
+  }
+
+  function handleMeetingChange(){
+
+    const item =
+      getSelectedMeeting();
+
+    const actionCard =
+      document.getElementById('actionCard');
+
+    if(!item){
+
+      actionCard.style.display =
+        'none';
+
+      return;
+
+    }
+
+    actionCard.style.display =
+      'block';
+
+    loadPeopleStatus(item);
+
+  }
+
+
+  /*
+  ========================================
+  載入人員 / 會議
+  ========================================
+  */
+
+  function loadStaffList(){
+
+    google.script.run
+
+      .withSuccessHandler(function(list){
+
+        staffList =
+          list || [];
+
+        renderStaffNameList();
+
+        loadMeetings();
+
+      })
+
+      .withFailureHandler(function(err){
+
+        alert(
+          '讀取人員名單失敗：' +
+          err.message
+        );
+
+      })
+
+      .getDefaultStaffList();
+
+  }
+
+  function renderStaffNameList(){
+
+    const dataList =
+      document.getElementById('staffNameList');
+
+    dataList.innerHTML =
+      '';
+
+    staffList.forEach(function(person){
+
+      const option =
+        document.createElement('option');
+
+      option.value =
+        person.name;
+
+      option.label =
+        (person.role || '') +
+        ' ' +
+        (person.emp || '');
+
+      dataList.appendChild(option);
+
+    });
+
+  }
+
+  function loadMeetings(selectedKey){
+
+    google.script.run
+
+      .withSuccessHandler(function(data){
+
+        meetings =
+          data || [];
+
+        renderMeetingSelect(
+          selectedKey
+        );
+
+      })
+
+      .withFailureHandler(function(err){
+
+        alert(
+          '讀取會議失敗：' +
+          err.message
+        );
+
+      })
+
+      .getMeetingList();
+
+  }
+
+  function renderMeetingSelect(selectedKey){
+
+    const select =
+      document.getElementById('meetingSelect');
+
+    select.innerHTML =
+      '<option value="">請選擇會議</option>';
+
+    meetings.forEach(function(item,index){
+
+      const option =
+        document.createElement('option');
+
+      option.value =
+        index;
+
+      option.textContent =
+        item.label;
+
+      select.appendChild(option);
+
+      if(
+        selectedKey &&
+        item.key === selectedKey
+      ){
+        select.value =
+          index;
+      }
+
+    });
+
+  }
+
+
+  /*
+  ========================================
+  跳轉到簽到單編輯+更新簽到上傳
+  ========================================
+  */
+
+  function openSignEditor(){
+
+    const item =
+      getSelectedMeeting();
+
+    if(!item){
+      return;
+    }
+
+    const btn =
+      document.getElementById(
+        'signBtn'
+      );
+
+    setButtonLoading(
+      btn,
+      true,
+      '準備中...'
+    );
+
+    google.script.run
+
+      .withSuccessHandler(function(ok){
+
+        setButtonLoading(
+          btn,
+          false,
+          '📄 跳轉到簽到單編輯'
+        );
+
+        if(!ok){
+
+          alert(
+            '找不到會議'
+          );
+
+          return;
+
+        }
+
+        window.open(
+          SIGN_SHEET_URL,
+          '_blank'
+        );
+
+      })
+
+      .withFailureHandler(function(err){
+
+        setButtonLoading(
+          btn,
+          false,
+          '📄 跳轉到簽到單編輯'
+        );
+
+        alert(
+          err.message
+        );
+
+      })
+
+      .updateSignUploadSheet(
+
+        item.course,
+
+        item.date
+
+      );
+
+  }
+
+  /*
+  ========================================
+  Excel 匯出
+  ========================================
+  */
+
+  function downloadRawExcel(){
+
+    exportExcel({
+      buttonId: 'rawBtn',
+      loadingText: '下載中...',
+      idleText: '📥 下載簽到原始檔',
+      serverFunction: 'exportRawSignData',
+      sheetName: '原始資料'
+    });
+
+  }
+
+  function downloadUploadExcel(){
+
+    exportExcel({
+      buttonId: 'uploadBtn',
+      loadingText: '下載中...',
+      idleText: '⬇️ 下載簽到上傳',
+      serverFunction: 'exportSignUploadData',
+      sheetName: '簽到上傳'
+    });
+
+  }
+
+  function exportExcel(config){
+
+    const item =
+      getSelectedMeeting();
+
+    if(!item){
+      return;
+    }
+
+    const btn =
+      document.getElementById(
+        config.buttonId
+      );
+
+    setButtonLoading(
+      btn,
+      true,
+      config.loadingText
+    );
+
+    google.script.run
+
+      .withSuccessHandler(function(res){
+
+        try{
+
+          if(!res.ok){
+
+            alert(
+              res.message ||
+              '產生失敗'
+            );
+
+            return;
+
+          }
+
+          writeExcelFile(
+            res.values,
+            config.sheetName,
+            res.filename
+          );
+
+        }finally{
+
+          setButtonLoading(
+            btn,
+            false,
+            config.idleText
+          );
+
+        }
+
+      })
+
+      .withFailureHandler(function(err){
+
+        setButtonLoading(
+          btn,
+          false,
+          config.idleText
+        );
+
+        alert(
+          '後端錯誤：' +
+          err.message
+        );
+
+      })
+
+      [config.serverFunction](
+        item.course,
+        item.date
+      );
+
+  }
+
+  function writeExcelFile(values, sheetName, filename){
+
+    const wb =
+      XLSX.utils.book_new();
+
+    const ws =
+      XLSX.utils.aoa_to_sheet(values);
+
+    XLSX.utils.book_append_sheet(
+      wb,
+      ws,
+      sheetName
+    );
+
+    XLSX.writeFile(
+      wb,
+      filename
+    );
+
+  }
+
+
+  /*
+  ========================================
+  人員狀態表格
+  ========================================
+  */
+
+  function loadPeopleStatus(item){
+
+    const area =
+      document.getElementById('statusArea');
+
+    area.style.display =
+      'block';
+
+    area.innerHTML =
+      renderLoadingHtml(
+        '讀取會議人員資料中...'
+      );
+
+    google.script.run
+
+      .withSuccessHandler(function(rows){
+
+        if(!rows || rows.length === 0){
+
+          originalPeopleStatus = [];
+
+          area.innerHTML =
+            buildPeopleStatusHtml([]);
+
+          return;
+
+        }
+
+        originalPeopleStatus =
+          JSON.parse(
+            JSON.stringify(rows)
+          );
+
+        area.innerHTML =
+          buildPeopleStatusHtml(rows);
+
+      })
+
+      .withFailureHandler(function(err){
+
+        area.innerHTML =
+          '讀取失敗：' +
+          err.message;
+
+      })
+
+      .getMeetingPeopleStatus(
+        item.course,
+        item.date
+      );
+
+  }
+
+  function buildPeopleStatusHtml(rows){
+
+    let html =
+      `
+      <div class="card peopleStatusCard">
+        <div class="peopleToolbar">
+          <button
+            id="peopleCancelChangesBtn"
+            class="secondaryBtn cancelChangesBtn"
+            onclick="cancelPeopleChanges()"
+          >
+            取消變更
+          </button>
+
+          <button
+            id="peopleEditBtn"
+            class="secondaryBtn"
+            onclick="togglePeopleEdit()"
+          >
+            編輯
+          </button>
+        </div>
+
+        <div class="statusTableWrap">
+          <table class="statusTable">
+            <thead>
+              <tr>
+                <th>原始資料</th>
+                <th>後台維護</th>
+                <th>紀錄者</th>
+                <th>職級</th>
+                <th>姓名</th>
+                <th>員工編號</th>
+                <th>簽到時間</th>
+                <th>狀態</th>
+              </tr>
+            </thead>
+            <tbody id="peopleTableBody">
+      `;
+
+    rows.forEach(function(row){
+
+      html +=
+        buildPeopleRowHtml(row);
+
+    });
+
+    html +=
+      `
+            </tbody>
+          </table>
+        </div>
+
+        <button
+          id="addPeopleRowBtn"
+          class="secondaryBtn"
+          style="display:none;"
+          onclick="addPeopleRow()"
+        >
+          ＋ 新增一列
+        </button>
+      </div>
+      `;
+
+    return html;
+
+  }
+
+  function buildPeopleRowHtml(row){
+
+    const rawData =
+      row.rawData || {};
+
+    const rawButton =
+      row.hasRawData
+      ? `
+        <button
+          class="deleteSourceBtn deleteRawBtn"
+          data-delete-field="raw"
+          onclick="togglePeopleSourceDelete(this)"
+        >
+          ✕
+        </button>
+      `
+      : '';
+
+    const backendButton =
+      row.hasBackendData
+      ? `
+        <button
+          class="deleteSourceBtn deleteBackendBtn"
+          data-delete-field="backend"
+          onclick="togglePeopleSourceDelete(this)"
+        >
+          ✕
+        </button>
+      `
+      : '';
+
+    return `
+      <tr
+        data-source="${escapeHtml(row.source || '')}"
+        data-has-raw="${row.hasRawData ? '1' : ''}"
+        data-has-backend="${row.hasBackendData ? '1' : ''}"
+        data-current-role="${escapeHtml(row.role || '')}"
+        data-current-name="${escapeHtml(row.name || '')}"
+        data-current-emp="${escapeHtml(row.emp || '')}"
+        data-current-time="${escapeHtml(row.time || '')}"
+        data-current-status="${escapeHtml(row.status || '')}"
+        data-current-recorder="${row.recorder ? '1' : ''}"
+        data-raw-role="${escapeHtml(rawData.role || '')}"
+        data-raw-name="${escapeHtml(rawData.name || '')}"
+        data-raw-emp="${escapeHtml(rawData.emp || '')}"
+        data-raw-time="${escapeHtml(rawData.time || '')}"
+        data-raw-status="${escapeHtml(rawData.status || '')}"
+      >
+        <td class="sourceDeleteCell">
+          ${rawButton}
+        </td>
+
+        <td class="sourceDeleteCell">
+          ${backendButton}
+        </td>
+
+        <td class="recorderCell">
+          <input
+            type="radio"
+            name="recorderPerson"
+            class="recorderRadio"
+            ${row.recorder ? 'checked' : ''}
+            ${row.recorder ? 'data-checked="1"' : ''}
+            disabled
+          >
+        </td>
+
+        <td class="roleCell textFieldCell">
+          <input
+            class="peopleInput autoTextField"
+            data-field-min="3.2"
+            ${getAutoTextFieldStyle(row.role || '', 3.2)}
+            value="${escapeHtml(row.role || '')}"
+            disabled
+          >
+        </td>
+
+        <td class="nameCell textFieldCell">
+          <input
+            class="peopleInput autoTextField"
+            data-field-min="4.8"
+            ${getAutoTextFieldStyle(row.name || '', 4.8)}
+            value="${escapeHtml(row.name || '')}"
+            disabled
+          >
+        </td>
+
+        <td class="empCell textFieldCell">
+          <input
+            class="peopleInput autoTextField"
+            data-field-min="6.6"
+            ${getAutoTextFieldStyle(row.emp || '', 6.6)}
+            value="${escapeHtml(row.emp || '')}"
+            disabled
+          >
+        </td>
+
+        <td class="signTimeCell">
+          <input
+            type="datetime-local"
+            step="60"
+            class="peopleInput"
+            value="${escapeHtml(toDateTimeInputValue(row.time || ''))}"
+            disabled
+          >
+        </td>
+
+        <td class="statusCell">
+          ${buildStatusSelect(row.status || '')}
+        </td>
+      </tr>
+    `;
+
+  }
+
+  function buildStatusSelect(status){
+
+    const options = [
+      '簽到成功',
+      '未簽到',
+      '未於課程時間內簽到',
+      '驗證失敗',
+      '請假'
+    ];
+
+    let html =
+      '<select class="peopleInput" onchange="handlePeopleStatusChange(this)" disabled>';
+
+    options.forEach(function(option){
+
+      html +=
+        '<option ' +
+        (status === option ? 'selected' : '') +
+        '>' +
+        option +
+        '</option>';
+
+    });
+
+    html +=
+      '</select>';
+
+    return html;
+
+  }
+
+  function handlePeopleStatusChange(select){
+
+    const tr =
+      select.closest('tr');
+
+    if(!tr){
+      return;
+    }
+
+    const inputs =
+      tr.querySelectorAll('.peopleInput');
+
+    const timeInput =
+      inputs[3];
+
+    if(!timeInput){
+      return;
+    }
+
+    if(select.value === '簽到成功'){
+
+      timeInput.value =
+        toDateTimeInputValue(
+          buildMeetingEndSignTime()
+        );
+
+      updatePeopleChangeIndicators();
+
+      return;
+
+    }
+
+    timeInput.value =
+      '';
+
+    updatePeopleChangeIndicators();
+
+  }
+
+  function buildMeetingEndSignTime(){
+
+    const item =
+      getSelectedMeetingSilently();
+
+    if(!item){
+      return '';
+    }
+
+    const dateText =
+      String(
+        item.fullCourse ||
+        item.course ||
+        ''
+      );
+
+    const timeText =
+      String(
+        item.date ||
+        ''
+      );
+
+    const dateMatch =
+      dateText.match(
+        /(?:(\d{4})\/)?(\d{1,2})\/(\d{1,2})/
+      );
+
+    const endMatch =
+      timeText.match(
+        /[-－~～]\s*(\d{1,2}):(\d{2})/
+      );
+
+    if(
+      !dateMatch ||
+      !endMatch
+    ){
+      return '';
+    }
+
+    const now =
+      new Date();
+
+    const year =
+      dateMatch[1] ||
+      now.getFullYear();
+
+    return [
+      year,
+      pad2(dateMatch[2]),
+      pad2(dateMatch[3])
+    ].join('/') +
+      ' ' +
+      pad2(endMatch[1]) +
+      ':' +
+      pad2(endMatch[2]) +
+      ':00';
+
+  }
+
+  function getSelectedMeetingSilently(){
+
+    const index =
+      document
+        .getElementById('meetingSelect')
+        .value;
+
+    if(index === ''){
+      return null;
+    }
+
+    return meetings[index] ||
+      null;
+
+  }
+
+  function pad2(value){
+
+    return String(value)
+      .padStart(
+        2,
+        '0'
+      );
+
+  }
+
+  function toDateTimeInputValue(value){
+
+    const text =
+      String(value || '').trim();
+
+    if(!text){
+      return '';
+    }
+
+    const match =
+      text.match(
+        /^(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})[ T](\d{1,2}):(\d{2})(?::(\d{2}))?/
+      );
+
+    if(!match){
+      return '';
+    }
+
+    return [
+      match[1],
+      pad2(match[2]),
+      pad2(match[3])
+    ].join('-') +
+      'T' +
+      pad2(match[4]) +
+      ':' +
+      pad2(match[5]);
+
+  }
+
+  function fromDateTimeInputValue(value){
+
+    const text =
+      String(value || '').trim();
+
+    if(!text){
+      return '';
+    }
+
+    const match =
+      text.match(
+        /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?/
+      );
+
+    if(!match){
+      return text;
+    }
+
+    return [
+      match[1],
+      match[2],
+      match[3]
+    ].join('/') +
+      ' ' +
+      match[4] +
+      ':' +
+      match[5] +
+      ':' +
+      (
+        match[6] ||
+        '00'
+      );
+
+  }
+
+  function normalizeSignTimeValue(value){
+
+    return fromDateTimeInputValue(
+      toDateTimeInputValue(
+        value
+      )
+    ) ||
+      String(value || '').trim();
+
+  }
+
+
+  /*
+  ========================================
+  人員編輯
+  ========================================
+  */
+
+  function togglePeopleEdit(){
+
+    const btn =
+      document.getElementById('peopleEditBtn');
+
+    const table =
+      document.querySelector('.statusTable');
+
+    const inputs =
+      document.querySelectorAll('.peopleInput');
+
+    const addBtn =
+      document.getElementById('addPeopleRowBtn');
+
+    const enteringEdit =
+      btn.textContent.trim() === '編輯';
+
+    if(enteringEdit){
+
+      enterPeopleEditMode();
+
+      return;
+
+    }
+
+    saveChangedPeopleStatus();
+
+  }
+
+  function addPeopleRow(){
+
+    const tbody =
+      document.getElementById('peopleTableBody');
+
+    const tr =
+      document.createElement('tr');
+
+    tr.classList.add('newRow');
+
+    tr.innerHTML =
+      `
+      <td class="sourceDeleteCell">
+      </td>
+
+      <td class="sourceDeleteCell">
+        <button
+          class="deleteSourceBtn deleteBackendBtn"
+          data-delete-field="backend"
+          onclick="deletePeopleRow(this)"
+        >
+          ✕
+        </button>
+      </td>
+
+      <td class="recorderCell">
+        <input
+          type="radio"
+          name="recorderPerson"
+          class="recorderRadio"
+        >
+      </td>
+
+      <td class="roleCell textFieldCell">
+        <input
+          class="peopleInput autoTextField"
+          data-field-min="3.2"
+          ${getAutoTextFieldStyle('', 3.2)}
+          placeholder="職級"
+        >
+      </td>
+
+      <td class="nameCell textFieldCell">
+        <input
+          class="peopleInput autoTextField"
+          data-field-min="4.8"
+          ${getAutoTextFieldStyle('', 4.8)}
+          list="staffNameList"
+          onchange="fillStaffInfo(this)"
+          placeholder="姓名"
+        >
+      </td>
+
+      <td class="empCell textFieldCell">
+        <input
+          class="peopleInput autoTextField"
+          data-field-min="6.6"
+          ${getAutoTextFieldStyle('', 6.6)}
+          placeholder="員工編號"
+        >
+      </td>
+
+      <td class="signTimeCell">
+        <input
+          type="datetime-local"
+          step="60"
+          class="peopleInput"
+          placeholder="簽到時間"
+        >
+      </td>
+
+      <td class="statusCell">
+        <select
+          class="peopleInput"
+          onchange="handlePeopleStatusChange(this)"
+        >
+          <option>簽到成功</option>
+          <option>未簽到</option>
+          <option>未於課程時間內簽到</option>
+          <option>驗證失敗</option>
+          <option>請假</option>
+        </select>
+      </td>
+      `;
+
+    tbody.appendChild(tr);
+
+    const statusSelect =
+      tr.querySelector(
+        '.statusCell select'
+      );
+
+    if(statusSelect){
+      handlePeopleStatusChange(
+        statusSelect
+      );
+    }
+
+    updatePeopleChangeIndicators();
+
+  }
+
+  function enterPeopleEditMode(){
+
+    const table =
+      document.querySelector('.statusTable');
+
+    const inputs =
+      document.querySelectorAll('.peopleInput');
+
+    const addBtn =
+      document.getElementById('addPeopleRowBtn');
+
+    table?.classList.add('editingPeople');
+
+    inputs.forEach(function(input){
+      input.disabled = false;
+    });
+
+    document
+      .querySelectorAll('.recorderRadio')
+      .forEach(function(radio){
+        radio.disabled = false;
+      });
+
+    if(addBtn){
+      addBtn.style.display =
+        'block';
+    }
+
+    updatePeopleChangeIndicators();
+
+  }
+
+  function cancelPeopleChanges(){
+
+    const area =
+      document.getElementById('statusArea');
+
+    const rows =
+      JSON.parse(
+        JSON.stringify(
+          originalPeopleStatus || []
+        )
+      );
+
+    area.innerHTML =
+      buildPeopleStatusHtml(rows);
+
+    enterPeopleEditMode();
+
+  }
+
+  function deletePeopleRow(button){
+
+    const tr =
+      button.closest('tr');
+
+    if(tr.classList.contains('newRow')){
+      tr.remove();
+      updatePeopleChangeIndicators();
+    }
+
+  }
+
+  function togglePeopleSourceDelete(button){
+
+    const tr =
+      button.closest('tr');
+
+    const field =
+      button.dataset.deleteField;
+
+    const marked =
+      getPeopleSourceDeleteState(
+        tr,
+        field
+      );
+
+    if(marked){
+
+      setPeopleSourceDeleteState(
+        tr,
+        field,
+        false
+      );
+
+      syncPeopleRowDeleteState(tr);
+
+      updatePeopleChangeIndicators();
+
+      return;
+
+    }
+
+    if(field === 'raw'){
+
+      const inputs =
+        tr.querySelectorAll('.peopleInput');
+
+      const name =
+        inputs[1]?.value?.trim() || '';
+
+      const ok =
+        confirm(
+          '確定要刪除「' + name + '」這筆原始簽到資料嗎？\n\n' +
+          (
+            tr.dataset.hasBackend === '1'
+            ? '這筆同時有後台維護資料，預設會一起刪除。\n如需保留後台維護，請再按一次後台維護欄位。'
+            : '這會刪除表單回覆中的原始資料。'
+          )
+        );
+
+      if(!ok){
+        return;
+      }
+
+    }
+
+    setPeopleSourceDeleteState(
+      tr,
+      field,
+      true
+    );
+
+    if(
+      field === 'raw' &&
+      tr.dataset.hasBackend === '1'
+    ){
+
+      setPeopleSourceDeleteState(
+        tr,
+        'backend',
+        true
+      );
+
+    }
+
+    syncPeopleRowDeleteState(tr);
+
+    updatePeopleChangeIndicators();
+
+  }
+
+  function getPeopleSourceDeleteState(tr, field){
+
+    const datasetKey =
+      field === 'raw'
+      ? 'deleteRaw'
+      : 'deleteBackend';
+
+    return tr.dataset[datasetKey] === '1';
+
+  }
+
+  function setPeopleSourceDeleteState(
+    tr,
+    field,
+    deleteIt
+  ){
+
+    const datasetKey =
+      field === 'raw'
+      ? 'deleteRaw'
+      : 'deleteBackend';
+
+    tr.dataset[datasetKey] =
+      deleteIt ? '1' : '';
+
+    const button =
+      tr.querySelector(
+        '[data-delete-field="' + field + '"]'
+      );
+
+    if(!button){
+      return;
+    }
+
+    button.classList.toggle(
+      'sourceMarkedDelete',
+      deleteIt
+    );
+
+    button.innerHTML =
+      deleteIt
+      ? '↺'
+      : '✕';
+
+  }
+
+  function syncPeopleSourceDeleteButtons(
+    tr,
+    visualState
+  ){
+
+    const rawButton =
+      tr.querySelector(
+        '[data-delete-field="raw"]'
+      );
+
+    const backendButton =
+      tr.querySelector(
+        '[data-delete-field="backend"]'
+      );
+
+    if(rawButton){
+
+      rawButton.innerHTML =
+        tr.dataset.deleteRaw === '1'
+        ? '↺'
+        : '✕';
+
+      rawButton.title =
+        tr.dataset.deleteRaw === '1'
+        ? (
+            visualState === 'backend'
+            ? '目前會保留後台維護資料，按一下可復原原始資料'
+            : '按一下復原原始資料'
+          )
+        : '刪除原始資料';
+
+    }
+
+    if(backendButton){
+
+      backendButton.innerHTML =
+        tr.dataset.deleteBackend === '1'
+        ? '↺'
+        : '✕';
+
+      backendButton.title =
+        tr.dataset.deleteBackend === '1'
+        ? (
+            visualState === 'raw'
+            ? '目前會保留原始資料，按一下可復原後台維護資料'
+            : '按一下復原後台維護資料'
+          )
+        : '刪除後台維護資料';
+
+    }
+
+  }
+
+  function syncPeopleRowDeleteState(tr){
+
+    const deletingRaw =
+      tr.dataset.deleteRaw === '1';
+
+    const deletingBackend =
+      tr.dataset.deleteBackend === '1';
+
+    const deleting =
+      deletingRaw ||
+      deletingBackend;
+
+    const hasRaw =
+      tr.dataset.hasRaw === '1';
+
+    const hasBackend =
+      tr.dataset.hasBackend === '1';
+
+    const remainingRaw =
+      hasRaw &&
+      !deletingRaw;
+
+    const remainingBackend =
+      hasBackend &&
+      !deletingBackend;
+
+    const visualState =
+      (
+        deleting &&
+        !remainingRaw &&
+        !remainingBackend
+      )
+      ? 'remove'
+      : (
+          deletingBackend &&
+          remainingRaw &&
+          !remainingBackend
+        )
+        ? 'raw'
+        : (
+            deletingRaw &&
+            remainingBackend &&
+            !remainingRaw
+          )
+          ? 'backend'
+          : '';
+
+    const editing =
+      Boolean(
+        document.querySelector(
+          '.statusTable.editingPeople'
+        )
+      );
+
+    tr.classList.toggle(
+      'rowWillRemove',
+      visualState === 'remove'
+    );
+
+    tr.classList.toggle(
+      'rowSwitchingRaw',
+      visualState === 'raw'
+    );
+
+    tr.classList.toggle(
+      'rowSwitchingBackend',
+      visualState === 'backend'
+    );
+
+    const recorder =
+      tr.querySelector('.recorderRadio');
+
+    tr.classList.toggle(
+      'backendRecorderRemoved',
+      deletingBackend &&
+      !deletingRaw &&
+      Boolean(
+        recorder &&
+        recorder.checked
+      )
+    );
+
+    syncPeopleSourceDeleteButtons(
+      tr,
+      visualState
+    );
+
+    syncPeopleRowDisplayForDeleteState(
+      tr,
+      deletingRaw,
+      deletingBackend,
+      visualState
+    );
+
+    tr
+      .querySelectorAll('.peopleInput')
+      .forEach(function(input){
+        input.disabled =
+          deleting ||
+          !editing;
+      });
+
+    tr
+      .querySelectorAll('.recorderRadio')
+      .forEach(function(radio){
+        radio.disabled =
+          deleting ||
+          !editing;
+      });
+
+  }
+
+  function saveChangedPeopleStatus(){
+
+    const item =
+      getSelectedMeeting();
+
+    if(!item){
+      return;
+    }
+
+    const changed =
+      collectChangedPeopleRows();
+      
+    if(changed.length === 0){
+
+      exitPeopleEditMode();
+
+      return;
+
+    }
+
+    const editBtn =
+      document.getElementById(
+        'peopleEditBtn'
+      );
+
+    setButtonLoading(
+      editBtn,
+      true,
+      '儲存中...'
+    );
+
+    setPeopleEditLocked(
+      true
+    );
+
+    google.script.run
+
+      .withSuccessHandler(function(){
+
+        setPeopleEditLocked(
+          false
+        );
+
+        setButtonLoading(
+          editBtn,
+          false,
+          '編輯'
+        );
+
+        loadMeetings(
+          item.key
+        );
+
+        loadPeopleStatus(
+          item
+        );
+
+      })
+
+      .withFailureHandler(function(err){
+
+        setPeopleEditLocked(
+          false
+        );
+
+        setButtonLoading(
+          editBtn,
+          false,
+          '取消編輯'
+        );
+
+        updatePeopleChangeIndicators();
+
+        alert(
+          '儲存失敗\n' +
+          err.message
+        );
+
+      })
+
+      .saveBackendPeopleStatus(
+        item.course,
+        item.date,
+        changed
+      );
+  }
+
+  function syncPeopleRowDisplayForDeleteState(
+    tr,
+    deletingRaw,
+    deletingBackend,
+    visualState
+  ){
+
+    if(
+      visualState === 'raw'
+    ){
+
+      setPeopleRowDisplayData(
+        tr,
+        {
+          role: tr.dataset.rawRole || '',
+          name: tr.dataset.rawName || '',
+          emp: tr.dataset.rawEmp || '',
+          time: tr.dataset.rawTime || '',
+          status: tr.dataset.rawStatus || '',
+          recorder: false
+        }
+      );
+
+      return;
+
+    }
+
+    setPeopleRowDisplayData(
+      tr,
+      {
+        role: tr.dataset.currentRole || '',
+        name: tr.dataset.currentName || '',
+        emp: tr.dataset.currentEmp || '',
+        time: tr.dataset.currentTime || '',
+        status: tr.dataset.currentStatus || '',
+        recorder: tr.dataset.currentRecorder === '1'
+      }
+    );
+
+  }
+
+  function setPeopleRowDisplayData(tr, data){
+
+    const inputs =
+      tr.querySelectorAll('.peopleInput');
+
+    if(inputs[0]){
+      inputs[0].value =
+        data.role || '';
+      resizePeopleTextInput(inputs[0]);
+    }
+
+    if(inputs[1]){
+      inputs[1].value =
+        data.name || '';
+      resizePeopleTextInput(inputs[1]);
+    }
+
+    if(inputs[2]){
+      inputs[2].value =
+        data.emp || '';
+      resizePeopleTextInput(inputs[2]);
+    }
+
+    if(inputs[3]){
+      inputs[3].value =
+        toDateTimeInputValue(
+          data.time || ''
+        );
+    }
+
+    if(inputs[4]){
+      inputs[4].value =
+        data.status || '';
+    }
+
+    if('recorder' in data){
+      setPeopleRowRecorderDisplay(
+        tr,
+        Boolean(data.recorder)
+      );
+    }
+
+  }
+
+  function setPeopleRowRecorderDisplay(
+    tr,
+    checked
+  ){
+
+    const recorder =
+      tr.querySelector('.recorderRadio');
+
+    if(!recorder){
+      return;
+    }
+
+    recorder.checked =
+      checked;
+
+    recorder.dataset.checked =
+      checked ? '1' : '';
+
+  }
+
+  function collectChangedPeopleRows(){
+
+    const rows =
+      document.querySelectorAll(
+        '#peopleTableBody tr'
+      );
+
+    const changed =
+      [];
+
+    rows.forEach(function(tr,index){
+
+      const old =
+        originalPeopleStatus[index];
+
+      const data =
+        getPeopleRowData(
+          tr,
+          old
+        );
+
+      const isEmptyRow =
+        isPeopleRowEmpty(data);
+
+      if(isEmptyRow){
+
+        if(tr.classList.contains('newRow')){
+          tr.remove();
+        }
+
+        return;
+
+      }
+
+      if(!data.name){
+        return;
+      }
+
+      if(isPeopleRowChanged(tr, old, data)){
+
+        changed.push(data);
+
+      }
+
+    });
+
+    return changed;
+
+  }
+
+  function getPeopleRowData(tr, old){
+
+    const inputs =
+      tr.querySelectorAll('.peopleInput');
+
+    const recorder =
+      tr.querySelector('.recorderRadio');
+
+    return {
+      originalName:
+        old && old.name
+        ? old.name
+        : '',
+      source:
+        tr.dataset.source || '',
+      hasRawData:
+        tr.dataset.hasRaw === '1',
+      hasBackendData:
+        tr.dataset.hasBackend === '1',
+      deleteRaw:
+        tr.dataset.deleteRaw === '1',
+      deleteBackend:
+        tr.dataset.deleteBackend === '1',
+      recorder:
+        recorder ? recorder.checked : false,
+      role: inputs[0]?.value?.trim() || '',
+      name: inputs[1]?.value?.trim() || '',
+      emp: inputs[2]?.value?.trim() || '',
+      signTime:
+        cleanManualSignTime(
+          fromDateTimeInputValue(
+            inputs[3]?.value?.trim() || ''
+          )
+        ),
+      status: inputs[4]?.value || ''
+    };
+
+  }
+
+  function isPeopleRowEmpty(data){
+
+    return (
+      !data.role &&
+      !data.name &&
+      !data.emp &&
+      !data.signTime
+    );
+
+  }
+
+  function isPeopleRowChanged(tr, old, data){
+
+    if(
+      data.deleteRaw ||
+      data.deleteBackend
+    ){
+      return true;
+    }
+
+    if(tr.classList.contains('newRow')){
+      return !isPeopleRowEmpty(data);
+    }
+
+    if(!old){
+      return true;
+    }
+
+    return (
+      data.role !== old.role ||
+      data.name !== old.name ||
+      data.emp !== old.emp ||
+      normalizeSignTimeValue(data.signTime) !==
+        normalizeSignTimeValue(old.time) ||
+      data.status !== old.status ||
+      data.recorder !== Boolean(old.recorder)
+    );
+
+  }
+
+  function updatePeopleChangeIndicators(){
+
+    const rows =
+      document.querySelectorAll(
+        '#peopleTableBody tr'
+      );
+
+    let count =
+      0;
+
+    const table =
+      document.querySelector('.statusTable');
+
+    const editing =
+      table?.classList.contains(
+        'editingPeople'
+      );
+
+    rows.forEach(function(tr,index){
+
+      const old =
+        originalPeopleStatus[index];
+
+      const data =
+        getPeopleRowData(
+          tr,
+          old
+        );
+
+      clearPeopleCellChanges(tr);
+
+      if(!editing){
+        return;
+      }
+
+      count +=
+        markPeopleCellChanges(
+          tr,
+          old,
+          data
+        );
+
+    });
+
+    updatePeopleEditButtonText(
+      count
+    );
+
+  }
+
+  function updatePeopleEditButtonText(count){
+
+    const editBtn =
+      document.getElementById(
+        'peopleEditBtn'
+      );
+
+    if(!editBtn){
+      return;
+    }
+
+    const table =
+      document.querySelector('.statusTable');
+
+    const editing =
+      table?.classList.contains(
+        'editingPeople'
+      );
+
+    if(!editing){
+
+      editBtn.textContent =
+        '編輯';
+
+      setPeopleCancelChangesVisible(false);
+
+      return;
+
+    }
+
+    editBtn.textContent =
+      count > 0
+      ? '儲存 ' + count + ' 個變更'
+      : '取消編輯';
+
+    setPeopleCancelChangesVisible(
+      count > 0
+    );
+
+  }
+
+  function setPeopleCancelChangesVisible(visible){
+
+    const cancelBtn =
+      document.getElementById(
+        'peopleCancelChangesBtn'
+      );
+
+    if(!cancelBtn){
+      return;
+    }
+
+    cancelBtn.style.display =
+      visible
+      ? 'inline-flex'
+      : 'none';
+
+  }
+
+  function clearPeopleCellChanges(tr){
+
+    tr
+      .querySelectorAll(
+        '.cellChanged'
+      )
+      .forEach(function(cell){
+        cell.classList.remove(
+          'cellChanged'
+        );
+      });
+
+  }
+
+  function markPeopleCellChanges(tr, old, data){
+
+    const cells =
+      tr.children;
+
+    let count =
+      0;
+
+    if(data.deleteRaw && cells[0]){
+      count++;
+    }
+
+    if(data.deleteBackend && cells[1]){
+      count++;
+    }
+
+    if(!old){
+      if(!isPeopleRowEmpty(data)){
+        Array
+          .from(cells)
+          .slice(2)
+          .forEach(function(cell){
+            cell.classList.add('cellChanged');
+            count++;
+          });
+      }
+
+      return count;
+    }
+
+    if(
+      data.recorder !==
+      Boolean(old.recorder)
+    ){
+      cells[2]?.classList.add('cellChanged');
+      count++;
+    }
+
+    if(data.role !== old.role){
+      cells[3]?.classList.add('cellChanged');
+      count++;
+    }
+
+    if(data.name !== old.name){
+      cells[4]?.classList.add('cellChanged');
+      count++;
+    }
+
+    if(data.emp !== old.emp){
+      cells[5]?.classList.add('cellChanged');
+      count++;
+    }
+
+    if(
+      normalizeSignTimeValue(data.signTime) !==
+      normalizeSignTimeValue(old.time)
+    ){
+      cells[6]?.classList.add('cellChanged');
+      count++;
+    }
+
+    if(data.status !== old.status){
+      cells[7]?.classList.add('cellChanged');
+      count++;
+    }
+
+    return count;
+
+  }
+
+  function exitPeopleEditMode(){
+
+    const table =
+      document.querySelector('.statusTable');
+
+    const inputs =
+      document.querySelectorAll('.peopleInput');
+
+    const addBtn =
+      document.getElementById('addPeopleRowBtn');
+
+    const editBtn =
+      document.getElementById('peopleEditBtn');
+
+    table?.classList.remove('editingPeople');
+
+    inputs.forEach(function(input){
+      input.disabled = true;
+    });
+
+    document
+      .querySelectorAll('.recorderRadio')
+      .forEach(function(radio){
+        radio.disabled = true;
+      });
+
+    addBtn.style.display =
+      'none';
+
+    editBtn.textContent =
+      '編輯';
+
+    setPeopleCancelChangesVisible(false);
+
+    document
+      .querySelectorAll(
+        '.cellChanged'
+      )
+      .forEach(function(item){
+        item.classList.remove(
+          'cellChanged'
+        );
+      });
+
+  }
+
+  function fillStaffInfo(input){
+
+    const person =
+      staffList.find(function(p){
+        return p.name === input.value;
+      });
+
+    if(!person){
+      return;
+    }
+
+    const tr =
+      input.closest('tr');
+
+    const inputs =
+      tr.querySelectorAll('.peopleInput');
+
+    inputs[0].value =
+      person.role || '';
+
+    inputs[1].value =
+      person.name || '';
+
+    inputs[2].value =
+      person.emp || '';
+
+    inputs.forEach(function(item){
+      resizePeopleTextInput(item);
+    });
+
+    updatePeopleChangeIndicators();
+
+  }
+
+
+  /*
+  ========================================
+  共用工具
+  ========================================
+  */
+
+  function setButtonLoading(btn, loading, text){
+
+    btn.disabled =
+      loading;
+
+    btn.classList.toggle(
+      'loading',
+      loading
+    );
+
+    btn.innerHTML =
+      text;
+
+  }
+
+  function escapeHtml(text){
+
+    return String(text)
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+
+  }
+
+  function getAutoTextFieldStyle(value, minimumEm){
+
+    return (
+      'style="--field-em:' +
+      getAutoTextFieldEm(
+        value,
+        minimumEm
+      ) +
+      ';"'
+    );
+
+  }
+
+  function getAutoTextFieldEm(value, minimumEm){
+
+    const text =
+      String(value || '');
+
+    let em =
+      0;
+
+    Array
+      .from(text)
+      .forEach(function(char){
+
+        if(/[A-Za-z0-9]/.test(char)){
+          em += 0.62;
+          return;
+        }
+
+        if(char === ' '){
+          em += 0.35;
+          return;
+        }
+
+        em += 1;
+
+      });
+
+    const size =
+      Math.max(
+        Number(minimumEm) || 4,
+        em + 1
+      );
+
+    return (
+      Math.ceil(size * 10) / 10
+    ).toFixed(1);
+
+  }
+
+  function resizePeopleTextInput(input){
+
+    if(
+      !input ||
+      !input.matches('.autoTextField')
+    ){
+      return;
+    }
+
+    input
+      .style
+      .setProperty(
+        '--field-em',
+        getAutoTextFieldEm(
+          input.value || input.placeholder || '',
+          input.dataset.fieldMin
+        )
+      );
+
+  }
+
+  function renderLoadingHtml(text){
+
+    return `
+      <div class="card">
+        <div class="loadingBox">
+          <div class="loadingCircle"></div>
+          <div>${text}</div>
+        </div>
+      </div>
+    `;
+
+  }
+
+  function setPeopleEditLocked(locked){
+
+    document
+      .querySelectorAll('.deleteSourceBtn')
+      .forEach(function(btn){
+        btn.disabled = locked;
+      });
+
+    if(locked){
+
+      document
+        .querySelectorAll('.peopleInput')
+        .forEach(function(input){
+          input.disabled = true;
+        });
+
+      document
+        .querySelectorAll('.recorderRadio')
+        .forEach(function(radio){
+          radio.disabled = true;
+        });
+
+    }else{
+
+      document
+        .querySelectorAll('#peopleTableBody tr')
+        .forEach(function(tr){
+          syncPeopleRowDeleteState(tr);
+        });
+
+    }
+
+    const addBtn =
+      document.getElementById('addPeopleRowBtn');
+
+    if(addBtn){
+      addBtn.disabled = locked;
+    }
+
+    document
+      .body
+      .classList[
+        locked
+        ? 'add'
+        : 'remove'
+      ](
+        'saving'
+      );
+
+  }
+
+  function cleanManualSignTime(value){
+
+    if(!value){
+      return '';
+    }
+
+    if(
+      value.startsWith('-')
+    ){
+      return '';
+    }
+
+    return value;
+
+  }
+
+  document.addEventListener(
+    'input',
+    function(e){
+
+      if(
+        e.target.matches(
+          '.peopleInput'
+        )
+      ){
+        resizePeopleTextInput(
+          e.target
+        );
+
+        updatePeopleChangeIndicators();
+      }
+
+    }
+  );
+
+  document.addEventListener(
+    'click',
+    function(e){
+
+      const radio =
+        e.target.closest(
+          '.recorderRadio'
+        );
+
+      if(
+        !radio
+        ||
+        radio.disabled
+      ){
+        return;
+      }
+
+      if(
+        radio.dataset.checked
+        ===
+        '1'
+      ){
+
+        radio.checked =
+          false;
+
+        radio.dataset.checked =
+          '';
+
+        updatePeopleChangeIndicators();
+
+        return;
+
+      }
+
+      document
+        .querySelectorAll(
+          '.recorderRadio'
+        )
+        .forEach(function(r){
+          r.dataset.checked =
+            '';
+        });
+
+      radio.dataset.checked =
+        '1';
+
+      updatePeopleChangeIndicators();
+
+    }
+  );
+
+  document.addEventListener(
+    'change',
+    function(e){
+
+      if(
+        e.target.matches(
+          '.peopleInput'
+        )
+      ){
+        resizePeopleTextInput(
+          e.target
+        );
+
+        updatePeopleChangeIndicators();
+        return;
+      }
+
+      if(
+        !e.target.matches(
+          '.recorderRadio'
+        )
+      ){
+        return;
+      }
+
+      document
+        .querySelectorAll(
+          '.recorderRadio'
+        )
+        .forEach(function(r){
+          r.dataset.checked =
+            '';
+        });
+
+      e.target.dataset.checked =
+        '1';
+
+      updatePeopleChangeIndicators();
+
+    }
+  );
+
+  function downloadSignPdf(){
+
+    const item =
+      getSelectedMeeting();
+
+    if(!item){
+      return;
+    }
+
+    const btn =
+      document.getElementById(
+        'signPdfBtn'
+      );
+
+    setButtonLoading(
+      btn,
+      true,
+      '產生 PDF 中...'
+    );
+
+    google.script.run
+
+      .withSuccessHandler(function(res){
+
+        setButtonLoading(
+          btn,
+          false,
+          '📄 下載簽到單 PDF'
+        );
+
+        if(!res.ok){
+
+          alert(
+            res.message ||
+            '產生 PDF 失敗'
+          );
+
+          return;
+
+        }
+
+        const a =
+          document.createElement('a');
+
+        a.href =
+          'data:application/pdf;base64,' +
+          res.base64;
+
+        a.download =
+          res.filename;
+
+        document.body.appendChild(a);
+
+        a.click();
+
+        a.remove();
+
+      })
+
+      .withFailureHandler(function(err){
+
+        setButtonLoading(
+          btn,
+          false,
+          '📄 下載簽到單 PDF'
+        );
+
+        alert(
+          '後端錯誤：' +
+          err.message
+        );
+
+      })
+
+      .exportMeetingSignSheetPdf(
+        item.course,
+        item.date
+      );
+
+  }
+</script>

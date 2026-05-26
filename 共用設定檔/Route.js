@@ -84,13 +84,25 @@ function doGet(e){
 
   /*
   ========================================
-  會議管理後台
+  敷料首頁
   ========================================
   */
 
   if(
     page ===
-    adminPageKey + 'meeting'
+    'dressing'
+  ){
+    return showDressingFrontPage();
+  }
+
+    /*
+  ========================================
+  會議管理後台
+  ========================================
+  */
+
+  if(
+    page === 'meeting'
   ){
     return showAdminMeetingPage();
   }
@@ -210,7 +222,7 @@ function getVersionBadgeHtml(){
     APP_DEFAULT_ENV,
     '" title="切換到目前測試版">',
     '<span class="appVersionBadgeMode" data-version-mode>正式版</span>',
-    '<span>v.',
+    '<span>v',
     APP_VERSION,
     '</span>',
     '<span class="appVersionBadgeSource">行事曆來源: ',

@@ -36,13 +36,19 @@ function getMeetingPeopleStatus(course,date){
     return [];
   }
 
+  const columnCount =
+    Math.max(
+      raw.getLastColumn(),
+      16
+    );
+
   return raw
 
     .getRange(
       2,
       1,
       raw.getLastRow()-1,
-      10
+      columnCount
     )
 
     .getDisplayValues()
@@ -52,7 +58,12 @@ function getMeetingPeopleStatus(course,date){
     )
 
     .map(
-      row=>({
+      row=>{
+
+        const sourceCode =
+          String(row[10] || '');
+
+        return {
 
         time:
           row[0],
@@ -87,9 +98,44 @@ function getMeetingPeopleStatus(course,date){
         source:
           row[6]==='後台驗證'
           ? 'backend'
-          : 'form'
+          : 'form',
 
-      })
+        hasRawData:
+          sourceCode === '1' ||
+          sourceCode === '3',
+
+        hasBackendData:
+          sourceCode === '2' ||
+          sourceCode === '3',
+
+        rawDeleted:
+          false,
+
+        backendDeleted:
+          false,
+
+        rawData:
+          (
+            sourceCode === '1' ||
+            sourceCode === '3'
+          )
+          ? {
+              time:
+                row[11] || row[0],
+              name:
+                row[12] || row[3],
+              emp:
+                row[13] || row[4],
+              role:
+                row[14] || row[5],
+              status:
+                row[15] || row[8] || row[7]
+            }
+          : null
+
+        };
+
+      }
     );
 
 }
@@ -184,13 +230,33 @@ function saveBackendPeopleStatus(
 
       });
 
-    if(person.delete){
+    let deleteRaw =
+      person.deleteRaw === true;
+
+    let deleteBackend =
+      person.deleteBackend === true;
+
+    if(
+      person.delete &&
+      !deleteRaw &&
+      !deleteBackend
+    ){
 
       if(
         person.source === 'form'
         ||
         rowIndex <= 0
       ){
+        deleteRaw =
+          true;
+      }else{
+        deleteBackend =
+          true;
+      }
+
+    }
+
+    if(deleteRaw){
 
         const deleted =
           deleteFormResponsePerson(
@@ -212,11 +278,25 @@ function saveBackendPeopleStatus(
 
         }
 
-      }else{
+    }
+
+    if(
+      deleteRaw &&
+      !deleteBackend
+    ){
+      return;
+    }
+
+    if(deleteBackend){
+
+      if(rowIndex > 0){
 
         sheet.deleteRow(
           rowIndex
         );
+
+        rowIndex =
+          -1;
 
       }
 
@@ -375,7 +455,7 @@ function deleteBackendPerson(
         name:
           name,
 
-        delete:
+        deleteBackend:
           true
 
       }
