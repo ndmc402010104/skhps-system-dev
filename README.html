@@ -1,3 +1,637 @@
-一切又從頭~~~
-ctrl+S push
-ctrl+shift+B 更新部署
+# 晨會 QR 簽到系統
+Morning Meeting System
+
+整形外科科室系統  
+Google Apps Script × Google Sheet × Google Form
+
+---
+
+# 快速部署
+
+VS Code（主要）
+
+修改  
+→ Ctrl + S  
+→ Ctrl + Shift + B  
+→ Deploy  
+→ 更新正式版
+
+Apps Script（備援）
+
+修改  
+→ 更新 config.gs APP_VERSION  
+→ 儲存（通常自動）  
+→ 部署  
+→ 更新部署
+
+---
+
+# 版本日誌
+
+規則：
+
+v.YYYYMMDDHHmm  
+→ 測試版（未 Deploy）
+
+正式版 v.YYYYMMDDHHmm  
+→ 已 Deploy
+
+正式版版本號需與來源測試版一致。  
+新版本放最上面。
+
+---
+
+v.202605261153
+
+更新：
+
+- README 重構
+- 版本日誌提前
+- 系統流程整理
+- 功能總覽整理
+
+---
+
+正式版 v.202605260117
+
+來源：
+v.202605260117
+
+更新：
+
+- 管理後台首頁
+- 會議管理獨立頁
+- 補登／請假／刪除原始簽到
+- 紀錄者功能
+- PDF／Excel 匯出
+- Loading 與手機版優化
+
+---
+
+v.202605260116
+
+更新：
+
+- 後台流程整理
+- Route 重構
+- 管理入口整理
+
+---
+
+v.202605260108
+
+⚠ 測試失敗
+
+- deploy version 不存在
+
+---
+
+v.202605260042
+
+更新：
+
+- QR 流程修正
+- 簽到頁整理
+
+---
+
+正式版 v.202605260040
+
+來源：
+v.202605260040
+
+更新：
+
+- 第一版正式部署
+
+---
+
+v.202605260039
+
+更新：
+
+- 專案初始化
+
+---
+
+# 系統流程
+
+使用者  
+建立會議 → QR → 簽到 → 驗證 → 完成
+
+管理者  
+後台 → 查詢 → 修正 → 匯出
+
+系統  
+Route → Page → Sheet → PDF / Excel / Upload
+
+---
+
+# 功能導覽
+
+專案採：
+
+Page（顯示）
+→ Logic（處理）
+→ Data（Sheet / Form）
+
+結構。
+
+---
+
+## Route｜入口與導頁
+
+位置：
+
+```text
+Route.gs
+```
+
+用途：
+
+負責所有進站、切頁、共用載入。
+
+主要流程：
+
+```text
+網址
+↓
+doGet()
+↓
+判斷 page
+↓
+show○○Page()
+↓
+回傳 HTML
+```
+
+函式：
+
+```javascript
+doGet()
+
+include()
+
+getAppEntryUrl()
+
+getVersionBadgeHtml()
+```
+
+---
+
+## Config｜系統設定
+
+位置：
+
+```text
+Config.gs
+```
+
+用途：
+
+集中所有常數設定。
+
+內容：
+
+```text
+APP_VERSION
+APP_ENTRY_URL
+
+SHEET_ID
+FORM_ID
+
+PAGE_NAME
+
+各 Sheet 名稱
+```
+
+原則：
+
+- 不寫死
+- 全系統共用
+
+---
+
+## Front｜首頁
+
+位置：
+
+```text
+Front/
+├─ Front.gs
+└─ FrontIndex.html
+```
+
+用途：
+
+系統入口。
+
+流程：
+
+```text
+首頁
+↓
+功能選單
+↓
+跳轉各功能
+```
+
+函式：
+
+```javascript
+showFrontIndex()
+```
+
+---
+
+## QR｜晨會 QR 產生
+
+位置：
+
+```text
+QR/
+├─ QR.gs
+└─ SignQRGenerator.html
+```
+
+用途：
+
+建立會議簽到 QR。
+
+流程：
+
+```text
+選擇會議
+↓
+產生簽到網址
+↓
+產生 QR
+↓
+開放簽到
+```
+
+函式：
+
+```javascript
+showSignQRGeneratorPage()
+
+getSignQRMeetingOptions()
+```
+
+---
+
+## Sign｜簽到系統
+
+位置：
+
+```text
+Sign/
+├─ Sign.gs
+└─ SignMeeting.html
+```
+
+用途：
+
+完成使用者簽到。
+
+功能：
+
+- 姓名輸入
+- 員工編號
+- 驗證碼
+- 表單送出
+- 防重複
+
+流程：
+
+```text
+掃 QR
+↓
+姓名
+↓
+員編
+↓
+驗證
+↓
+送出
+↓
+完成
+```
+
+函式：
+
+```javascript
+showSignMeetingPage()
+
+submitSign()
+```
+
+---
+
+## Meeting｜會議資料管理
+
+位置：
+
+```text
+Meeting/
+└─ Meeting.gs
+```
+
+用途：
+
+建立與維護會議。
+
+功能：
+
+- 建立會議
+- 更新會議
+- 產生簽到表
+- 同步資料
+
+流程：
+
+```text
+建立
+↓
+產生 Sheet
+↓
+等待簽到
+```
+
+函式：
+
+```javascript
+getMeetingList()
+
+prepareSignSheet()
+
+refreshMeetingOutput()
+```
+
+---
+
+## Admin｜管理後台
+
+位置：
+
+```text
+Admin/
+├─ Admin.gs
+├─ AdminIndex.html
+├─ AdminMeeting.html
+└─ AdminMeetingScript.html
+```
+
+用途：
+
+管理簽到資料。
+
+功能：
+
+- 查詢
+- 補登
+- 請假
+- 刪除原始簽到
+- 編輯
+- 匯出
+- 紀錄者
+
+流程：
+
+```text
+後台首頁
+↓
+會議管理
+↓
+查看名單
+↓
+修正
+↓
+匯出
+```
+
+函式：
+
+```javascript
+showAdminIndexPage()
+
+showAdminMeetingPage()
+
+saveBackendPeopleStatus()
+
+getMeetingPeopleStatus()
+```
+
+---
+
+## Export｜輸出模組
+
+位置：
+
+```text
+Export/
+└─ Export.gs
+```
+
+用途：
+
+輸出各種報表。
+
+功能：
+
+- PDF
+- Excel
+- Upload
+
+流程：
+
+```text
+查詢
+↓
+整理
+↓
+輸出
+```
+
+函式：
+
+```javascript
+exportRawSignData()
+
+exportSignUploadData()
+
+updateSignUploadSheet()
+```
+
+---
+
+## Staff｜人員資料
+
+位置：
+
+```text
+Staff/
+└─ Staff.gs
+```
+
+用途：
+
+管理預設名單。
+
+功能：
+
+- 預設人員
+- 員編對應
+- 職稱
+
+函式：
+
+```javascript
+getDefaultStaffList()
+```
+
+---
+
+## Calendar｜會議來源
+
+位置：
+
+```text
+Calendar/
+└─ Calendar.gs
+```
+
+用途：
+
+同步行事曆。
+
+功能：
+
+- 讀取會議
+- 建立日期
+- 更新清單
+
+---
+
+## Token｜驗證模組
+
+位置：
+
+```text
+Token/
+└─ Token.gs
+```
+
+用途：
+
+簽到驗證。
+
+功能：
+
+- Token 產生
+- Token 驗證
+- 防重複提交
+
+---
+
+# 專案結構
+
+```text
+Root
+
+├─ Route.gs
+├─ Config.gs
+
+├─ Front
+│  ├─ Front.gs
+│  └─ FrontIndex.html
+
+├─ QR
+│  ├─ QR.gs
+│  └─ SignQRGenerator.html
+
+├─ Sign
+│  ├─ Sign.gs
+│  └─ SignMeeting.html
+
+├─ Meeting
+│  └─ Meeting.gs
+
+├─ Admin
+│  ├─ Admin.gs
+│  ├─ AdminIndex.html
+│  ├─ AdminMeeting.html
+│  └─ AdminMeetingScript.html
+
+├─ Export
+│  └─ Export.gs
+
+├─ Staff
+│  └─ Staff.gs
+
+├─ Calendar
+│  └─ Calendar.gs
+
+├─ Token
+│  └─ Token.gs
+```
+
+---
+
+# 命名規則
+
+Page
+
+```javascript
+show○○Page()
+```
+
+資料
+
+```javascript
+get○○()
+
+save○○()
+
+update○○()
+
+export○○()
+```
+
+HTML
+
+```text
+功能名稱.html
+```
+
+---
+
+# 開發原則
+
+優先：
+
+```text
+可讀
+＞
+可維護
+＞
+快速新增
+```
+
+避免：
+
+- 重複邏輯
+- Route 分散
+- 寫死資料
+- HTML / GS 強耦合
+- 隱藏依賴
+
+---
+
+# 待辦
+
+□ 人員管理頁
+□ 系統設定頁
+□ App 包裝
+□ PWA
+□ 多科別支援
