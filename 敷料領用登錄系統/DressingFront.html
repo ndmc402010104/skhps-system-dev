@@ -439,6 +439,34 @@ style="margin-top:14px;color:#475569;font-size:15px;">
 
 </div>
 
+<div
+style="
+display:flex;
+gap:8px;
+margin-top:10px;
+align-items:center;
+">
+
+<input
+id="barcodeManualInput"
+placeholder="輸入條碼測試"
+style="
+flex:1;
+padding:10px;
+border:1px solid #cbd5e1;
+border-radius:8px;
+">
+
+<button
+type="button"
+onclick="manualBarcodeLookup()">
+
+查詢
+
+</button>
+
+</div>
+
 <div id="formArea">
 
 <div class="infoRow">
@@ -912,6 +940,37 @@ onclick="submitUse()">
 
     }
 
+    async function manualBarcodeLookup(){
+
+        const barcode =
+        document
+        .getElementById(
+        'barcodeManualInput'
+        )
+        .value
+        .trim();
+
+        if(
+        !barcode
+        ){
+
+        alert(
+        '請輸入條碼'
+        );
+
+        return;
+
+        }
+
+        scannerMode =
+        'lookup';
+
+        await handleBarcodeScanResult(
+        barcode
+        );
+
+    }
+    
     function submitUse(){
 
     alert('下一步接 Sheet');
