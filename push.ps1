@@ -280,7 +280,7 @@ if ($Action -eq 'ask') {
 if ($Bump -eq 'ask') {
   Write-Host ""
   $Bump = Read-MenuChoice `
-    -Message "要更新哪種版本？P=patch 小修，M=minor 新功能，A=major 大改 [P]" `
+    -Message "要更新哪種版本？P=patch 小修，M=minor 新功能，A=major 大改，N=none 不升版 [N]" `
     -Choices @{
       'p' = 'patch'
       'patch' = 'patch'
@@ -288,21 +288,19 @@ if ($Bump -eq 'ask') {
       'minor' = 'minor'
       'a' = 'major'
       'major' = 'major'
+      'n' = 'none'
+      'none' = 'none'
     } `
-    -Default 'patch'
+    -Default 'none'
 }
 
-$defaultReadme = $Bump -ne 'patch'
-
-if ($Action -eq 'deploy') {
-  $defaultReadme = $true
-}
+$defaultReadme = $Bump -in @('minor','major')
 
 $writeReadme = $false
 
 if (-not $NoReadmePrompt) {
   Write-Host ""
-  $writeReadme = Read-YesNo -Message "要寫入 README 版本日誌嗎？patch 預設 N，minor/major/deploy 預設 Y" -Default $defaultReadme
+  $writeReadme = Read-YesNo -Message "要寫入 README 版本日誌嗎？none/patch 預設 N，minor/major 預設 Y" -Default $defaultReadme
 }
 
 if ($writeReadme -and -not ($Note -and ($Note -join '').Trim())) {

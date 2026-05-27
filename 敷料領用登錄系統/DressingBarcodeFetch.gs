@@ -18,7 +18,7 @@ const DRESSING_BARCODE_HEADERS = [
   'updatedBy'
 ];
 
-function doGet(e){
+function handleDressingBarcodeGet(e){
 
   const data =
     e.parameter || {};
@@ -26,26 +26,55 @@ function doGet(e){
   const action =
     data.action || '';
 
+  try{
+
   if(action === 'lookupDressingBarcode'){
-    return jsonOutput_(
-      lookupDressingBarcode_(data.barcode)
+    return apiOutput_(
+      lookupDressingBarcode_(data.barcode),
+      data.callback
+    );
+  }
+
+  if(action === 'ping'){
+    return apiOutput_(
+      pingDressingBarcode_(),
+      data.callback
+    );
+  }
+
+  if(action === 'whoami'){
+    return apiOutput_(
+      whoamiDressingBarcode_(),
+      data.callback
     );
   }
 
   if(action === 'saveDressingBarcode'){
-    return jsonOutput_(
-      saveDressingBarcode_(data)
+    return apiOutput_(
+      saveDressingBarcode_(data),
+      data.callback
     );
   }
 
-  return jsonOutput_({
-    ok:false,
-    message:'unknown action'
-  });
+  return apiOutput_(
+    {
+      ok:false,
+      message:'unknown action'
+    },
+    data.callback
+  );
+
+  }
+  catch(error){
+    return apiOutput_(
+      errorDressingBarcode_(error, action),
+      data.callback
+    );
+  }
 
 }
 
-function doPost(e){
+function handleDressingBarcodePost(e){
 
   const data =
     JSON.parse(e.postData.contents || '{}');
@@ -53,9 +82,23 @@ function doPost(e){
   const action =
     data.action || '';
 
+  try{
+
   if(action === 'lookupDressingBarcode'){
     return jsonOutput_(
       lookupDressingBarcode_(data.barcode)
+    );
+  }
+
+  if(action === 'ping'){
+    return jsonOutput_(
+      pingDressingBarcode_()
+    );
+  }
+
+  if(action === 'whoami'){
+    return jsonOutput_(
+      whoamiDressingBarcode_()
     );
   }
 
@@ -69,6 +112,28 @@ function doPost(e){
     ok:false,
     message:'unknown action'
   });
+
+  }
+  catch(error){
+    return jsonOutput_(
+      errorDressingBarcode_(error, action)
+    );
+  }
+
+}
+
+function errorDressingBarcode_(error, action){
+
+  return {
+    ok:false,
+    action:action || '',
+    message:error && error.message
+      ? error.message
+      : String(error),
+    stack:error && error.stack
+      ? String(error.stack).slice(0, 800)
+      : ''
+  };
 
 }
 
@@ -95,6 +160,14 @@ function lookupDressingBarcode_(barcode){
 
   const barcodeCol =
     headers.indexOf('barcode');
+
+  if(barcodeCol < 0){
+    return {
+      ok:false,
+      message:'missing barcode header',
+      headers:headers
+    };
+  }
 
   for(let i = 1; i < values.length; i++){
 
@@ -145,6 +218,14 @@ function saveDressingBarcode_(data){
 
   const barcodeCol =
     headers.indexOf('barcode');
+
+  if(barcodeCol < 0){
+    return {
+      ok:false,
+      message:'missing barcode header',
+      headers:headers
+    };
+  }
 
   let targetRow =
     -1;
@@ -263,10 +344,62 @@ function setupDressingBarcodeHeader_(sheet){
       .getRange(1, 1, 1, DRESSING_BARCODE_HEADERS.length)
       .setValues([DRESSING_BARCODE_HEADERS]);
 
-    sheet
-      .setFrozenRows(1);
+    return;
 
   }
+
+  const headers =
+    firstRow.map(function(value){
+      return String(value || '').trim();
+    });
+
+  const missingHeaders =
+    DRESSING_BARCODE_HEADERS.filter(function(header){
+      return headers.indexOf(header) < 0;
+    });
+
+  if(missingHeaders.length > 0){
+
+    sheet
+      .getRange(
+        1,
+        lastColumn + 1,
+        1,
+        missingHeaders.length
+      )
+      .setValues([missingHeaders]);
+
+  }
+
+}
+
+function pingDressingBarcode_(){
+
+  const sheet =
+    getDressingBarcodeSheet_();
+
+  return {
+    ok:true,
+    sheetName:sheet.getName(),
+    lastRow:sheet.getLastRow(),
+    lastColumn:sheet.getLastColumn(),
+    headers:sheet
+      .getRange(1, 1, 1, sheet.getLastColumn())
+      .getValues()[0]
+  };
+
+}
+
+function whoamiDressingBarcode_(){
+
+  return {
+    ok:true,
+    effectiveUser:Session.getEffectiveUser().getEmail(),
+    activeUser:Session.getActiveUser().getEmail(),
+    scriptTimeZone:Session.getScriptTimeZone(),
+    spreadsheetId:DRESSING_BARCODE_SHEET_ID,
+    sheetName:DRESSING_BARCODE_SHEET_NAME
+  };
 
 }
 
@@ -303,5 +436,27 @@ return lookupDressingBarcode_(barcode);
 function saveDressingBarcode(data){
 
 return saveDressingBarcode_(data);
+
+}
+
+function apiOutput_(obj, callback){
+
+  const callbackName =
+    String(callback || '').trim();
+
+  if(
+    callbackName &&
+    /^[A-Za-z_$][0-9A-Za-z_$]*(\.[A-Za-z_$][0-9A-Za-z_$]*)*$/.test(callbackName)
+  ){
+    return ContentService
+      .createTextOutput(
+        callbackName + '(' + JSON.stringify(obj) + ');'
+      )
+      .setMimeType(
+        ContentService.MimeType.JAVASCRIPT
+      );
+  }
+
+  return jsonOutput_(obj);
 
 }

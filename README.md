@@ -19,13 +19,12 @@ Ctrl + Shift + B
 之後照問題回答就好：
 
 ```text
-1. 要不要先儲存全部檔案
+1. 要不要先儲存全部檔案，預設 Y
 2. 要 push 測試版，還是 deploy 正式版
-3. 要更新 patch / minor / major
+3. 要更新 patch / minor / major / none，預設 none
 4. 要不要寫入 README 版本日誌
-   - patch 預設 N
+   - none / patch 預設 N
    - minor / major 預設 Y
-   - deploy 預設 Y
 5. 如果 README 選 Y，才會問版本日誌要寫什麼
 6. 要不要順便 push GitHub
 ```
@@ -43,8 +42,10 @@ Ctrl + Shift + B
   major → push → README 選 Y
 
 確認要上正式版：
-  patch → deploy → README 選 Y
+  none → deploy → README 選 Y
 ```
+
+none 代表不升 major / minor / patch，只更新時間戳；適合重跑 deploy 或不想讓版本號一直增加時使用。
 
 GitHub 那題：
 
@@ -106,11 +107,19 @@ v1.1.5-202605262315
 
 ---
 
+v2.6.0-202605272041
+
+更新：
+
+- 完成sheet權限釐清，修改之前正式版CSS問題
+
+---
+
 v2.5.0-202605271935
 
 更新：
 
--
+- 統一 push / deploy 更新流程與 README 版本日誌問答
 
 ---
 

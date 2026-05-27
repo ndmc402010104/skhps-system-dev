@@ -1,6 +1,7 @@
 **/**
 !appsscript.json
 !**/*.js
+!**/*.gs
 !**/*.html
 node_modules/**
 .git/**

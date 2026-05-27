@@ -370,7 +370,7 @@ const APP_ENTRY_URL =
 '<?= appEntryUrl ?>';
 
 const DRESSING_BARCODE_API =
-'https://script.google.com/macros/s/AKfycbwySlDY2aAbYpy5OSi85vHz1pk5g1FQfopcaCfVneE/dev';
+'https://script.google.com/macros/s/AKfycbwbz8pXfU68j2aFeF_AaDmmG6Vco3JsPSw-PGyYeLu0AF3vCfzaZJQFOjORnwSw8Xp4/exec';
 
 function goHome(){
 
@@ -885,15 +885,9 @@ onclick="submitUse()">
 
     }
 
-    const url =
-    DRESSING_BARCODE_API
-    +
-    '?action=lookupDressingBarcode&barcode='
-    +
-    encodeURIComponent(barcode);
-
-    return fetch(url).then(function(response){
-    return response.json();
+    return callDressingBarcodeApi({
+    action: 'lookupDressingBarcode',
+    barcode: barcode
     });
 
     }
@@ -913,24 +907,139 @@ onclick="submitUse()">
 
     }
 
-    const url =
-    DRESSING_BARCODE_API
-    +
-    '?action=saveDressingBarcode'
-    +
-    '&barcode='
-    +
-    encodeURIComponent(data.barcode)
-    +
-    '&dressingName='
-    +
-    encodeURIComponent(data.dressingName)
-    +
-    '&active=true';
-
-    return fetch(url).then(function(response){
-    return response.json();
+    return callDressingBarcodeApi({
+    action: 'saveDressingBarcode',
+    barcode: data.barcode,
+    dressingName: data.dressingName,
+    active: true
     });
+
+    }
+
+    function callDressingBarcodeApi(params){
+
+    return jsonpDressingBarcode(params);
+
+    }
+
+    function jsonpDressingBarcode(params){
+
+    return new Promise(function(resolve, reject){
+
+    const callbackName =
+    '__dressingBarcodeCallback_' +
+    Date.now() +
+    '_' +
+    Math.random().toString(36).slice(2);
+
+    const query =
+    new URLSearchParams();
+
+    Object.keys(params).forEach(function(key){
+
+    if(params[key] !== undefined && params[key] !== null){
+    query.set(key, params[key]);
+    }
+
+    });
+
+    query.set('callback', callbackName);
+
+    const script =
+    document.createElement('script');
+
+    const timer =
+    setTimeout(function(){
+
+    cleanup();
+    reject(
+    new Error('API 逾時，請檢查部署網址或 Sheet 權限')
+    );
+
+    }, 15000);
+
+    window[callbackName] = function(result){
+
+    debugDressingBarcode(
+    'response',
+    result
+    );
+
+    cleanup();
+    resolve(result);
+
+    };
+
+    script.onerror = function(){
+
+    debugDressingBarcode(
+    'script-error',
+    {
+    url: script.src,
+    callback: callbackName
+    }
+    );
+
+    cleanup();
+    reject(
+    new Error('API 載入失敗，請檢查部署網址或 Apps Script 權限')
+    );
+
+    };
+
+    script.src =
+    DRESSING_BARCODE_API +
+    '?' +
+    query.toString();
+
+    debugDressingBarcode(
+    'request',
+    {
+    url: script.src,
+    params: params,
+    callback: callbackName
+    }
+    );
+
+    document.head.appendChild(script);
+
+    function cleanup(){
+
+    clearTimeout(timer);
+
+    if(script.parentNode){
+    script.parentNode.removeChild(script);
+    }
+
+    try{
+    delete window[callbackName];
+    }
+    catch(error){
+    window[callbackName] = undefined;
+    }
+
+    }
+
+    });
+
+    }
+
+    function isDressingBarcodeDebugMode(){
+
+    return /(?:\?|&)debug=1(?:&|$)/.test(
+    window.location.search || ''
+    );
+
+    }
+
+    function debugDressingBarcode(label, data){
+
+    if(!isDressingBarcodeDebugMode()){
+    return;
+    }
+
+    console.log('[DressingBarcode]', label, data);
+    debugger;
 
     }
 

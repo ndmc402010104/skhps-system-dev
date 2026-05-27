@@ -10,6 +10,16 @@ var APP_REQUEST_ENV =
 
 function doGet(e){
 
+  if(
+    e &&
+    e.parameter &&
+    isDressingBarcodeAction_(
+      e.parameter.action
+    )
+  ){
+    return handleDressingBarcodeGet(e);
+  }
+
   APP_REQUEST_ENV =
     e &&
     e.parameter &&
@@ -117,6 +127,51 @@ function doGet(e){
   */
 
   return showFrontIndex();
+
+}
+
+function doPost(e){
+
+  let action = '';
+
+  try{
+    const data =
+      JSON.parse(
+        e &&
+        e.postData &&
+        e.postData.contents
+        ? e.postData.contents
+        : '{}'
+      );
+
+    action =
+      data.action || '';
+  }
+  catch(error){
+    action = '';
+  }
+
+  if(
+    isDressingBarcodeAction_(action)
+  ){
+    return handleDressingBarcodePost(e);
+  }
+
+  return jsonOutput_({
+    ok:false,
+    message:'unknown post action'
+  });
+
+}
+
+function isDressingBarcodeAction_(action){
+
+  return [
+    'lookupDressingBarcode',
+    'saveDressingBarcode',
+    'ping',
+    'whoami'
+  ].indexOf(action || '') >= 0;
 
 }
 

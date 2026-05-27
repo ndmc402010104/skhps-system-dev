@@ -1,4 +1,4 @@
-$ErrorActionPreference = 'Stop'
+﻿$ErrorActionPreference = 'Stop'
 
 function Invoke-Clasp {
   param(
@@ -459,7 +459,23 @@ function Update-ReadmeVersionLog {
 
   $entryLines.Add($updateText)
   $entryLines.Add('')
-  $entryLines.Add('-')
+
+  $bullets =
+    Get-ReadmeUpdateBullets `
+      -RootPath $RootPath `
+      -ReleaseType $ReleaseType `
+      -Notes $Notes
+
+  if ($bullets.Count -eq 0) {
+    $bullets = @(
+      New-ReadmeBulletText -Text '更新專案行為與支援檔案'
+    )
+  }
+
+  foreach ($bullet in $bullets) {
+    $entryLines.Add($bullet)
+  }
+
   $entryLines.Add('')
   $entryLines.Add('---')
   $entryLines.Add('')
