@@ -7,6 +7,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>敷料領用</title>
 
+<script src="https://unpkg.com/html5-qrcode"></script>
+
 <style>
 
 body{
@@ -42,17 +44,6 @@ border-bottom:1px solid #dbe4ef;
 background:rgba(248,251,255,.92);
 backdrop-filter:blur(10px);
 box-shadow:0 8px 24px rgba(15,23,42,.06);
-}
-
-.homeBtn{
-width:auto;
-padding:12px 22px;
-border-radius:8px;
-border:1px solid #d6dde7;
-background:#eef2f7;
-color:#334155;
-font-size:16px;
-cursor:pointer;
 }
 
 .brand{
@@ -284,10 +275,67 @@ margin:0;
 width:100%;
 }
 
+.dressingInputGroup{
+display:flex;
+gap:8px;
+align-items:center;
+}
+
+.dressingInputGroup .dressingName{
+flex:1;
+}
+
+.cameraBtn{
+white-space:nowrap;
+padding:7px 10px;
+}
+
 .actions{
 margin-top:14px;
 display:flex;
 gap:10px;
+}
+
+.scannerOverlay{
+display:none;
+position:fixed;
+inset:0;
+z-index:999;
+background:rgba(15,23,42,.72);
+padding:24px;
+box-sizing:border-box;
+}
+
+.scannerBox{
+max-width:520px;
+margin:60px auto;
+background:white;
+border-radius:12px;
+padding:18px;
+box-shadow:0 16px 40px rgba(15,23,42,.25);
+}
+
+.scannerTitle{
+margin:0 0 12px;
+font-size:20px;
+font-weight:800;
+}
+
+.scannerHint{
+margin:0 0 12px;
+color:#64748b;
+font-size:14px;
+line-height:1.6;
+}
+
+#scannerReader{
+width:100%;
+}
+
+.scannerActions{
+margin-top:12px;
+display:flex;
+justify-content:flex-end;
 }
 
 @media(max-width:720px){
@@ -301,6 +349,15 @@ align-items:flex-start;
 justify-content:center;
 height:88px;
 padding:0 16px;
+}
+
+.card{
+padding:18px;
+overflow-x:auto;
+}
+
+.scannerBox{
+margin:24px auto;
 }
 
 }
@@ -382,11 +439,12 @@ onclick="startUse()">
 
 <div class="actions">
 
-<button onclick="addPatientBlock()">
+<button type="button" onclick="addPatientBlock()">
 下一個病人
 </button>
 
 <button
+type="button"
 class="primary"
 onclick="submitUse()">
 
@@ -400,9 +458,31 @@ onclick="submitUse()">
 
 </div>
 
+<div id="scannerOverlay" class="scannerOverlay">
+
+<div class="scannerBox">
+
+<h3 class="scannerTitle">掃描 QR code / 條碼</h3>
+
+<p class="scannerHint">
+請將 QR code 或傳統條碼對準畫面。掃描成功後會自動填入敷料名稱。
+</p>
+
+<div id="scannerReader"></div>
+
+<div class="scannerActions">
+<button type="button" onclick="closeDressingScanner()">關閉</button>
+</div>
+
+</div>
+
+</div>
+
 <script>
 
-let patientCount=0;
+let patientCount = 0;
+let dressingScanner = null;
+let activeDressingInput = null;
 
 function startUse(){
 
@@ -410,20 +490,20 @@ document
 .getElementById(
 'formArea'
 )
-.style.display='block';
+.style.display = 'block';
 
 document
 .getElementById(
 'useDateTime'
 )
-.value=
+.value =
 new Date()
 .toLocaleString(
 'zh-TW'
 );
 
 if(
-patientCount===0
+patientCount === 0
 ){
 
 addPatientBlock();
@@ -438,15 +518,15 @@ function addPatientBlock(){
 
 patientCount++;
 
-const block=
+const block =
 document.createElement(
 'div'
 );
 
-block.className=
+block.className =
 'patientBlock';
 
-block.innerHTML=
+block.innerHTML =
 
 `
 <div class="patientTitle">
@@ -494,11 +574,12 @@ ${createRow()}
 
 <div class="actions">
 
-<button onclick="addRow(this)">
+<button type="button" onclick="addRow(this)">
 新增一列
 </button>
 
 <button
+type="button"
 class="
 danger
 deletePatient">
@@ -527,7 +608,7 @@ refreshPatientTitle();
 
 function createRow(){
 
-const id=
+const id =
 Date.now()
 +
 '_'
@@ -541,6 +622,7 @@ return `
 <td>
 
 <button
+type="button"
 class="
 danger
 deleteRow">
@@ -586,8 +668,21 @@ value="未計價">
 
 <td>
 
+<div class="dressingInputGroup">
+
 <input
 class="dressingName">
+
+<button
+type="button"
+class="cameraBtn"
+onclick="openDressingScanner(this)">
+
+📷
+
+</button>
+
+</div>
 
 </td>
 
@@ -668,6 +763,149 @@ createRow()
 
 
 
+async function openDressingScanner(button){
+
+activeDressingInput =
+button
+.closest(
+'td'
+)
+.querySelector(
+'.dressingName'
+);
+
+document
+.getElementById(
+'scannerOverlay'
+)
+.style.display =
+'block';
+
+activeDressingInput =
+button
+.closest(
+'td'
+)
+.querySelector(
+'.dressingName'
+);
+
+document
+.getElementById(
+'scannerOverlay'
+)
+.style.display =
+'block';
+
+if(
+dressingScanner
+){
+
+return;
+
+}
+
+dressingScanner =
+new Html5Qrcode(
+'scannerReader'
+);
+
+const config = {
+fps: 10,
+qrbox: {
+width: 260,
+height: 180
+},
+formatsToSupport: [
+Html5QrcodeSupportedFormats.QR_CODE,
+Html5QrcodeSupportedFormats.CODE_128,
+Html5QrcodeSupportedFormats.CODE_39,
+Html5QrcodeSupportedFormats.EAN_13,
+Html5QrcodeSupportedFormats.EAN_8,
+Html5QrcodeSupportedFormats.UPC_A,
+Html5QrcodeSupportedFormats.UPC_E
+]
+};
+
+dressingScanner
+.start(
+{
+facingMode:{
+exact:'environment'
+}
+},
+config,
+function(decodedText){
+
+if(
+activeDressingInput
+){
+
+activeDressingInput.value =
+decodedText;
+
+}
+
+closeDressingScanner();
+
+},
+function(errorMessage){
+
+}
+)
+.catch(function(err){
+
+alert(
+'無法開啟相機，請確認手機瀏覽器已允許相機權限'
+);
+
+console.log(
+err
+);
+
+});
+
+}
+
+
+
+function closeDressingScanner(){
+
+document
+.getElementById(
+'scannerOverlay'
+)
+.style.display =
+'none';
+
+if(
+dressingScanner
+){
+
+dressingScanner
+.stop()
+.then(function(){
+
+dressingScanner.clear();
+dressingScanner = null;
+
+})
+.catch(function(err){
+
+console.log(
+err
+);
+
+dressingScanner = null;
+
+});
+
+}
+
+}
+
+
+
 document
 .addEventListener(
 'click',
@@ -682,13 +920,13 @@ e.target
 )
 ){
 
-const tbody=
+const tbody =
 e.target.closest(
 'tbody'
 );
 
 if(
-tbody.rows.length<=1
+tbody.rows.length <= 1
 ){
 
 alert(
@@ -722,7 +960,7 @@ document
 .querySelectorAll(
 '.patientBlock'
 )
-.length<=1
+.length <= 1
 ){
 
 alert(
@@ -762,11 +1000,11 @@ el,
 i
 ){
 
-el.innerText=
+el.innerText =
 '病人 '
 +
 (
-i+1
+i + 1
 );
 
 }
