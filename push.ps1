@@ -322,6 +322,17 @@ $appConfig =
     -Version $version `
     -DefaultEnv $defaultEnv
 
+# 自動更新 DressingFront.html 中的 GitHub 版號
+$dressingFrontPath = Join-Path $rootPath '敷料領用登錄系統\DressingFront.html'
+if (Test-Path -LiteralPath $dressingFrontPath) {
+  $dfContent = Get-Content -Path $dressingFrontPath -Raw -Encoding UTF8
+  $dfNewContent = [regex]::Replace($dfContent, '(<span[^>]*>GitHub 版</span>\s*<span>v\.)[^<]+(</span>)', "`${1}$($appConfig.Version)`$2")
+  if ($dfContent -cne $dfNewContent) {
+    Set-Content -Path $dressingFrontPath -Value $dfNewContent -Encoding UTF8
+    Write-Host "Updated GitHub version in DressingFront.html to v.$($appConfig.Version)" -ForegroundColor Green
+  }
+}
+
 if ($writeReadme) {
   $releaseType = if ($Action -eq 'deploy') { 'prod' } else { 'dev' }
 
