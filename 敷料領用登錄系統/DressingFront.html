@@ -369,6 +369,9 @@ margin:24px auto;
 const APP_ENTRY_URL =
 '<?= appEntryUrl ?>';
 
+const DRESSING_BARCODE_API =
+APP_ENTRY_URL;
+
 function goHome(){
 
 window.top.location.href =
@@ -841,8 +844,11 @@ if(
 activeDressingInput
 ){
 
-activeDressingInput.value =
-decodedText;
+handleScannedBarcode(
+decodedText
+);
+
+closeDressingScanner();
 
 }
 
@@ -1014,6 +1020,110 @@ i + 1
 }
 
 
+
+async function handleScannedBarcode(
+barcode
+){
+
+try{
+
+const response =
+await fetch(
+DRESSING_BARCODE_API,
+{
+method:'POST',
+
+body:
+JSON.stringify({
+
+action:
+'lookupDressingBarcode',
+
+barcode
+
+})
+
+}
+);
+
+const result =
+await response.json();
+
+if(
+result.found
+){
+
+activeDressingInput.value =
+result.data.dressingName;
+
+alert(
+'找到：'
++
+result.data.dressingName
+);
+
+return;
+
+}
+
+const name =
+prompt(
+'新敷料，請輸入名稱',
+barcode
+);
+
+if(
+!name){
+
+return;
+
+}
+
+await fetch(
+DRESSING_BARCODE_API,
+{
+method:'POST',
+
+body:
+JSON.stringify({
+
+action:
+'saveDressingBarcode',
+
+barcode,
+
+dressingName:
+name,
+
+active:
+true
+
+})
+
+}
+);
+
+activeDressingInput.value =
+name;
+
+alert(
+'已建立'
+);
+
+}
+catch(err){
+
+console.log(
+err
+);
+
+alert(
+'查詢失敗'
+);
+
+}
+
+}
 
 function submitUse(){
 
