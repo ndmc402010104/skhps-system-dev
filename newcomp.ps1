@@ -1,228 +1,242 @@
-$ErrorActionPreference='Stop'
+$ErrorActionPreference = 'Stop'
 
 Clear-Host
 
 Write-Host ""
 Write-Host "==================================" -ForegroundColor Cyan
-Write-Host " 新電腦初始化工具 v2" -ForegroundColor Cyan
+Write-Host " 新電腦初始化工具 v3" -ForegroundColor Cyan
 Write-Host "==================================" -ForegroundColor Cyan
 Write-Host ""
 
-$paths=@(
-"C:\Program Files\Git\cmd",
-"C:\Program Files\nodejs",
-"$env:APPDATA\npm"
+$paths = @(
+  "C:\Program Files\Git\cmd",
+  "C:\Program Files\nodejs",
+  "$env:APPDATA\npm"
 )
 
-Write-Host "修正 PATH..." -ForegroundColor Yellow
+Write-Host "修正目前 PowerShell PATH..." -ForegroundColor Yellow
 
 foreach($path in $paths){
 
-if(
-(Test-Path $path) -and
-($env:Path -notlike "*$path*")
-){
+  if((Test-Path $path) -and ($env:Path -notlike "*$path*")){
 
-$env:Path+=";$path"
+    $env:Path += ";$path"
+    Write-Host "已加入：$path" -ForegroundColor Green
 
-Write-Host "✓ $path"
+  }
 
 }
 
-}
+function Test-CommandExists{
 
-function Exists{
+  param(
+    [string]$Command
+  )
 
-param(
-[string]$cmd
-)
-
-return $null -ne (
-Get-Command $cmd -ErrorAction SilentlyContinue
-)
+  return $null -ne (
+    Get-Command $Command -ErrorAction SilentlyContinue
+  )
 
 }
 
-function AskInstall{
+function Ask-YesNo{
 
-param(
-[string]$name
-)
+  param(
+    [string]$Message
+  )
 
-while($true){
+  while($true){
 
-$ans=
-Read-Host "安裝 $name ? (Y/N)"
+    $answer = Read-Host "$Message (Y/N)"
 
-if($ans -match '^[Yy]'){
-return $true
-}
+    if($answer -match '^[Yy]'){
+      return $true
+    }
 
-if($ans -match '^[Nn]'){
-return $false
-}
+    if($answer -match '^[Nn]'){
+      return $false
+    }
 
-}
+  }
 
 }
 
 Write-Host ""
 Write-Host "=== 工具檢查 ===" -ForegroundColor Cyan
 
-if(
-Exists "git"
-){
-
 Write-Host ""
-Write-Host "Git ✓"
+Write-Host "1. Git"
 
-git --version
+if(Test-CommandExists "git"){
 
-}
-else{
+  git --version
 
-Write-Host ""
-Write-Host "Git ✗"
+}else{
 
-Write-Host ""
-Write-Host "請安裝："
-Write-Host "https://git-scm.com"
-
-}
-
-if(
-Exists "node"
-){
-
-Write-Host ""
-Write-Host "Node ✓"
-
-node -v
-
-}
-else{
-
-Write-Host ""
-Write-Host "Node ✗"
-
-Write-Host ""
-Write-Host "請安裝 Node.js LTS"
-
-}
-
-if(
-Exists "npm"
-){
-
-Write-Host ""
-Write-Host "npm ✓"
-
-npm -v
-
-}
-else{
-
-Write-Host ""
-Write-Host "npm ✗"
-
-}
-
-if(
-Exists "clasp"
-){
-
-Write-Host ""
-Write-Host "clasp ✓"
-
-clasp -v
-
-}
-else{
-
-Write-Host ""
-
-if(
-Exists "npm"
-){
-
-if(
-AskInstall "clasp"
-){
-
-npm install -g @google/clasp
-
-Write-Host ""
-Write-Host "clasp 安裝完成"
-
-}
-
-}
-else{
-
-Write-Host "缺 npm"
-
-}
+  Write-Host "找不到 Git，請先安裝 Git for Windows" -ForegroundColor Red
+  Write-Host "https://git-scm.com" -ForegroundColor Yellow
 
 }
 
 Write-Host ""
-Write-Host "=== Repo ===" -ForegroundColor Cyan
+Write-Host "2. Node.js"
 
-if(
-Exists "git"
-){
+if(Test-CommandExists "node"){
 
-try{
+  node -v
 
-git status
+}else{
 
-}
-catch{
-
-Write-Host "不是 Git Repo"
-
-}
+  Write-Host "找不到 Node.js，請安裝 Node.js LTS" -ForegroundColor Red
+  Write-Host "https://nodejs.org" -ForegroundColor Yellow
 
 }
 
 Write-Host ""
-Write-Host "=== Apps Script ===" -ForegroundColor Cyan
+Write-Host "3. npm"
 
-if(
-Exists "clasp"
-){
+if(Test-CommandExists "npm"){
 
-try{
+  npm -v
 
-clasp status
+}else{
+
+  Write-Host "找不到 npm，通常安裝 Node.js LTS 會一起安裝" -ForegroundColor Red
 
 }
-catch{
 
 Write-Host ""
-Write-Host "尚未登入"
+Write-Host "4. clasp"
 
-if(
-AskInstall "登入 clasp"
-){
+if(Test-CommandExists "clasp"){
 
-clasp login
+  clasp -v
+
+}else{
+
+  Write-Host "找不到 clasp" -ForegroundColor Yellow
+
+  if(Test-CommandExists "npm"){
+
+    if(Ask-YesNo "是否安裝 @google/clasp"){
+
+      npm install -g @google/clasp
+
+      Write-Host ""
+      Write-Host "clasp 安裝完成" -ForegroundColor Green
+
+    }
+
+  }else{
+
+    Write-Host "缺少 npm，無法安裝 clasp" -ForegroundColor Red
+
+  }
 
 }
 
+Write-Host ""
+Write-Host "=== Git Repo 檢查 ===" -ForegroundColor Cyan
+
+if(Test-CommandExists "git"){
+
+  try{
+
+    git status
+
+  }catch{
+
+    Write-Host "目前資料夾不是 Git Repo，或 Git 尚未初始化" -ForegroundColor Yellow
+
+  }
+
 }
+
+Write-Host ""
+Write-Host "=== Git 使用者設定 ===" -ForegroundColor Cyan
+
+$gitName =
+git config --global user.name
+
+$gitEmail =
+git config --global user.email
+
+if(!$gitName){
+
+  git config --global user.name "益昇 石"
+
+  Write-Host "已設定 git user.name：益昇 石" -ForegroundColor Green
+
+}else{
+
+  Write-Host "git user.name：$gitName"
+
+}
+
+if(!$gitEmail){
+
+  git config --global user.email "ndmc402010104@gmail.com"
+
+  Write-Host "已設定 git user.email：ndmc402010104@gmail.com" -ForegroundColor Green
+
+}else{
+
+  Write-Host "git user.email：$gitEmail"
+
+}
+
+$claspRc =
+Join-Path $env:USERPROFILE ".clasprc.json"
+Write-Host ""
+Write-Host "=== Apps Script / clasp 檢查 ===" -ForegroundColor Cyan
+
+$claspRc =
+Join-Path $env:USERPROFILE ".clasprc.json"
+
+if(Test-CommandExists "clasp"){
+
+  if(!(Test-Path $claspRc)){
+
+    Write-Host ""
+    Write-Host "找不到 clasp 登入憑證：$claspRc" -ForegroundColor Yellow
+
+    if(Ask-YesNo "是否現在登入 Google Apps Script"){
+
+      clasp login
+
+    }
+
+  }
+
+  Write-Host ""
+  Write-Host "重新確認 clasp 狀態..." -ForegroundColor Cyan
+
+  try{
+
+    clasp status
+
+    Write-Host ""
+    Write-Host "clasp 可用" -ForegroundColor Green
+
+  }catch{
+
+    Write-Host ""
+    Write-Host "clasp 仍不可用，請手動執行：" -ForegroundColor Red
+    Write-Host "clasp login" -ForegroundColor Green
+
+  }
+
+}else{
+
+  Write-Host "找不到 clasp，略過 Apps Script 檢查" -ForegroundColor Yellow
 
 }
 
 Write-Host ""
 Write-Host "==================================" -ForegroundColor Green
-Write-Host "完成"
+Write-Host " 新電腦初始化完成" -ForegroundColor Green
 Write-Host "==================================" -ForegroundColor Green
-Write-Host ""
-
-Write-Host "下一步："
 
 Write-Host ""
+Write-Host "下一步可以執行：" -ForegroundColor Cyan
 Write-Host ".\push.ps1 -Bump patch" -ForegroundColor Green
-
-Write-Host ""
