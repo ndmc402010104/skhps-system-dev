@@ -323,7 +323,7 @@ gap: 10px;
 width: 100%;
 border-collapse: collapse;
 margin-top: 10px;
-table-layout: auto;
+table-layout: fixed;
 }
 .dictTable th, .dictTable td {
 border: 1px solid #dbe4ef;
@@ -538,12 +538,12 @@ onclick="submitUse()">
 <table class="dictTable" id="dictTable">
 <thead>
 <tr>
-<th style="width:130px;">條碼</th>
+<th style="width:110px;">條碼</th>
 <th>敷料名稱</th>
-<th style="width:120px;">規格/Size</th>
-<th style="width:100px;">料號</th>
-<th style="width:90px;">狀態</th>
-<th style="width:140px;">操作</th>
+<th style="width:90px;">規格</th>
+<th style="width:130px;">料號</th>
+<th style="width:80px;">狀態</th>
+<th style="width:130px;">操作</th>
 </tr>
 </thead>
 <tbody id="dictTbody">
@@ -1542,7 +1542,7 @@ if (window.location.hostname.includes('github.io')) {
   ghFooter.innerHTML = `
     <div style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">
       <span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>
-      <span>v.2.10.4-202605280247</span>
+      <span>v.2.10.5-202605280250</span>
     </div>
   `;
   document.body.appendChild(ghFooter);
