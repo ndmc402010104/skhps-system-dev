@@ -222,6 +222,11 @@ h1{
   background:var(--softMint);
 }
 
+.entryButton.github .entryIcon{
+color:#24292f;
+background:#f3f4f6;
+}
+
 .entryButton.secondary .entryIcon{
   color:var(--amber);
   background:var(--softAmber);
@@ -325,6 +330,15 @@ function goDressingFront(){
 
 }
 
+function goGithubHome(){
+
+window.open(
+'https://ndmc402010104.github.io/plastic-surgery-department-system/',
+'_blank'
+);
+
+}
+
 </script>
 
 </head>
@@ -405,6 +419,41 @@ onclick="goDressingFront()"
     <span class="entryDesc">進入 dressingFront，登錄病人敷料領用資料。</span>
   </span>
   <span class="arrow">›</span>
+</button>
+
+<button
+class="entryButton github"
+onclick="goGithubHome()"
+>
+
+<span class="entryIcon">
+
+GH
+
+</span>
+
+<span>
+
+<span class="entryTitle">
+
+GitHub 首頁（測試）
+
+</span>
+
+<span class="entryDesc">
+
+開啟 GitHub Pages 首頁，測試手機版與相機功能。
+
+</span>
+
+</span>
+
+<span class="arrow">
+
+↗
+
+</span>
+
 </button>
 
 </div>
