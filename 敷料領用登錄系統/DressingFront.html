@@ -421,6 +421,24 @@ onclick="startUse()">
 
 </button>
 
+<button
+type="button"
+class="primary"
+onclick="openBarcodeLookup()"
+style="margin-left:10px;">
+
+敷料查詢 📷
+
+</button>
+
+<div
+id="barcodeLookupResult"
+style="margin-top:14px;color:#475569;font-size:15px;">
+
+尚未查詢敷料
+
+</div>
+
 <div id="formArea">
 
 <div class="infoRow">
@@ -482,659 +500,340 @@ onclick="submitUse()">
 </div>
 
 <script>
+    let patientCount = 0;
+    let dressingScanner = null;
+    let activeDressingInput = null;
+    let scannerMode = '';
 
-let patientCount = 0;
-let dressingScanner = null;
-let activeDressingInput = null;
+    function openBarcodeLookup(){
 
-function startUse(){
+    scannerMode = 'lookup';
+    activeDressingInput = null;
 
-document
-.getElementById(
-'formArea'
-)
-.style.display = 'block';
+    document.getElementById('barcodeLookupResult').innerText =
+    '正在開啟相機掃描敷料條碼...';
 
-document
-.getElementById(
-'useDateTime'
-)
-.value =
-new Date()
-.toLocaleString(
-'zh-TW'
-);
+    document.getElementById('scannerOverlay').style.display =
+    'block';
 
-if(
-patientCount === 0
-){
+    startDressingScanner();
 
-addPatientBlock();
+    }
 
-}
+    function startUse(){
 
-}
+    document.getElementById('formArea').style.display = 'block';
 
+    document.getElementById('useDateTime').value =
+    new Date().toLocaleString('zh-TW');
 
+    if(patientCount === 0){
+    addPatientBlock();
+    }
 
-function addPatientBlock(){
+    }
 
-patientCount++;
+    function addPatientBlock(){
 
-const block =
-document.createElement(
-'div'
-);
+    patientCount++;
 
-block.className =
-'patientBlock';
+    const block = document.createElement('div');
+    block.className = 'patientBlock';
 
-block.innerHTML =
+    block.innerHTML =
+    `
+    <div class="patientTitle">病人 ${patientCount}</div>
 
-`
-<div class="patientTitle">
+    <div class="infoRow">
+    <label>病歷號：</label>
+    <input class="patientId">
+    </div>
 
-病人 ${patientCount}
+    <table>
+    <thead>
+    <tr>
+    <th>操作</th>
+    <th>計價狀態</th>
+    <th>敷料名稱</th>
+    <th>數量</th>
+    <th>支付類別</th>
+    <th>主治醫師</th>
+    </tr>
+    </thead>
 
-</div>
+    <tbody class="dressingRows">
+    ${createRow()}
+    </tbody>
+    </table>
 
-<div class="infoRow">
+    <div class="actions">
 
-<label>
+    <button type="button" onclick="addRow(this)">
+    新增一列
+    </button>
 
-病歷號：
+    <button type="button" class="danger deletePatient">
+    刪除病人
+    </button>
 
-</label>
+    </div>
+    `;
 
-<input class="patientId">
+    document.getElementById('patientArea').appendChild(block);
 
-</div>
+    refreshPatientTitle();
 
-<table>
+    }
 
-<thead>
+    function createRow(){
 
-<tr>
+    const id =
+    Date.now() + '_' + Math.random();
 
-<th>操作</th>
-<th>計價狀態</th>
-<th>敷料名稱</th>
-<th>數量</th>
-<th>支付類別</th>
-<th>主治醫師</th>
+    return `
+    <tr>
 
-</tr>
+    <td>
+    <button type="button" class="danger deleteRow">
+    刪除
+    </button>
+    </td>
 
-</thead>
+    <td>
+    <div class="radioGroup">
 
-<tbody class="dressingRows">
+    <label>
+    <input type="radio" name="charge_${id}" value="已計價">
+    已計價
+    </label>
 
-${createRow()}
+    <label>
+    <input type="radio" name="charge_${id}" checked value="未計價">
+    未計價
+    </label>
 
-</tbody>
+    </div>
+    </td>
 
-</table>
+    <td>
+    <div class="dressingInputGroup">
+
+    <input class="dressingName">
 
-<div class="actions">
+    <button
+    type="button"
+    class="cameraBtn"
+    onclick="openDressingScanner(this)">
+    📷
+    </button>
 
-<button type="button" onclick="addRow(this)">
-新增一列
-</button>
+    </div>
+    </td>
 
-<button
-type="button"
-class="
-danger
-deletePatient">
+    <td>
+    <input class="quantity" type="number" value="1" min="1">
+    </td>
 
-刪除病人
+    <td>
+    <div class="radioGroup">
 
-</button>
+    <label>
+    <input type="radio" name="pay_${id}" value="健保">
+    健保
+    </label>
 
-</div>
+    <label>
+    <input type="radio" name="pay_${id}" checked value="自費">
+    自費
+    </label>
 
-`;
+    </div>
+    </td>
 
-document
-.getElementById(
-'patientArea'
-)
-.appendChild(
-block
-);
+    <td>
+    <input class="doctorName">
+    </td>
 
-refreshPatientTitle();
+    </tr>
+    `;
 
-}
+    }
 
+    function addRow(button){
 
+    button
+    .closest('.patientBlock')
+    .querySelector('.dressingRows')
+    .insertAdjacentHTML('beforeend', createRow());
 
-function createRow(){
+    }
 
-const id =
-Date.now()
-+
-'_'
-+
-Math.random();
+    function openDressingScanner(button){
 
-return `
+    scannerMode = 'row';
 
-<tr>
+    activeDressingInput =
+    button.closest('td').querySelector('.dressingName');
 
-<td>
+    document.getElementById('scannerOverlay').style.display =
+    'block';
 
-<button
-type="button"
-class="
-danger
-deleteRow">
+    startDressingScanner();
 
-刪除
+    }
 
-</button>
+    function startDressingScanner(){
 
-</td>
+    if(dressingScanner){
+    return;
+    }
 
+    dressingScanner =
+    new Html5Qrcode('scannerReader');
 
-<td>
+    const config = {
+    fps: 10,
+    qrbox: {
+    width: 260,
+    height: 180
+    },
+    formatsToSupport: [
+    Html5QrcodeSupportedFormats.QR_CODE,
+    Html5QrcodeSupportedFormats.CODE_128,
+    Html5QrcodeSupportedFormats.CODE_39,
+    Html5QrcodeSupportedFormats.EAN_13,
+    Html5QrcodeSupportedFormats.EAN_8,
+    Html5QrcodeSupportedFormats.UPC_A,
+    Html5QrcodeSupportedFormats.UPC_E
+    ]
+    };
 
-<div class="radioGroup">
+    dressingScanner
+    .start(
+    {
+    facingMode: {
+    exact: 'environment'
+    }
+    },
+    config,
+    function(decodedText){
 
-<label>
+    handleBarcodeScanResult(decodedText);
 
-<input
-type="radio"
-name="charge_${id}"
-value="已計價">
+    closeDressingScanner();
 
-已計價
+    },
+    function(errorMessage){}
+    )
+    .catch(function(err){
 
-</label>
+    console.log(err);
 
-<label>
+    alert(
+    '無法開啟相機，請確認手機瀏覽器已允許相機權限'
+    );
 
-<input
-type="radio"
-name="charge_${id}"
-checked
-value="未計價">
+    });
 
-未計價
+    }
 
-</label>
+    function closeDressingScanner(){
 
-</div>
+    document.getElementById('scannerOverlay').style.display =
+    'none';
 
-</td>
+    if(dressingScanner){
 
+    dressingScanner
+    .stop()
+    .then(function(){
 
-<td>
+    dressingScanner.clear();
+    dressingScanner = null;
 
-<div class="dressingInputGroup">
+    })
+    .catch(function(err){
 
-<input
-class="dressingName">
+    console.log(err);
+    dressingScanner = null;
 
-<button
-type="button"
-class="cameraBtn"
-onclick="openDressingScanner(this)">
+    });
 
-📷
+    }
 
-</button>
+    }
 
-</div>
+    async function handleBarcodeScanResult(barcode){
 
-</td>
+    if(scannerMode === 'lookup'){
 
+    document.getElementById('barcodeLookupResult').innerText =
+    '掃描結果：' + barcode + '，查詢功能下一步接 Sheet';
 
-<td>
+    return;
 
-<input
-class="quantity"
-type="number"
-value="1"
-min="1">
+    }
 
-</td>
+    if(scannerMode === 'row'){
 
+    if(activeDressingInput){
+    activeDressingInput.value = barcode;
+    }
 
-<td>
+    }
 
-<div class="radioGroup">
+    }
 
-<label>
+    document.addEventListener('click', function(e){
 
-<input
-type="radio"
-name="pay_${id}"
-value="健保">
+    if(e.target.classList.contains('deleteRow')){
 
-健保
+    const tbody =
+    e.target.closest('tbody');
 
-</label>
+    if(tbody.rows.length <= 1){
+    alert('至少保留一列');
+    return;
+    }
 
-<label>
+    e.target.closest('tr').remove();
 
-<input
-type="radio"
-name="pay_${id}"
-checked
-value="自費">
+    }
 
-自費
+    if(e.target.classList.contains('deletePatient')){
 
-</label>
+    if(document.querySelectorAll('.patientBlock').length <= 1){
+    alert('至少保留一位病人');
+    return;
+    }
 
-</div>
+    e.target.closest('.patientBlock').remove();
 
-</td>
+    refreshPatientTitle();
 
+    }
 
-<td>
+    });
 
-<input
-class="doctorName">
+    function refreshPatientTitle(){
 
-</td>
+    document
+    .querySelectorAll('.patientTitle')
+    .forEach(function(el, i){
 
-</tr>
+    el.innerText =
+    '病人 ' + (i + 1);
 
-`;
+    });
 
-}
+    }
 
+    function submitUse(){
 
+    alert('下一步接 Sheet');
 
-function addRow(button){
-
-button
-.closest(
-'.patientBlock'
-)
-.querySelector(
-'.dressingRows'
-)
-.insertAdjacentHTML(
-'beforeend',
-createRow()
-);
-
-}
-
-
-
-async function openDressingScanner(button){
-
-activeDressingInput =
-button
-.closest(
-'td'
-)
-.querySelector(
-'.dressingName'
-);
-
-document
-.getElementById(
-'scannerOverlay'
-)
-.style.display =
-'block';
-
-activeDressingInput =
-button
-.closest(
-'td'
-)
-.querySelector(
-'.dressingName'
-);
-
-document
-.getElementById(
-'scannerOverlay'
-)
-.style.display =
-'block';
-
-if(
-dressingScanner
-){
-
-return;
-
-}
-
-dressingScanner =
-new Html5Qrcode(
-'scannerReader'
-);
-
-const config = {
-fps: 10,
-qrbox: {
-width: 260,
-height: 180
-},
-formatsToSupport: [
-Html5QrcodeSupportedFormats.QR_CODE,
-Html5QrcodeSupportedFormats.CODE_128,
-Html5QrcodeSupportedFormats.CODE_39,
-Html5QrcodeSupportedFormats.EAN_13,
-Html5QrcodeSupportedFormats.EAN_8,
-Html5QrcodeSupportedFormats.UPC_A,
-Html5QrcodeSupportedFormats.UPC_E
-]
-};
-
-dressingScanner
-.start(
-{
-facingMode:{
-exact:'environment'
-}
-},
-config,
-function(decodedText){
-
-if(
-activeDressingInput
-){
-
-handleScannedBarcode(
-decodedText
-);
-
-closeDressingScanner();
-
-}
-
-closeDressingScanner();
-
-},
-function(errorMessage){
-
-}
-)
-.catch(function(err){
-
-alert(
-'無法開啟相機，請確認手機瀏覽器已允許相機權限'
-);
-
-console.log(
-err
-);
-
-});
-
-}
-
-
-
-function closeDressingScanner(){
-
-document
-.getElementById(
-'scannerOverlay'
-)
-.style.display =
-'none';
-
-if(
-dressingScanner
-){
-
-dressingScanner
-.stop()
-.then(function(){
-
-dressingScanner.clear();
-dressingScanner = null;
-
-})
-.catch(function(err){
-
-console.log(
-err
-);
-
-dressingScanner = null;
-
-});
-
-}
-
-}
-
-
-
-document
-.addEventListener(
-'click',
-
-function(e){
-
-if(
-e.target
-.classList
-.contains(
-'deleteRow'
-)
-){
-
-const tbody =
-e.target.closest(
-'tbody'
-);
-
-if(
-tbody.rows.length <= 1
-){
-
-alert(
-'至少保留一列'
-);
-
-return;
-
-}
-
-e.target
-.closest(
-'tr'
-)
-.remove();
-
-}
-
-
-
-if(
-e.target
-.classList
-.contains(
-'deletePatient'
-)
-){
-
-if(
-document
-.querySelectorAll(
-'.patientBlock'
-)
-.length <= 1
-){
-
-alert(
-'至少保留一位病人'
-);
-
-return;
-
-}
-
-e.target
-.closest(
-'.patientBlock'
-)
-.remove();
-
-refreshPatientTitle();
-
-}
-
-}
-
-);
-
-
-
-function refreshPatientTitle(){
-
-document
-.querySelectorAll(
-'.patientTitle'
-)
-.forEach(
-
-function(
-el,
-i
-){
-
-el.innerText =
-'病人 '
-+
-(
-i + 1
-);
-
-}
-
-);
-
-}
-
-
-
-async function handleScannedBarcode(
-barcode
-){
-
-try{
-
-const response =
-await fetch(
-DRESSING_BARCODE_API,
-{
-method:'POST',
-
-body:
-JSON.stringify({
-
-action:
-'lookupDressingBarcode',
-
-barcode
-
-})
-
-}
-);
-
-const result =
-await response.json();
-
-if(
-result.found
-){
-
-activeDressingInput.value =
-result.data.dressingName;
-
-alert(
-'找到：'
-+
-result.data.dressingName
-);
-
-return;
-
-}
-
-const name =
-prompt(
-'新敷料，請輸入名稱',
-barcode
-);
-
-if(
-!name){
-
-return;
-
-}
-
-await fetch(
-DRESSING_BARCODE_API,
-{
-method:'POST',
-
-body:
-JSON.stringify({
-
-action:
-'saveDressingBarcode',
-
-barcode,
-
-dressingName:
-name,
-
-active:
-true
-
-})
-
-}
-);
-
-activeDressingInput.value =
-name;
-
-alert(
-'已建立'
-);
-
-}
-catch(err){
-
-console.log(
-err
-);
-
-alert(
-'查詢失敗'
-);
-
-}
-
-}
-
-function submitUse(){
-
-alert(
-'下一步接 Sheet'
-);
-
-}
-
+    }    
 </script>
-
 </main>
 
 <?!= versionBadgeHtml ?>
