@@ -5,18 +5,9 @@ const DRESSING_BARCODE_SHEET_NAME =
 '工作表1';
 
 const DRESSING_BARCODE_HEADERS = [
-  'createdAt',
-  'updatedAt',
   'barcode',
   'dressingName',
-  'size',
-  'sortOrder',
-  'materialCode',
-  'payType',
-  'vendor',
-  'note',
-  'active',
-  'updatedBy'
+  'size'
 ];
 
 function handleDressingBarcodeGet(e){
@@ -29,55 +20,55 @@ function handleDressingBarcodeGet(e){
 
   try{
 
-  if(action === 'lookupDressingBarcode'){
+    if(action === 'lookupDressingBarcode'){
+      return apiOutput_(
+        lookupDressingBarcode_(data.barcode),
+        data.callback
+      );
+    }
+
+    if(action === 'ping'){
+      return apiOutput_(
+        pingDressingBarcode_(),
+        data.callback
+      );
+    }
+
+    if(action === 'whoami'){
+      return apiOutput_(
+        whoamiDressingBarcode_(),
+        data.callback
+      );
+    }
+
+    if(action === 'saveDressingBarcode'){
+      return apiOutput_(
+        saveDressingBarcode_(data),
+        data.callback
+      );
+    }
+
+    if(action === 'listDressingBarcode'){
+      return apiOutput_(
+        listDressingBarcode_(),
+        data.callback
+      );
+    }
+
+    if(action === 'reorderDressingBarcode'){
+      return apiOutput_(
+        reorderDressingBarcode_(data),
+        data.callback
+      );
+    }
+
     return apiOutput_(
-      lookupDressingBarcode_(data.barcode),
+      {
+        ok:false,
+        message:'unknown action'
+      },
       data.callback
     );
-  }
-
-  if(action === 'ping'){
-    return apiOutput_(
-      pingDressingBarcode_(),
-      data.callback
-    );
-  }
-
-  if(action === 'whoami'){
-    return apiOutput_(
-      whoamiDressingBarcode_(),
-      data.callback
-    );
-  }
-
-  if(action === 'saveDressingBarcode'){
-    return apiOutput_(
-      saveDressingBarcode_(data),
-      data.callback
-    );
-  }
-
-  if(action === 'listDressingBarcode'){
-    return apiOutput_(
-      listDressingBarcode_(),
-      data.callback
-    );
-  }
-
-  if(action === 'reorderDressingBarcode'){
-    return apiOutput_(
-      reorderDressingBarcode_(data),
-      data.callback
-    );
-  }
-
-  return apiOutput_(
-    {
-      ok:false,
-      message:'unknown action'
-    },
-    data.callback
-  );
 
   }
   catch(error){
@@ -99,46 +90,46 @@ function handleDressingBarcodePost(e){
 
   try{
 
-  if(action === 'lookupDressingBarcode'){
-    return jsonOutput_(
-      lookupDressingBarcode_(data.barcode)
-    );
-  }
+    if(action === 'lookupDressingBarcode'){
+      return jsonOutput_(
+        lookupDressingBarcode_(data.barcode)
+      );
+    }
 
-  if(action === 'ping'){
-    return jsonOutput_(
-      pingDressingBarcode_()
-    );
-  }
+    if(action === 'ping'){
+      return jsonOutput_(
+        pingDressingBarcode_()
+      );
+    }
 
-  if(action === 'whoami'){
-    return jsonOutput_(
-      whoamiDressingBarcode_()
-    );
-  }
+    if(action === 'whoami'){
+      return jsonOutput_(
+        whoamiDressingBarcode_()
+      );
+    }
 
-  if(action === 'saveDressingBarcode'){
-    return jsonOutput_(
-      saveDressingBarcode_(data)
-    );
-  }
+    if(action === 'saveDressingBarcode'){
+      return jsonOutput_(
+        saveDressingBarcode_(data)
+      );
+    }
 
-  if(action === 'listDressingBarcode'){
-    return jsonOutput_(
-      listDressingBarcode_()
-    );
-  }
+    if(action === 'listDressingBarcode'){
+      return jsonOutput_(
+        listDressingBarcode_()
+      );
+    }
 
-  if(action === 'reorderDressingBarcode'){
-    return jsonOutput_(
-      reorderDressingBarcode_(data)
-    );
-  }
+    if(action === 'reorderDressingBarcode'){
+      return jsonOutput_(
+        reorderDressingBarcode_(data)
+      );
+    }
 
-  return jsonOutput_({
-    ok:false,
-    message:'unknown action'
-  });
+    return jsonOutput_({
+      ok:false,
+      message:'unknown action'
+    });
 
   }
   catch(error){
@@ -182,6 +173,18 @@ function lookupDressingBarcode_(barcode){
   const values =
     sheet.getDataRange().getValues();
 
+  if(values.length <= 1){
+    return {
+      ok:true,
+      found:false,
+      data:{
+        barcode:code,
+        dressingName:'',
+        size:''
+      }
+    };
+  }
+
   const headers =
     values[0];
 
@@ -199,14 +202,12 @@ function lookupDressingBarcode_(barcode){
   for(let i = 1; i < values.length; i++){
 
     if(String(values[i][barcodeCol]).trim() === code){
-
       return {
         ok:true,
         found:true,
         row:i + 1,
         data:rowToObject_(headers, values[i])
       };
-
     }
 
   }
@@ -216,7 +217,8 @@ function lookupDressingBarcode_(barcode){
     found:false,
     data:{
       barcode:code,
-      active:true
+      dressingName:'',
+      size:''
     }
   };
 
@@ -254,50 +256,27 @@ function saveDressingBarcode_(data){
     };
   }
 
-  let targetRow =
-    -1;
+  let targetRow = -1;
 
   for(let i = 1; i < values.length; i++){
-
     if(String(values[i][barcodeCol]).trim() === barcode){
       targetRow = i + 1;
       break;
     }
-
   }
 
-  const now =
-    new Date();
-
   const rowData = {
-    createdAt: now,
-    updatedAt: now,
     barcode: barcode,
     dressingName: data.dressingName || '',
-    size: data.size || '',
-    materialCode: data.materialCode || '',
-    payType: data.payType || '',
-    vendor: data.vendor || '',
-    note: data.note || '',
-    active: data.active === false ? false : true,
-    updatedBy: data.updatedBy || ''
+    size: data.size || ''
   };
 
+  const row =
+    headers.map(function(header){
+      return rowData[header] !== undefined ? rowData[header] : '';
+    });
+
   if(targetRow > 0){
-
-    const oldCreatedAt =
-      sheet
-        .getRange(targetRow, headers.indexOf('createdAt') + 1)
-        .getValue();
-
-    rowData.createdAt =
-      oldCreatedAt || now;
-
-    const row =
-      headers.map(function(header){
-        return rowData[header];
-      });
-
     sheet
       .getRange(targetRow, 1, 1, headers.length)
       .setValues([row]);
@@ -308,15 +287,9 @@ function saveDressingBarcode_(data){
       row:targetRow,
       data:rowData
     };
-
   }
 
-  const newRow =
-    headers.map(function(header){
-      return rowData[header];
-    });
-
-  sheet.appendRow(newRow);
+  sheet.appendRow(row);
 
   return {
     ok:true,
@@ -328,71 +301,77 @@ function saveDressingBarcode_(data){
 }
 
 function listDressingBarcode_(){
-  try{
-    const sheet = getDressingBarcodeSheet_();
-    const values = sheet.getDataRange().getValues();
-    if (values.length <= 1) {
-      return { ok: true, data: [] };
-    }
-    const headers = values[0];
-    const barcodeCol = headers.indexOf('barcode');
-    if (barcodeCol < 0) throw new Error('missing barcode header');
 
-    let list = [];
-    for(let i = 1; i < values.length; i++){
-      const bc = String(values[i][barcodeCol]).trim();
-      if(bc){
-        const obj = rowToObject_(headers, values[i]);
-        obj.rowIndex = i + 1;
-        // 如果沒有排序值，預設給一個很大的數字讓它排在最後面
-        obj.sortOrderNum = obj.sortOrder !== '' && !isNaN(obj.sortOrder) ? Number(obj.sortOrder) : 999999 + i;
-        list.push(obj);
-      }
-    }
+  const sheet =
+    getDressingBarcodeSheet_();
 
-    list.sort(function(a, b){
-      return a.sortOrderNum - b.sortOrderNum;
-    });
+  const values =
+    sheet.getDataRange().getValues();
 
-    const result = list.map(function(item){
-      return {
-        barcode: item.barcode,
-        dressingName: item.dressingName,
-        size: item.size
-      };
-    });
-
-    return { ok: true, data: result };
-  } catch(err) {
-    return errorDressingBarcode_(err, 'listDressingBarcode');
+  if(values.length <= 1){
+    return {
+      ok:true,
+      data:[]
+    };
   }
+
+  const headers =
+    values[0];
+
+  const barcodeCol =
+    headers.indexOf('barcode');
+
+  if(barcodeCol < 0){
+    throw new Error('missing barcode header');
+  }
+
+  const data = [];
+
+  for(let i = 1; i < values.length; i++){
+    const row = values[i];
+    const barcode = String(row[barcodeCol] || '').trim();
+
+    if(!barcode){
+      continue;
+    }
+
+    data.push({
+      barcode: barcode,
+      dressingName: String(row[headers.indexOf('dressingName')] || ''),
+      size: String(row[headers.indexOf('size')] || '')
+    });
+  }
+
+  return {
+    ok:true,
+    data:data
+  };
+
 }
 
 function reorderDressingBarcode_(data){
-  try{
-    const barcodesStr = data.barcodes || '';
-    if(!barcodesStr) return { ok: false, message: '沒有提供排序資料' };
-    
-    const orderArray = barcodesStr.split(',').map(function(s){ return String(s).trim(); });
-    const sheet = getDressingBarcodeSheet_();
-    const values = sheet.getDataRange().getValues();
-    const headers = values[0];
-    
-    const barcodeCol = headers.indexOf('barcode');
-    const sortOrderCol = headers.indexOf('sortOrder');
-    if (barcodeCol < 0 || sortOrderCol < 0) return { ok: false, message: '缺少對應欄位' };
 
-    const sortOrderData = [[headers[sortOrderCol]]]; // 裝載新的排序陣列
-    for(let i = 1; i < values.length; i++){
-      const bc = String(values[i][barcodeCol]).trim();
-      const idx = orderArray.indexOf(bc);
-      sortOrderData.push([idx !== -1 ? idx + 1 : 999999]); // 更新排序數值
-    }
-    sheet.getRange(1, sortOrderCol + 1, sortOrderData.length, 1).setValues(sortOrderData);
-    return { ok: true };
-  } catch(err) {
-    return errorDressingBarcode_(err, 'reorderDressingBarcode');
+  const order =
+    String(data.barcodes || '').split(',')
+      .map(function(item){
+        return String(item || '').trim();
+      })
+      .filter(function(item){
+        return item.length > 0;
+      });
+
+  if(order.length === 0){
+    return {
+      ok:false,
+      message:'沒有提供排序資料'
+    };
   }
+
+  return {
+    ok:true,
+    ordered:order
+  };
+
 }
 
 function getDressingBarcodeSheet_(){
@@ -434,13 +413,10 @@ function setupDressingBarcodeHeader_(sheet){
       .trim() !== '';
 
   if(!hasHeader){
-
     sheet
       .getRange(1, 1, 1, DRESSING_BARCODE_HEADERS.length)
       .setValues([DRESSING_BARCODE_HEADERS]);
-
     return;
-
   }
 
   const headers =
@@ -454,16 +430,9 @@ function setupDressingBarcodeHeader_(sheet){
     });
 
   if(missingHeaders.length > 0){
-
     sheet
-      .getRange(
-        1,
-        lastColumn + 1,
-        1,
-        missingHeaders.length
-      )
+      .getRange(1, lastColumn + 1, 1, missingHeaders.length)
       .setValues([missingHeaders]);
-
   }
 
 }
@@ -523,23 +492,19 @@ function jsonOutput_(obj){
 }
 
 function lookupDressingBarcode(barcode){
-
-return lookupDressingBarcode_(barcode);
-
+  return lookupDressingBarcode_(barcode);
 }
 
 function saveDressingBarcode(data){
-
-return saveDressingBarcode_(data);
-
+  return saveDressingBarcode_(data);
 }
 
 function listDressingBarcode(){
-return listDressingBarcode_();
+  return listDressingBarcode_();
 }
 
 function reorderDressingBarcode(data){
-return reorderDressingBarcode_(data);
+  return reorderDressingBarcode_(data);
 }
 
 function apiOutput_(obj, callback){
