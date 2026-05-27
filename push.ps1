@@ -327,9 +327,16 @@ $dressingFrontPath = Join-Path $rootPath '敷料領用登錄系統\DressingFront
 if (Test-Path -LiteralPath $dressingFrontPath) {
   $dfContent = Get-Content -Path $dressingFrontPath -Raw -Encoding UTF8
   $dfNewContent = [regex]::Replace($dfContent, '(<span[^>]*>GitHub 版</span>\s*<span>v\.)[^<]+(</span>)', "`${1}$($appConfig.Version)`$2")
+  
+  # 自動寫入真實的 Apps Script API 部署網址
+  if ($appConfig.DeploymentId) {
+    $realUrl = "https://script.google.com/macros/s/$($appConfig.DeploymentId)/exec"
+    $dfNewContent = [regex]::Replace($dfNewContent, "(APP_ENTRY_URL\s*=\s*')https://script\.google\.com/macros/s/[^/']+/exec(')", "`${1}$realUrl`$2")
+  }
+
   if ($dfContent -cne $dfNewContent) {
     Set-Content -Path $dressingFrontPath -Value $dfNewContent -Encoding UTF8
-    Write-Host "Updated GitHub version in DressingFront.html to v.$($appConfig.Version)" -ForegroundColor Green
+    Write-Host "Updated GitHub version & API URL in DressingFront.html to v.$($appConfig.Version)" -ForegroundColor Green
   }
 }
 
