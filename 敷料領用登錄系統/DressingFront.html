@@ -533,6 +533,14 @@ onclick="submitUse()">
     let activeDressingInput = null;
     let scannerMode = '';
 
+    function isAppsScriptMode(){
+
+    return typeof google !== 'undefined'
+    && google.script
+    && google.script.run;
+
+    }
+
     function openBarcodeLookup(){
 
     scannerMode = 'lookup';
@@ -541,8 +549,7 @@ onclick="submitUse()">
     document.getElementById('barcodeLookupResult').innerText =
     '正在開啟相機掃描敷料條碼...';
 
-    document.getElementById('scannerOverlay').style.display =
-    'block';
+    document.getElementById('scannerOverlay').style.display = 'block';
 
     startDressingScanner();
 
@@ -568,8 +575,7 @@ onclick="submitUse()">
     const block = document.createElement('div');
     block.className = 'patientBlock';
 
-    block.innerHTML =
-    `
+    block.innerHTML = `
     <div class="patientTitle">病人 ${patientCount}</div>
 
     <div class="infoRow">
@@ -595,15 +601,8 @@ onclick="submitUse()">
     </table>
 
     <div class="actions">
-
-    <button type="button" onclick="addRow(this)">
-    新增一列
-    </button>
-
-    <button type="button" class="danger deletePatient">
-    刪除病人
-    </button>
-
+    <button type="button" onclick="addRow(this)">新增一列</button>
+    <button type="button" class="danger deletePatient">刪除病人</button>
     </div>
     `;
 
@@ -615,46 +614,32 @@ onclick="submitUse()">
 
     function createRow(){
 
-    const id =
-    Date.now() + '_' + Math.random();
+    const id = Date.now() + '_' + Math.random();
 
     return `
     <tr>
 
     <td>
-    <button type="button" class="danger deleteRow">
-    刪除
-    </button>
+    <button type="button" class="danger deleteRow">刪除</button>
     </td>
 
     <td>
     <div class="radioGroup">
-
     <label>
     <input type="radio" name="charge_${id}" value="已計價">
     已計價
     </label>
-
     <label>
     <input type="radio" name="charge_${id}" checked value="未計價">
     未計價
     </label>
-
     </div>
     </td>
 
     <td>
     <div class="dressingInputGroup">
-
     <input class="dressingName">
-
-    <button
-    type="button"
-    class="cameraBtn"
-    onclick="openDressingScanner(this)">
-    📷
-    </button>
-
+    <button type="button" class="cameraBtn" onclick="openDressingScanner(this)">📷</button>
     </div>
     </td>
 
@@ -664,17 +649,14 @@ onclick="submitUse()">
 
     <td>
     <div class="radioGroup">
-
     <label>
     <input type="radio" name="pay_${id}" value="健保">
     健保
     </label>
-
     <label>
     <input type="radio" name="pay_${id}" checked value="自費">
     自費
     </label>
-
     </div>
     </td>
 
@@ -703,8 +685,7 @@ onclick="submitUse()">
     activeDressingInput =
     button.closest('td').querySelector('.dressingName');
 
-    document.getElementById('scannerOverlay').style.display =
-    'block';
+    document.getElementById('scannerOverlay').style.display = 'block';
 
     startDressingScanner();
 
@@ -747,7 +728,6 @@ onclick="submitUse()">
     function(decodedText){
 
     handleBarcodeScanResult(decodedText);
-
     closeDressingScanner();
 
     },
@@ -767,8 +747,7 @@ onclick="submitUse()">
 
     function closeDressingScanner(){
 
-    document.getElementById('scannerOverlay').style.display =
-    'none';
+    document.getElementById('scannerOverlay').style.display = 'none';
 
     if(dressingScanner){
 
@@ -791,27 +770,50 @@ onclick="submitUse()">
 
     }
 
+    async function manualBarcodeLookup(){
+
+    const barcode =
+    document
+    .getElementById('barcodeManualInput')
+    .value
+    .trim();
+
+    if(!barcode){
+
+    alert('請輸入條碼');
+    return;
+
+    }
+
+    scannerMode = 'lookup';
+
+    await handleBarcodeScanResult(barcode);
+
+    }
+
     async function handleBarcodeScanResult(barcode){
 
-    if(scannerMode === 'lookup'){
+    if(scannerMode === 'row'){
+
+    if(activeDressingInput){
+    activeDressingInput.value = barcode;
+    }
+
+    return;
+
+    }
+
+    if(scannerMode !== 'lookup'){
+    return;
+    }
 
     document.getElementById('barcodeLookupResult').innerText =
     '查詢中：' + barcode;
 
     try{
 
-    const lookupUrl =
-    DRESSING_BARCODE_API
-    +
-    '?action=lookupDressingBarcode&barcode='
-    +
-    encodeURIComponent(barcode);
-
-    const response =
-    await fetch(lookupUrl);
-
     const result =
-    await response.json();
+    await lookupBarcode(barcode);
 
     if(result.found){
 
@@ -837,26 +839,12 @@ onclick="submitUse()">
 
     }
 
-    const saveUrl =
-    DRESSING_BARCODE_API
-    +
-    '?action=saveDressingBarcode'
-    +
-    '&barcode='
-    +
-    encodeURIComponent(barcode)
-    +
-    '&dressingName='
-    +
-    encodeURIComponent(name)
-    +
-    '&active=true';
-
-    const saveResponse =
-    await fetch(saveUrl);
-
     const saveResult =
-    await saveResponse.json();
+    await saveBarcode({
+    barcode: barcode,
+    dressingName: name,
+    active: true
+    });
 
     if(!saveResult.ok){
 
@@ -870,8 +858,6 @@ onclick="submitUse()">
     document.getElementById('barcodeLookupResult').innerText =
     '已建立：' + name + '（' + barcode + '）';
 
-    return;
-
     }
     catch(err){
 
@@ -880,19 +866,71 @@ onclick="submitUse()">
     document.getElementById('barcodeLookupResult').innerText =
     '查詢失敗：' + err.message;
 
-    return;
-
     }
 
     }
 
-    if(scannerMode === 'row'){
+    function lookupBarcode(barcode){
 
-    if(activeDressingInput){
-    activeDressingInput.value = barcode;
+    if(isAppsScriptMode()){
+
+    return new Promise(function(resolve, reject){
+
+    google.script.run
+    .withSuccessHandler(resolve)
+    .withFailureHandler(reject)
+    .lookupDressingBarcode(barcode);
+
+    });
+
     }
 
+    const url =
+    DRESSING_BARCODE_API
+    +
+    '?action=lookupDressingBarcode&barcode='
+    +
+    encodeURIComponent(barcode);
+
+    return fetch(url).then(function(response){
+    return response.json();
+    });
+
     }
+
+    function saveBarcode(data){
+
+    if(isAppsScriptMode()){
+
+    return new Promise(function(resolve, reject){
+
+    google.script.run
+    .withSuccessHandler(resolve)
+    .withFailureHandler(reject)
+    .saveDressingBarcode(data);
+
+    });
+
+    }
+
+    const url =
+    DRESSING_BARCODE_API
+    +
+    '?action=saveDressingBarcode'
+    +
+    '&barcode='
+    +
+    encodeURIComponent(data.barcode)
+    +
+    '&dressingName='
+    +
+    encodeURIComponent(data.dressingName)
+    +
+    '&active=true';
+
+    return fetch(url).then(function(response){
+    return response.json();
+    });
 
     }
 
@@ -940,42 +978,11 @@ onclick="submitUse()">
 
     }
 
-    async function manualBarcodeLookup(){
-
-        const barcode =
-        document
-        .getElementById(
-        'barcodeManualInput'
-        )
-        .value
-        .trim();
-
-        if(
-        !barcode
-        ){
-
-        alert(
-        '請輸入條碼'
-        );
-
-        return;
-
-        }
-
-        scannerMode =
-        'lookup';
-
-        await handleBarcodeScanResult(
-        barcode
-        );
-
-    }
-    
     function submitUse(){
 
     alert('下一步接 Sheet');
 
-    }    
+    }
 </script>
 </main>
 

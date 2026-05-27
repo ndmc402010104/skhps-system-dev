@@ -293,3 +293,15 @@ function jsonOutput_(obj){
     );
 
 }
+
+function lookupDressingBarcode(barcode){
+
+return lookupDressingBarcode_(barcode);
+
+}
+
+function saveDressingBarcode(data){
+
+return saveDressingBarcode_(data);
+
+}
