@@ -59,11 +59,11 @@ function exportSignUploadData(course, date){
       .getDisplayValue();
 
   const filename =
-    meeting
-      .replace(/\//g,'')
-      .replace(/\s/g,'')
-    +
-    '課程簽到上傳.xlsx';
+    buildDownloadFilename(
+      meeting,
+      '課程簽到上傳',
+      'xlsx'
+    );
 
   return {
     ok:true,
@@ -343,11 +343,11 @@ function exportMeetingSignSheet(course, date){
       .getDisplayValue();
 
   const filename =
-    meeting
-      .replace(/\//g,'')
-      .replace(/\s/g,'')
-    +
-    '課程簽到單.xlsx';
+    buildDownloadFilename(
+      meeting,
+      '課程簽到單',
+      'xlsx'
+    );
 
   return {
     ok:true,
@@ -429,11 +429,11 @@ function exportRawSignData(course, date){
       .getDisplayValue();
 
   const filename =
-    meeting
-      .replace(/\//g,'')
-      .replace(/\s/g,'')
-    +
-    '簽到原始檔.xlsx';
+    buildDownloadFilename(
+      meeting,
+      '簽到原始檔',
+      'xlsx'
+    );
 
   return {
     ok:true,
@@ -484,9 +484,26 @@ function formatUploadSignTimeText(value){
 
   if(timeMatch){
 
-    return String(
-      timeMatch[1]
-    )
+    let hour =
+      Number(
+        timeMatch[1]
+      );
+
+    if(
+      /下午|PM/i.test(text) &&
+      hour < 12
+    ){
+      hour += 12;
+    }
+
+    if(
+      /上午|AM/i.test(text) &&
+      hour === 12
+    ){
+      hour = 0;
+    }
+
+    return String(hour)
       .padStart(
         2,
         '0'
@@ -510,6 +527,53 @@ function formatUploadSignTimeText(value){
   }
 
   return text;
+
+}
+
+
+function buildDownloadFilename(meeting, label, extension){
+
+  return sanitizeDownloadMeetingName(
+    meeting
+  )
+    +
+    label
+    +
+    '-'
+    +
+    getDownloadTimestampSuffix()
+    +
+    '.'
+    +
+    extension;
+
+}
+
+
+function sanitizeDownloadMeetingName(meeting){
+
+  return String(
+    meeting || ''
+  )
+    .replace(
+      /[\\/:*?"<>|]/g,
+      ''
+    )
+    .replace(
+      /\s/g,
+      ''
+    );
+
+}
+
+
+function getDownloadTimestampSuffix(){
+
+  return Utilities.formatDate(
+    new Date(),
+    Session.getScriptTimeZone(),
+    'MMddHHmm'
+  );
 
 }
 
@@ -556,11 +620,11 @@ function exportMeetingSignSheetPdf(course, date){
       .getDisplayValue();
 
   const filename =
-    meeting
-      .replace(/\//g,'')
-      .replace(/\s/g,'')
-    +
-    '課程簽到單.pdf';
+    buildDownloadFilename(
+      meeting,
+      '課程簽到單',
+      'pdf'
+    );
 
   const url =
     'https://docs.google.com/spreadsheets/d/' +
