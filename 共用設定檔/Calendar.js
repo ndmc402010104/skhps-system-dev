@@ -95,21 +95,76 @@ function getConfiguredCalendarEvents(start, end){
 
 function getCalendarSourceLabel(){
 
-  try{
+  const calendarName =
+    getCalendarSourceName();
 
-    if(
-      getConfiguredCalendar()
-    ){
-      return 'Calendar';
-    }
+  const accessLabel =
+    getCalendarIcalAccessLabel();
 
-  }catch(error){
+  if(calendarName){
 
-    return getCalendarIcalAccessLabel();
+    return calendarName +
+      '(' +
+      accessLabel +
+      ')';
 
   }
 
-  return getCalendarIcalAccessLabel();
+  return accessLabel;
+
+}
+
+
+function getCalendarSourceName(){
+
+  try{
+
+    const calendar =
+      getConfiguredCalendar();
+
+    if(calendar){
+
+      const calendarName =
+        normalizeCalendarName(
+          calendar.getName()
+        );
+
+      if(calendarName){
+        return calendarName;
+      }
+
+    }
+
+  }catch(error){}
+
+  try{
+
+    const data =
+      getPublicCalendarData();
+
+    const calendarName =
+      normalizeCalendarName(
+        data.calendarName
+      );
+
+    if(calendarName){
+      return calendarName;
+    }
+
+  }catch(error){}
+
+  if(
+    typeof CALENDAR_NAME !== 'undefined' &&
+    CALENDAR_NAME
+  ){
+
+    return normalizeCalendarName(
+      CALENDAR_NAME
+    );
+
+  }
+
+  return '';
 
 }
 

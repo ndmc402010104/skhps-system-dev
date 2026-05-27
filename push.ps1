@@ -15,17 +15,33 @@ if ($env:APP_VERSION_BUMP) {
   $Bump = $env:APP_VERSION_BUMP
 }
 
+$sourceVersion = Get-CurrentAppVersion -RootPath $rootPath
 $version = New-AppVersion -RootPath $rootPath -Bump $Bump
 $appConfig = Sync-AppVersion -RootPath $rootPath -Version $version -DefaultEnv 'dev'
-$readmeUpdated = Update-ReadmeVersionLog -RootPath $rootPath -Version $version -ReleaseType 'dev' -Notes $Note
+
+$readmeUpdated = $false
+
+if ($Bump -ne 'patch') {
+  $readmeUpdated = Update-ReadmeVersionLog `
+    -RootPath $rootPath `
+    -Version $version `
+    -ReleaseType 'dev' `
+    -SourceVersion $sourceVersion `
+    -Notes $Note
+}
 
 Write-Host "APP_VERSION updated to version $($appConfig.Version)"
-if ($readmeUpdated) {
+
+if ($Bump -eq 'patch') {
+  Write-Host "Patch bump detected. README version log skipped."
+}
+elseif ($readmeUpdated) {
   Write-Host "README version log updated with $($appConfig.Description)"
 }
 else {
   Write-Host "README already contains $($appConfig.Description)"
 }
+
 Write-Host "Synced .clasp.json scriptId to $($appConfig.ScriptId)"
 Write-Host "Pushing source files to Apps Script"
 

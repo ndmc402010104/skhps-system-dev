@@ -45,6 +45,13 @@ function showAdminMeetingPage(){
   template.appEntryUrl =
   getAppEntryUrl();
 
+  template.adminPageKey =
+  ADMIN_PAGE_PREFIX
+  +
+  ADMIN_ACCOUNT
+  +
+  ADMIN_PASSWORD;
+
   return template
   .evaluate()
   .setTitle(

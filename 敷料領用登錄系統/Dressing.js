@@ -16,6 +16,10 @@ function showDressingFrontPage(){
   template.appEntryUrl =
     getAppEntryUrl();
 
+  //調用版本號
+  template.versionBadgeHtml =
+    getVersionBadgeHtml();
+
   return template
     .evaluate()
     .setTitle(

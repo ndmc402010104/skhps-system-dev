@@ -179,7 +179,9 @@ function buildUploadDataFromRawValues(rawValues){
 
       const signTime =
         rawSignTime
-        ? rawSignTime
+        ? formatUploadSignTimeText(
+            rawSignTime
+          )
         : '';
 
       let uploadStatus =
@@ -264,7 +266,7 @@ function writeSignUploadSheet(sheet, values){
         1
       )
       .setNumberFormat(
-        'yyyy/m/d hh:mm:ss'
+        '@'
       );
 
   }
@@ -406,15 +408,15 @@ function exportRawSignData(course, date){
       .getDisplayValues()
       .map(function(row){
 
-      return row.filter(function(cell,index){
-
-        return ![
-          6, // 驗證碼
-          7, // 狀態
-          9  // 紀錄者
-        ].includes(index);
-
-      });
+        return [
+          row[0], // 簽到時間
+          row[1], // 課程名稱
+          row[2], // 會議時間
+          row[3], // 姓名
+          row[4], // 員工編號
+          row[5], // 職級
+          row[7]  // 狀態
+        ];
 
       });
 
@@ -438,6 +440,76 @@ function exportRawSignData(course, date){
     filename:filename,
     values:values
   };
+
+}
+
+
+function formatUploadSignTimeText(value){
+
+  if(value instanceof Date){
+
+    return Utilities.formatDate(
+      value,
+      Session.getScriptTimeZone(),
+      'HHmm'
+    );
+
+  }
+
+  const text =
+    String(value || '').trim();
+
+  if(!text){
+    return '';
+  }
+
+  const fourDigitTime =
+    text.match(
+      /^\d{3,4}$/
+    );
+
+  if(fourDigitTime){
+
+    return text.padStart(
+      4,
+      '0'
+    );
+
+  }
+
+  const timeMatch =
+    text.match(
+      /(\d{1,2}):(\d{2})(?::\d{2})?/
+    );
+
+  if(timeMatch){
+
+    return String(
+      timeMatch[1]
+    )
+      .padStart(
+        2,
+        '0'
+      )
+      +
+      timeMatch[2];
+
+  }
+
+  const date =
+    new Date(text);
+
+  if(!isNaN(date)){
+
+    return Utilities.formatDate(
+      date,
+      Session.getScriptTimeZone(),
+      'HHmm'
+    );
+
+  }
+
+  return text;
 
 }
 

@@ -62,8 +62,85 @@ font-size:
 color:
 #666;
 
+margin:
+0;
+
+}
+
+.header{
+
+display:
+flex;
+
+justify-content:
+space-between;
+
+align-items:
+flex-start;
+
+gap:
+18px;
+
 margin-bottom:
 36px;
+
+}
+
+.homeButton{
+
+border:
+1px solid #d6dde7;
+
+background:
+#eef2f7;
+
+color:
+#475569;
+
+border-radius:
+14px;
+
+padding:
+12px 18px;
+
+font-size:
+16px;
+
+font-weight:
+700;
+
+cursor:
+pointer;
+
+transition:
+0.15s;
+
+white-space:
+nowrap;
+
+}
+
+.homeButton:hover{
+
+background:
+white;
+
+color:
+#1e293b;
+
+transform:
+translateY(
+-1px
+);
+
+box-shadow:
+0 8px 20px
+rgba(
+0,
+0,
+0,
+0.06
+);
 
 }
 
@@ -231,6 +308,20 @@ font-size:
 
 }
 
+.header{
+
+flex-direction:
+column;
+
+}
+
+.homeButton{
+
+width:
+100%;
+
+}
+
 }
 
 </style>
@@ -293,6 +384,14 @@ ADMIN_PAGE_KEY
 
 }
 
+function goSystemHome(){
+
+window.top.location.href =
+
+APP_ENTRY_URL;
+
+}
+
 </script>
 
 </head>
@@ -306,6 +405,10 @@ ADMIN_PAGE_KEY
 
 <!-- 標題 -->
 
+<div class="header">
+
+<div>
+
 <div class="title">
 
 管理後台
@@ -316,6 +419,20 @@ ADMIN_PAGE_KEY
 <div class="subtitle">
 
 整形外科科室系統管理中心
+
+</div>
+
+</div>
+
+
+<button
+class="homeButton"
+onclick="
+goSystemHome()
+"
+>
+← 返回科室系統首頁
+</button>
 
 </div>
 

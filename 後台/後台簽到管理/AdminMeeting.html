@@ -826,6 +826,14 @@
     }
   </style>
 
+  <script>
+    window.APP_ENTRY_URL =
+      '<?= appEntryUrl ?>';
+
+    window.ADMIN_PAGE_KEY =
+      '<?= adminPageKey ?>';
+  </script>
+
   <?!= include('後台/後台簽到管理/AdminMeetingScript'); ?>
 
 
@@ -841,7 +849,7 @@
     class="homeBtn"
     onclick="goHome()"
   >
-    ← 返回首頁
+    ← 返回後台首頁
   </button>
 
 </div>
@@ -913,7 +921,7 @@
 
 <datalist id="staffNameList"></datalist>
 
-<?!= getVersionBadgeHtml() ?>
+<?!= getVersionBadgeHtml({showCalendarSource:true}) ?>
 
 </body>
 </html>

@@ -6,7 +6,12 @@
   */
 
   const APP_ENTRY_URL =
-    '<?= appEntryUrl ?>';
+    window.APP_ENTRY_URL ||
+    '';
+
+  const ADMIN_PAGE_KEY =
+    window.ADMIN_PAGE_KEY ||
+    '';
 
   const SIGN_SHEET_URL =
     'https://docs.google.com/spreadsheets/d/184zUBhApg5CJnk7To_6FqlPcV1r-LK1kZUt2yyasD68/edit#gid=1049157062';
@@ -50,7 +55,9 @@
   function goHome(){
 
     window.top.location.href =
-      APP_ENTRY_URL;
+      APP_ENTRY_URL +
+      '?page=' +
+      ADMIN_PAGE_KEY;
 
   }
 

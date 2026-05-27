@@ -90,7 +90,7 @@ function doGet(e){
 
   if(
     page ===
-    'dressing'
+    'dressingfront'
   ){
     return showDressingFrontPage();
   }
@@ -103,6 +103,8 @@ function doGet(e){
 
   if(
     page === 'meeting'
+    ||
+    page === adminPageKey + 'meeting'
   ){
     return showAdminMeetingPage();
   }
@@ -162,7 +164,25 @@ function getAppEnvUrl(url, env){
 }
 
 
-function getVersionBadgeHtml(){
+function getVersionBadgeHtml(options){
+
+  const showCalendarSource =
+    options === true ||
+    (
+      options &&
+      options.showCalendarSource === true
+    );
+
+  const calendarSourceHtml =
+    showCalendarSource
+    ? [
+        '<span class="appVersionBadgeSource">行事曆來源: ',
+        escapeAppHtml(
+          getCalendarSourceLabel()
+        ),
+        '</span>'
+      ].join('')
+    : '';
 
   return [
     '<style>',
@@ -185,6 +205,7 @@ function getVersionBadgeHtml(){
     'box-shadow:0 2px 10px rgba(15,23,42,.08);',
     'cursor:pointer;',
     'user-select:none;',
+    'transition:color .16s ease,border-color .16s ease,background-color .16s ease,box-shadow .16s ease;',
     '}',
     '.appVersionBadge:hover{',
     'color:#1d4ed8;',
@@ -197,6 +218,10 @@ function getVersionBadgeHtml(){
     '.appVersionBadgeSource{',
     'font-weight:600;',
     'color:#64748b;',
+    'transition:color .16s ease;',
+    '}',
+    '.appVersionBadge:hover .appVersionBadgeSource{',
+    'color:#1d4ed8;',
     '}',
     '@media(max-width:600px){',
     '.appVersionBadge{',
@@ -225,9 +250,7 @@ function getVersionBadgeHtml(){
     '<span>v',
     APP_VERSION,
     '</span>',
-    '<span class="appVersionBadgeSource">行事曆來源: ',
-    getCalendarSourceLabel(),
-    '</span>',
+    calendarSourceHtml,
     '</a>',
     '<script>',
     '(function(){',
@@ -319,5 +342,34 @@ function getVersionBadgeHtml(){
     '})();',
     '</script>'
   ].join('');
+
+}
+
+
+function escapeAppHtml(value){
+
+  return String(
+    value || ''
+  )
+    .replace(
+      /&/g,
+      '&amp;'
+    )
+    .replace(
+      /</g,
+      '&lt;'
+    )
+    .replace(
+      />/g,
+      '&gt;'
+    )
+    .replace(
+      /"/g,
+      '&quot;'
+    )
+    .replace(
+      /'/g,
+      '&#39;'
+    );
 
 }

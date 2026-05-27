@@ -86,14 +86,18 @@ function Test-SnapshotChanged {
 
 function Invoke-VersionedPush {
   $version = New-AppVersion -RootPath $rootPath -Bump 'patch'
-  $appConfig = Sync-AppVersion -RootPath $rootPath -Version $version -DefaultEnv 'dev'
-  $readmeUpdated = Update-ReadmeVersionLog -RootPath $rootPath -Version $version -ReleaseType 'dev' -Notes @()
+
+  $appConfig =
+    Sync-AppVersion `
+      -RootPath $rootPath `
+      -Version $version `
+      -DefaultEnv 'dev'
 
   Write-Host "[$(Get-Date -Format 'HH:mm:ss')] APP_VERSION updated to $($appConfig.Description)"
-  if ($readmeUpdated) {
-    Write-Host "[$(Get-Date -Format 'HH:mm:ss')] README version log updated"
-  }
+  Write-Host "[$(Get-Date -Format 'HH:mm:ss')] Patch push detected. README version log skipped."
+
   Invoke-Clasp -Arguments @('push') -WorkingDirectory $rootPath
+
   Write-Host "[$(Get-Date -Format 'HH:mm:ss')] Push completed"
 }
 
