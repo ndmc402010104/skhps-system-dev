@@ -2,7 +2,7 @@ const DRESSING_BARCODE_SHEET_ID =
 '1SJIQGgViQo6AhSDvJTNcNDx_KNXEjgTMfJh4R9SIMvk';
 
 const DRESSING_BARCODE_SHEET_NAME =
-'工作表1';
+'敷料建檔';
 
 const DRESSING_BARCODE_HEADERS = [
   'barcode',
@@ -51,6 +51,13 @@ function handleDressingBarcodeGet(e){
     if(action === 'listDressingBarcode'){
       return apiOutput_(
         listDressingBarcode_(),
+        data.callback
+      );
+    }
+
+    if(action === 'deleteDressingBarcode'){
+      return apiOutput_(
+        deleteDressingBarcode_(data),
         data.callback
       );
     }
@@ -117,6 +124,12 @@ function handleDressingBarcodePost(e){
     if(action === 'listDressingBarcode'){
       return jsonOutput_(
         listDressingBarcode_()
+      );
+    }
+
+    if(action === 'deleteDressingBarcode'){
+      return jsonOutput_(
+        deleteDressingBarcode_(data)
       );
     }
 
@@ -349,6 +362,35 @@ function listDressingBarcode_(){
 
 }
 
+function deleteDressingBarcode_(data){
+
+  const barcode = String(data.barcode || '').trim();
+
+  if(!barcode){
+    return { ok: false, message: 'empty barcode' };
+  }
+
+  const sheet = getDressingBarcodeSheet_();
+  const values = sheet.getDataRange().getValues();
+
+  if(values.length <= 1){
+    return { ok: true, deleted: false, message: 'not found' };
+  }
+
+  const headers = values[0];
+  const barcodeCol = headers.indexOf('barcode');
+
+  for(let i = 1; i < values.length; i++){
+    if(String(values[i][barcodeCol]).trim() === barcode){
+      sheet.deleteRow(i + 1);
+      return { ok: true, deleted: true, barcode: barcode };
+    }
+  }
+
+  return { ok: true, deleted: false, message: 'not found' };
+
+}
+
 function reorderDressingBarcode_(data){
 
   const order =
@@ -365,6 +407,47 @@ function reorderDressingBarcode_(data){
       ok:false,
       message:'沒有提供排序資料'
     };
+  }
+
+  const sheet = getDressingBarcodeSheet_();
+  const values = sheet.getDataRange().getValues();
+
+  if(values.length <= 1){
+    return { ok: true, ordered: order };
+  }
+
+  const headers = values[0];
+  const barcodeCol = headers.indexOf('barcode');
+
+  if(barcodeCol < 0){
+    return { ok: false, message: 'missing barcode header' };
+  }
+
+  const dataRows = values.slice(1);
+  const rowMap = {};
+
+  dataRows.forEach(function(row){
+    const code = String(row[barcodeCol] || '').trim();
+    if(code){
+      rowMap[code] = row;
+    }
+  });
+
+  const newRows = [];
+  order.forEach(function(code){
+    if(rowMap[code]){
+      newRows.push(rowMap[code]);
+      delete rowMap[code];
+    }
+  });
+
+  Object.keys(rowMap).forEach(function(code){
+    newRows.push(rowMap[code]);
+  });
+
+  if(newRows.length > 0){
+    sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).clearContent();
+    sheet.getRange(2, 1, newRows.length, headers.length).setValues(newRows);
   }
 
   return {
@@ -505,6 +588,10 @@ function listDressingBarcode(){
 
 function reorderDressingBarcode(data){
   return reorderDressingBarcode_(data);
+}
+
+function deleteDressingBarcode(data){
+  return deleteDressingBarcode_(data);
 }
 
 function apiOutput_(obj, callback){
