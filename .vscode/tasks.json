@@ -26,9 +26,7 @@
         "-ExecutionPolicy",
         "Bypass",
         "-File",
-        "${workspaceFolder}\\push.ps1",
-        "-Note",
-        "${input:pushNote}"
+        "${workspaceFolder}\\push.ps1"
       ],
       "presentation": {
         "reveal": "always",
@@ -38,16 +36,14 @@
       "problemMatcher": []
     },
     {
-      "label": "clasp: deploy update existing",
+      "label": "clasp: update version, push or deploy",
       "type": "shell",
       "command": "powershell",
       "args": [
         "-ExecutionPolicy",
         "Bypass",
         "-File",
-        "${workspaceFolder}\\update-version.ps1",
-        "-Note",
-        "${input:deployNote}"
+        "${workspaceFolder}\\push.ps1"
       ],
       "group": {
         "kind": "build",
@@ -87,20 +83,6 @@
         "clear": true
       },
       "problemMatcher": []
-    }
-  ],
-  "inputs": [
-    {
-      "id": "pushNote",
-      "type": "promptString",
-      "description": "這次測試版具體改了什麼？留空則使用自動摘要",
-      "default": ""
-    },
-    {
-      "id": "deployNote",
-      "type": "promptString",
-      "description": "這次正式部署具體改了什麼？留空則使用自動摘要",
-      "default": ""
     }
   ]
 }

@@ -1,242 +1,326 @@
+param(
+  [switch]$NonInteractive
+)
+
 $ErrorActionPreference = 'Stop'
+
+chcp 65001 | Out-Null
+
+[Console]::InputEncoding =
+  [System.Text.UTF8Encoding]::new()
+
+[Console]::OutputEncoding =
+  [System.Text.UTF8Encoding]::new()
+
+$OutputEncoding =
+  [System.Text.UTF8Encoding]::new()
 
 Clear-Host
 
-Write-Host ""
-Write-Host "==================================" -ForegroundColor Cyan
-Write-Host " 新電腦初始化工具 v3" -ForegroundColor Cyan
-Write-Host "==================================" -ForegroundColor Cyan
-Write-Host ""
+Write-Host ''
+Write-Host '==================================' -ForegroundColor Cyan
+Write-Host ' New computer setup check' -ForegroundColor Cyan
+Write-Host '==================================' -ForegroundColor Cyan
+Write-Host ''
 
-$paths = @(
-  "C:\Program Files\Git\cmd",
-  "C:\Program Files\nodejs",
-  "$env:APPDATA\npm"
-)
-
-Write-Host "修正目前 PowerShell PATH..." -ForegroundColor Yellow
-
-foreach($path in $paths){
-
-  if((Test-Path $path) -and ($env:Path -notlike "*$path*")){
-
-    $env:Path += ";$path"
-    Write-Host "已加入：$path" -ForegroundColor Green
-
-  }
-
-}
-
-function Test-CommandExists{
-
+function Test-CommandExists {
   param(
+    [Parameter(Mandatory = $true)]
     [string]$Command
   )
 
   return $null -ne (
     Get-Command $Command -ErrorAction SilentlyContinue
   )
-
 }
 
-function Ask-YesNo{
-
+function Ask-YesNo {
   param(
+    [Parameter(Mandatory = $true)]
     [string]$Message
   )
 
-  while($true){
+  if ($NonInteractive) {
+    Write-Host "$Message (skipped: non-interactive mode)" -ForegroundColor Yellow
+    return $false
+  }
 
-    $answer = Read-Host "$Message (Y/N)"
+  while ($true) {
+    $answer =
+      Read-Host "$Message (Y/N)"
 
-    if($answer -match '^[Yy]'){
+    if ($answer -match '^[Yy]') {
       return $true
     }
 
-    if($answer -match '^[Nn]'){
+    if ($answer -match '^[Nn]') {
       return $false
     }
 
+    Write-Host 'Please answer Y or N.' -ForegroundColor Yellow
+  }
+}
+
+function Add-PathIfExists {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$PathToAdd
+  )
+
+  if (!(Test-Path -LiteralPath $PathToAdd)) {
+    return
   }
 
+  $pathParts =
+    ($env:Path -split ';') |
+    Where-Object { $_ }
+
+  if ($pathParts -contains $PathToAdd) {
+    return
+  }
+
+  $env:Path =
+    (
+      @($env:Path, $PathToAdd) |
+      Where-Object { $_ }
+    ) -join ';'
+
+  Write-Host "Added to PATH: $PathToAdd" -ForegroundColor Green
 }
 
-Write-Host ""
-Write-Host "=== 工具檢查 ===" -ForegroundColor Cyan
+function Show-ToolVersion {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$Name,
 
-Write-Host ""
-Write-Host "1. Git"
+    [Parameter(Mandatory = $true)]
+    [string]$Command,
 
-if(Test-CommandExists "git"){
+    [Parameter(Mandatory = $true)]
+    [string[]]$Arguments
+  )
 
-  git --version
+  Write-Host ''
+  Write-Host $Name -ForegroundColor Cyan
 
-}else{
+  if (!(Test-CommandExists $Command)) {
+    Write-Host "Missing: $Command" -ForegroundColor Yellow
+    return $false
+  }
 
-  Write-Host "找不到 Git，請先安裝 Git for Windows" -ForegroundColor Red
-  Write-Host "https://git-scm.com" -ForegroundColor Yellow
-
+  & $Command @Arguments
+  return $true
 }
 
-Write-Host ""
-Write-Host "2. Node.js"
+$paths = @(
+  'C:\Program Files\Git\cmd',
+  'C:\Program Files\nodejs',
+  (Join-Path $env:APPDATA 'npm'),
+  'C:\Program Files\PowerShell\7'
+)
 
-if(Test-CommandExists "node"){
+Write-Host 'Checking PATH...' -ForegroundColor Yellow
 
-  node -v
-
-}else{
-
-  Write-Host "找不到 Node.js，請安裝 Node.js LTS" -ForegroundColor Red
-  Write-Host "https://nodejs.org" -ForegroundColor Yellow
-
+foreach ($path in $paths) {
+  Add-PathIfExists -PathToAdd $path
 }
 
-Write-Host ""
-Write-Host "3. npm"
+Write-Host ''
+Write-Host '=== Tool checks ===' -ForegroundColor Cyan
 
-if(Test-CommandExists "npm"){
+$hasPwsh =
+  Show-ToolVersion `
+    -Name '0. PowerShell 7' `
+    -Command 'pwsh' `
+    -Arguments @('-v')
 
-  npm -v
-
-}else{
-
-  Write-Host "找不到 npm，通常安裝 Node.js LTS 會一起安裝" -ForegroundColor Red
-
-}
-
-Write-Host ""
-Write-Host "4. clasp"
-
-if(Test-CommandExists "clasp"){
-
-  clasp -v
-
-}else{
-
-  Write-Host "找不到 clasp" -ForegroundColor Yellow
-
-  if(Test-CommandExists "npm"){
-
-    if(Ask-YesNo "是否安裝 @google/clasp"){
-
-      npm install -g @google/clasp
-
-      Write-Host ""
-      Write-Host "clasp 安裝完成" -ForegroundColor Green
-
+if (!$hasPwsh) {
+  if (Test-CommandExists 'winget') {
+    if (Ask-YesNo 'Install PowerShell 7 with winget?') {
+      winget install Microsoft.PowerShell --source winget
+      Write-Host 'PowerShell 7 installed. Restart VS Code after this script finishes.' -ForegroundColor Green
     }
-
-  }else{
-
-    Write-Host "缺少 npm，無法安裝 clasp" -ForegroundColor Red
-
   }
-
+  else {
+    Write-Host 'winget is not available. Install PowerShell 7 manually if needed.' -ForegroundColor Yellow
+  }
 }
 
-Write-Host ""
-Write-Host "=== Git Repo 檢查 ===" -ForegroundColor Cyan
+$hasGit =
+  Show-ToolVersion `
+    -Name '1. Git' `
+    -Command 'git' `
+    -Arguments @('--version')
 
-if(Test-CommandExists "git"){
+if (!$hasGit) {
+  Write-Host 'Install Git for Windows, then rerun this script.' -ForegroundColor Red
+}
 
-  try{
+$hasNode =
+  Show-ToolVersion `
+    -Name '2. Node.js' `
+    -Command 'node' `
+    -Arguments @('-v')
 
+if (!$hasNode) {
+  Write-Host 'Install Node.js LTS, then rerun this script.' -ForegroundColor Red
+}
+
+$hasNpm =
+  Show-ToolVersion `
+    -Name '3. npm' `
+    -Command 'npm' `
+    -Arguments @('-v')
+
+if (!$hasNpm) {
+  Write-Host 'npm usually comes with Node.js LTS.' -ForegroundColor Red
+}
+
+$hasClasp =
+  Show-ToolVersion `
+    -Name '4. clasp' `
+    -Command 'clasp' `
+    -Arguments @('-v')
+
+if (!$hasClasp) {
+  if ($hasNpm) {
+    if (Ask-YesNo 'Install @google/clasp globally with npm?') {
+      npm install -g '@google/clasp'
+      $hasClasp =
+        Test-CommandExists 'clasp'
+
+      if ($hasClasp) {
+        Write-Host 'clasp installed.' -ForegroundColor Green
+      }
+    }
+  }
+  else {
+    Write-Host 'Cannot install clasp because npm is missing.' -ForegroundColor Red
+  }
+}
+
+Write-Host ''
+Write-Host '=== Git repository check ===' -ForegroundColor Cyan
+
+if ($hasGit) {
+  try {
     git status
-
-  }catch{
-
-    Write-Host "目前資料夾不是 Git Repo，或 Git 尚未初始化" -ForegroundColor Yellow
-
   }
-
+  catch {
+    Write-Host 'This folder does not appear to be a valid Git repository.' -ForegroundColor Yellow
+  }
 }
 
-Write-Host ""
-Write-Host "=== Git 使用者設定 ===" -ForegroundColor Cyan
+Write-Host ''
+Write-Host '=== Git identity check ===' -ForegroundColor Cyan
 
-$gitName =
-git config --global user.name
+if ($hasGit) {
+  $gitName =
+    git config --global user.name
 
-$gitEmail =
-git config --global user.email
+  $gitEmail =
+    git config --global user.email
 
-if(!$gitName){
+  if (!$gitName) {
+    $defaultName =
+      if ($env:USERNAME) { $env:USERNAME } else { 'ndmc4' }
 
-  git config --global user.name "益昇 石"
-
-  Write-Host "已設定 git user.name：益昇 石" -ForegroundColor Green
-
-}else{
-
-  Write-Host "git user.name：$gitName"
-
-}
-
-if(!$gitEmail){
-
-  git config --global user.email "ndmc402010104@gmail.com"
-
-  Write-Host "已設定 git user.email：ndmc402010104@gmail.com" -ForegroundColor Green
-
-}else{
-
-  Write-Host "git user.email：$gitEmail"
-
-}
-
-$claspRc =
-Join-Path $env:USERPROFILE ".clasprc.json"
-Write-Host ""
-Write-Host "=== Apps Script / clasp 檢查 ===" -ForegroundColor Cyan
-
-$claspRc =
-Join-Path $env:USERPROFILE ".clasprc.json"
-
-if(Test-CommandExists "clasp"){
-
-  if(!(Test-Path $claspRc)){
-
-    Write-Host ""
-    Write-Host "找不到 clasp 登入憑證：$claspRc" -ForegroundColor Yellow
-
-    if(Ask-YesNo "是否現在登入 Google Apps Script"){
-
-      clasp login
-
+    if ($NonInteractive) {
+      $newName =
+        $defaultName
+    }
+    else {
+      $newName =
+        Read-Host "Git user.name is empty. Enter name [$defaultName]"
     }
 
+    if (!$newName) {
+      $newName = $defaultName
+    }
+
+    git config --global user.name $newName
+    Write-Host "Set git user.name: $newName" -ForegroundColor Green
+  }
+  else {
+    Write-Host "git user.name: $gitName"
   }
 
-  Write-Host ""
-  Write-Host "重新確認 clasp 狀態..." -ForegroundColor Cyan
+  if (!$gitEmail) {
+    $defaultEmail =
+      'ndmc402010104@gmail.com'
 
-  try{
+    if ($NonInteractive) {
+      $newEmail =
+        $defaultEmail
+    }
+    else {
+      $newEmail =
+        Read-Host "Git user.email is empty. Enter email [$defaultEmail]"
+    }
 
-    clasp status
+    if (!$newEmail) {
+      $newEmail = $defaultEmail
+    }
 
-    Write-Host ""
-    Write-Host "clasp 可用" -ForegroundColor Green
-
-  }catch{
-
-    Write-Host ""
-    Write-Host "clasp 仍不可用，請手動執行：" -ForegroundColor Red
-    Write-Host "clasp login" -ForegroundColor Green
-
+    git config --global user.email $newEmail
+    Write-Host "Set git user.email: $newEmail" -ForegroundColor Green
   }
-
-}else{
-
-  Write-Host "找不到 clasp，略過 Apps Script 檢查" -ForegroundColor Yellow
-
+  else {
+    Write-Host "git user.email: $gitEmail"
+  }
+}
+else {
+  Write-Host 'Skipping Git identity check because Git is missing.' -ForegroundColor Yellow
 }
 
-Write-Host ""
-Write-Host "==================================" -ForegroundColor Green
-Write-Host " 新電腦初始化完成" -ForegroundColor Green
-Write-Host "==================================" -ForegroundColor Green
+Write-Host ''
+Write-Host '=== Apps Script / clasp check ===' -ForegroundColor Cyan
 
-Write-Host ""
-Write-Host "下一步可以執行：" -ForegroundColor Cyan
-Write-Host ".\push.ps1 -Bump patch" -ForegroundColor Green
+if ($hasClasp -or (Test-CommandExists 'clasp')) {
+  $claspRc =
+    Join-Path $env:USERPROFILE '.clasprc.json'
+
+  if (!(Test-Path -LiteralPath $claspRc)) {
+    Write-Host "clasp login file not found: $claspRc" -ForegroundColor Yellow
+
+    if (Ask-YesNo 'Run clasp login now?') {
+      clasp login
+    }
+  }
+
+  Write-Host ''
+  Write-Host 'Running clasp status...' -ForegroundColor Cyan
+
+  try {
+    clasp status
+    Write-Host ''
+    Write-Host 'clasp is ready.' -ForegroundColor Green
+  }
+  catch {
+    Write-Host ''
+    Write-Host 'clasp status failed.' -ForegroundColor Red
+    Write-Host 'Try these steps:' -ForegroundColor Yellow
+    Write-Host '1. Run: clasp login' -ForegroundColor Yellow
+    Write-Host '2. Confirm .clasp.json exists and points to the right Apps Script project.' -ForegroundColor Yellow
+    Write-Host '3. Confirm you have permission to the Apps Script project.' -ForegroundColor Yellow
+  }
+}
+else {
+  Write-Host 'Skipping Apps Script checks because clasp is missing.' -ForegroundColor Yellow
+}
+
+Write-Host ''
+Write-Host '=== PowerShell session ===' -ForegroundColor Cyan
+Write-Host "PSEdition: $($PSVersionTable.PSEdition)"
+Write-Host "PSVersion : $($PSVersionTable.PSVersion)"
+
+Write-Host ''
+Write-Host '==================================' -ForegroundColor Green
+Write-Host ' Setup check complete' -ForegroundColor Green
+Write-Host '==================================' -ForegroundColor Green
+
+Write-Host ''
+Write-Host 'Suggested next steps:' -ForegroundColor Cyan
+Write-Host '1. Restart VS Code if this script installed or updated tools.' -ForegroundColor Yellow
+Write-Host '2. Use PowerShell 7 / pwsh.exe as the VS Code terminal profile.' -ForegroundColor Yellow
+Write-Host '3. Run .\pullall.ps1 to sync the project.' -ForegroundColor Green

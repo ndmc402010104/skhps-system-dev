@@ -8,58 +8,64 @@ Google Apps Script × Google Sheet × Google Form
 
 # 快速部署
 
-## VS Code（主要）
+## 最簡單流程
 
-測試版
+按：
 
-修改  
-→ Ctrl + S  
-→ watcher 自動偵測  
-→ 更新 APP_VERSION  
-→ 更新 README 測試版版本  
-→ clasp push
+```
+Ctrl + Shift + B
+```
 
-正式版
+之後照問題回答就好：
 
-Ctrl + Shift + B  
-→ 更新正式版版本  
-→ clasp push
-→ 建立 Apps Script version
-→ 更新正式 deployment
+```text
+1. 要不要先儲存全部檔案
+2. 要更新 patch / minor / major / none
+3. 要 push 測試版，還是 deploy 正式版
+4. 這次備註要寫什麼
+5. 要不要寫入 README 版本日誌
+6. 要不要順便 push GitHub
+```
 
----
+建議回答：
 
-## 手動推版
+```text
+小修正：
+  patch → push → README 選 N
 
-Patch
+新增功能：
+  minor → push → README 選 Y
+
+大改版：
+  major → push → README 選 Y
+
+確認要上正式版：
+  通常選 none 或 patch → deploy → README 選 Y
+```
+
+GitHub 那題：
+
+```text
+留空：不 commit、不 push GitHub
+有輸入：自動 git add .、git commit、git push
+```
+
+## 手動執行
 
 ```powershell
 .\push.ps1
 ```
 
-Minor
+它跟 `Ctrl + Shift + B` 是同一套流程。
 
-```powershell
-.\push.ps1 -Bump minor
-```
+正式版
 
-Major
-
-```powershell
-.\push.ps1 -Bump major
-```
-
-附註：
-
-```powershell
-.\push.ps1 -Note "修正 QR 頁面"
-```
-
-正式部署：
-
-```powershell
-.\update-version.ps1 -Bump none -Note "正式部署 v2.0.0"
-```
+Ctrl + Shift + B  
+→ 依問題選 deploy  
+→ clasp push  
+→ 建立 Apps Script version  
+→ 更新正式 deployment  
+→ 可選擇是否寫 README 與 GitHub
 
 ---
 
@@ -94,6 +100,14 @@ v1.1.5-202605262315
 # 版本日誌
 
 ## 最新版本（保留近期）
+
+---
+
+v2.4.13-202605271921
+
+更新：
+
+-
 
 ---
 
