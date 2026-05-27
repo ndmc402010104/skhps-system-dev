@@ -192,6 +192,10 @@ function Get-ClaspVersionNumberFromOutput {
 }
 
 function Push-GitHubIfRequested {
+  param(
+    [pscustomobject]$Config
+  )
+
   if ($NoGitHubPrompt) {
     return
   }
@@ -200,15 +204,20 @@ function Push-GitHubIfRequested {
   Write-Host "==========================" -ForegroundColor Cyan
   Write-Host "GitHub commit" -ForegroundColor Cyan
   Write-Host "=========================="
-  Write-Host "有輸入 commit message 時，會執行 git add .，包含目前所有變更。"
+  Write-Host "自動將最新版號與 API 網址同步至 GitHub。"
 
+  $defaultMsg = if ($Config) { "Bump version to v$($Config.Version)" } else { "Update version" }
   $commitMessage =
-    Read-Host "Git commit message（留空 = 不 push GitHub）"
+    Read-Host "Git commit message（直接按 Enter 使用 '$defaultMsg'，輸入 skip 略過）"
 
-  if ([string]::IsNullOrWhiteSpace($commitMessage)) {
+  if ($commitMessage.Trim().ToLower() -eq 'skip') {
     Write-Host ""
     Write-Host "已略過 GitHub commit" -ForegroundColor Yellow
     return
+  }
+
+  if ([string]::IsNullOrWhiteSpace($commitMessage)) {
+    $commitMessage = $defaultMsg
   }
 
   if (-not (Test-CommandExists -Name 'git')) {
@@ -409,4 +418,4 @@ else {
   Write-Host "Push completed with version $($appConfig.Description)"
 }
 
-Push-GitHubIfRequested
+Push-GitHubIfRequested -Config $appConfig
