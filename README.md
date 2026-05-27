@@ -20,10 +20,13 @@ Ctrl + Shift + B
 
 ```text
 1. 要不要先儲存全部檔案
-2. 要更新 patch / minor / major / none
-3. 要 push 測試版，還是 deploy 正式版
-4. 這次備註要寫什麼
-5. 要不要寫入 README 版本日誌
+2. 要 push 測試版，還是 deploy 正式版
+3. 要更新 patch / minor / major
+4. 要不要寫入 README 版本日誌
+   - patch 預設 N
+   - minor / major 預設 Y
+   - deploy 預設 Y
+5. 如果 README 選 Y，才會問版本日誌要寫什麼
 6. 要不要順便 push GitHub
 ```
 
@@ -40,7 +43,7 @@ Ctrl + Shift + B
   major → push → README 選 Y
 
 確認要上正式版：
-  通常選 none 或 patch → deploy → README 選 Y
+  patch → deploy → README 選 Y
 ```
 
 GitHub 那題：
@@ -103,7 +106,7 @@ v1.1.5-202605262315
 
 ---
 
-v2.4.13-202605271921
+v2.5.0-202605271935
 
 更新：
 

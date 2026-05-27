@@ -1,4 +1,4 @@
-param(
+﻿param(
   [ValidateSet('major','minor','patch','none')]
   [string]$Bump = 'none',
 
