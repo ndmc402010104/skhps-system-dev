@@ -352,6 +352,32 @@ color: #64748b;
 .dictActionBtn {
 padding: 6px 10px;
 font-size: 13px;
+margin-right: 2px;
+}
+
+#saveOrderBtn {
+background: #f8fafc;
+color: #1d4ed8;
+border: 1px solid #bfdbfe;
+}
+
+.dictTable.reorder-mode tr { cursor: grab; }
+.dictTable.reorder-mode tr:active { cursor: grabbing; }
+.dictTable tr.dragging { opacity: 0.5; background: #eef2ff !important; }
+.dictTable tr.drag-over { box-shadow: inset 0 3px 0 #2563eb; }
+.dictTable tr.drag-over-bottom { box-shadow: inset 0 -3px 0 #2563eb; }
+.dragHandle { display: none; cursor: grab; font-size: 20px; color: #94a3b8; margin-right: 12px; vertical-align: middle; }
+.reorder-mode .dragHandle { display: inline-block; }
+.reorder-mode .dictActionBtn { display: none !important; }
+
+#reorderBtn {
+background: #f8fafc;
+color: #475569;
+border: 1px solid #cbd5e1;
+}
+#reorderBtn:hover {
+background: #f1f5f9;
+color: #1e293b;
 }
 
 @media(max-width:720px){
@@ -381,9 +407,6 @@ overflow-x: auto;
 
 const APP_ENTRY_URL =
 '<?= appEntryUrl ?>';
-
-const DRESSING_BARCODE_API =
-'https://script.google.com/macros/s/AKfycbwbz8pXfU68j2aFeF_AaDmmG6Vco3JsPSw-PGyYeLu0AF3vCfzaZJQFOjORnwSw8Xp4/exec';
 
 function goHome(){
 
@@ -478,6 +501,8 @@ onclick="submitUse()">
 <div class="dictHeader">
 <h2>敷料條碼建檔清單</h2>
 <div class="dictToolbar">
+<button type="button" id="reorderBtn" onclick="toggleReorderMode()">更改排序</button>
+<button type="button" id="saveOrderBtn" style="display:none;" onclick="saveDictOrder()">儲存排序</button>
 <button type="button" class="primary" onclick="startDictScanner()">開啟掃描 📷</button>
 </div>
 </div>
@@ -542,6 +567,141 @@ onclick="submitUse()">
     function openDressingDict(){
     document.getElementById('formArea').style.display = 'none';
     document.getElementById('dictArea').style.display = 'block';
+    loadDictList();
+    }
+
+    async function loadDictList() {
+    const tbody = document.getElementById('dictTbody');
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#64748b; padding:20px;">載入中...</td></tr>';
+    
+    try {
+    const res = await listBarcode();
+    if (res.ok && res.data && res.data.length > 0) {
+    tbody.innerHTML = '';
+    res.data.forEach(item => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+    <td><input class="dict-barcode readonly" value="${item.barcode}" readonly></td>
+    <td><input class="dict-name" value="${item.dressingName}"></td>
+    <td><input class="dict-size" value="${item.size || ''}"></td>
+    <td><span class="dictStatus saved">已建檔</span></td>
+    <td style="white-space:nowrap;">
+    <span class="dragHandle">☰</span>
+    <button type="button" class="dictActionBtn edit-btn" onclick="editDictRow(this)">編輯</button>
+    <button type="button" class="dictActionBtn save-btn primary" style="display:none;" onclick="saveDictRow(this)">儲存</button>
+    <button type="button" class="dictActionBtn danger" onclick="deleteDictRow(this)">刪除</button>
+    </td>
+    `;
+    tbody.appendChild(tr);
+    });
+    } else {
+    tbody.innerHTML = '<tr id="dictEmptyRow"><td colspan="5" style="text-align:center; color:#64748b; padding:20px;">目前尚無任何敷料資料</td></tr>';
+    }
+    } catch (err) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#dc2626; padding:20px;">讀取失敗，請確認後端已實作 listDressingBarcode API</td></tr>';
+    }
+    }
+
+    let draggedRow = null;
+    function toggleReorderMode() {
+        const rows = document.querySelectorAll('#dictTbody tr:not(#dictEmptyRow)');
+        if (rows.length === 0) return;
+        
+        document.getElementById('dictTable').classList.add('reorder-mode');
+        document.getElementById('reorderBtn').style.display = 'none';
+        document.getElementById('saveOrderBtn').style.display = 'inline-block';
+        
+        rows.forEach(row => {
+            row.setAttribute('draggable', 'true');
+            row.addEventListener('dragstart', handleDragStart);
+            row.addEventListener('dragend', handleDragEnd);
+            row.addEventListener('dragover', handleDragOver);
+            row.addEventListener('drop', handleDrop);
+        });
+    }
+
+    function handleDragStart(e) {
+        draggedRow = this;
+        if (e.dataTransfer) {
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', this.querySelector('.dict-barcode').value);
+        }
+        setTimeout(() => this.classList.add('dragging'), 0);
+    }
+
+    function handleDragEnd(e) {
+        this.classList.remove('dragging');
+        draggedRow = null;
+        document.querySelectorAll('#dictTbody tr').forEach(r => r.classList.remove('drag-over', 'drag-over-bottom'));
+    }
+
+    function handleDragOver(e) {
+        e.preventDefault();
+        if (!draggedRow || this === draggedRow) return false;
+        
+        const rect = this.getBoundingClientRect();
+        const midpoint = rect.top + rect.height / 2;
+
+        this.classList.remove('drag-over', 'drag-over-bottom');
+        if (e.clientY < midpoint) {
+            this.classList.add('drag-over');
+        } else {
+            this.classList.add('drag-over-bottom');
+        }
+        return false;
+    }
+
+    function handleDrop(e) {
+        e.preventDefault();
+        if (!draggedRow || this === draggedRow) return false;
+
+        this.classList.remove('drag-over', 'drag-over-bottom');
+
+        const rect = this.getBoundingClientRect();
+        const midpoint = rect.top + rect.height / 2;
+
+        if (e.clientY < midpoint) {
+            this.parentNode.insertBefore(draggedRow, this);
+        } else {
+            this.parentNode.insertBefore(draggedRow, this.nextSibling);
+        }
+        return false;
+    }
+
+    async function saveDictOrder() {
+    const rows = document.querySelectorAll('#dictTbody tr:not(#dictEmptyRow)');
+    const barcodes = [];
+    
+    rows.forEach(tr => {
+    const input = tr.querySelector('.dict-barcode');
+    if (input && input.value) {
+    barcodes.push(input.value);
+    }
+    });
+    
+    if (barcodes.length === 0) return;
+
+    const btn = document.getElementById('saveOrderBtn');
+    btn.innerText = '儲存中...';
+    btn.disabled = true;
+
+    try {
+    const res = await reorderBarcode(barcodes.join(','));
+    if (res.ok) {
+    btn.style.display = 'none';
+    document.getElementById('reorderBtn').style.display = 'inline-block';
+    document.getElementById('dictTable').classList.remove('reorder-mode');
+    
+    rows.forEach(r => r.removeAttribute('draggable'));
+    } else {
+    alert('排序儲存失敗');
+    }
+    } catch (err) {
+    alert('儲存錯誤：' + err.message);
+    }
+    
+    btn.innerText = '儲存排序';
+    btn.disabled = false;
     }
 
     function editDictRow(btn) {
@@ -634,6 +794,7 @@ onclick="submitUse()">
     <td><input class="dict-size" placeholder="請輸入尺寸"></td>
     <td><span class="dictStatus">查詢中...</span></td>
     <td style="white-space:nowrap;">
+    <span class="dragHandle">☰</span>
     <button type="button" class="dictActionBtn edit-btn" style="display:none;" onclick="editDictRow(this)">編輯</button>
     <button type="button" class="dictActionBtn save-btn primary" onclick="saveDictRow(this)">儲存</button>
     <button type="button" class="dictActionBtn danger" onclick="deleteDictRow(this)">刪除</button>
@@ -1015,7 +1176,7 @@ onclick="submitUse()">
     };
 
     script.src =
-    DRESSING_BARCODE_API +
+    APP_ENTRY_URL +
     '?' +
     query.toString();
 
@@ -1122,7 +1283,6 @@ onclick="submitUse()">
 </script>
 </main>
 
-<?!= versionBadgeHtml ?>
 <?!= getVersionBadgeHtml() ?>
 
 </body>

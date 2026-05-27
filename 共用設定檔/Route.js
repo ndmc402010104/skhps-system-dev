@@ -169,6 +169,8 @@ function isDressingBarcodeAction_(action){
   return [
     'lookupDressingBarcode',
     'saveDressingBarcode',
+    'listDressingBarcode',
+    'reorderDressingBarcode',
     'ping',
     'whoami'
   ].indexOf(action || '') >= 0;
