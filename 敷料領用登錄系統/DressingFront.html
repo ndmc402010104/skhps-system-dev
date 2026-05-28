@@ -1331,15 +1331,45 @@ async function addDictRow(barcode, parsed){
   try{
     const res = await lookupBarcode(scannedGtin);
 
-    if(res.found){
-      applyExistingItemToRow(tr, res.data, res.packageType === 'box' ? 'box' : 'single');
-      tr.querySelector('.dictStatus').innerText =
-        res.matchType === 'boxGtin' ? '已建檔：盒裝GTIN' : '已建檔：單包GTIN';
-      tr.querySelector('.dictStatus').className = 'dictStatus saved';
-      setDictRowSnapshot(tr);
-      leaveDictEditMode(tr);
-      return;
-    }
+  if(res.found){
+
+    applyExistingItemToRow(
+      tr,
+      res.data,
+      res.packageType === 'box'
+        ? 'box'
+        : 'single'
+    );
+
+    const itemName =
+      res.data.dressingName || '未命名敷料';
+
+    const itemSize =
+      res.data.size || '';
+
+    const packageLabel =
+      res.packageType === 'box'
+        ? '盒裝'
+        : '單包';
+
+    alert(
+      `已建檔 (${packageLabel})\n\n` +
+      `${itemName}\n` +
+      `${itemSize}`
+    );
+
+    tr.querySelector('.dictStatus').innerText =
+      `已建檔：${itemName} ${itemSize}`;
+
+    tr.querySelector('.dictStatus').className =
+      'dictStatus saved';
+
+    setDictRowSnapshot(tr);
+
+    leaveDictEditMode(tr);
+
+    return;
+  }
 
     tr.querySelector('.dictStatus').innerText = '新GTIN，開始引導建檔';
     tr.querySelector('.dictStatus').className = 'dictStatus';
@@ -1992,7 +2022,7 @@ if (window.location.hostname.includes('github.io')) {
   ghFooter.innerHTML = `
     <div style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">
       <span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>
-      <span>v.2.15.0-202605290200</span>
+      <span>v.2.15.1-202605290211</span>
     </div>
   `;
   document.body.appendChild(ghFooter);
@@ -2001,6 +2031,7 @@ if (window.location.hostname.includes('github.io')) {
 
 </body>
 </html>
+
 
 
 
