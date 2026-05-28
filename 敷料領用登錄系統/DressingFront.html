@@ -1267,21 +1267,88 @@ onclick="submitUse()">
 
     async function handleBarcodeScanResult(barcode){
 
-    if(scannerMode === 'row'){
-    if(activeDressingInput){
-    activeDressingInput.value = barcode;
-    }
-    return;
+      // 解析 UDI
+      const parsed = parseUDI(barcode);
+      const gtin = parsed.gtin || barcode;
+
+      if(scannerMode === 'row'){
+        if(activeDressingInput){
+          // 領用模式下，顯示解析後的 GTIN，並可考慮同時儲存 LOT/EXP 到隱藏欄位供後續寫入 UsageLog
+          activeDressingInput.value = gtin; 
+          activeDressingInput.dataset.lot = parsed.lot;
+          activeDressingInput.dataset.exp = parsed.exp;
+          activeDressingInput.dataset.raw = parsed.raw;
+          
+          // 若有找到對應名稱，可直接替換顯示名稱，並在 tooltip 提示批號
+          try {
+            const res = await lookupBarcode(gtin);
+            if (res.found && res.data.dressingName) {
+              activeDressingInput.value = res.data.dressingName;
+              activeDressingInput.title = `GTIN: ${gtin}\nLOT: ${parsed.lot}\nEXP: ${parsed.exp}`;
+            }
+          } catch(e) {
+            console.log('查詢失敗', e);
+          }
+        }
+        return;
+      }
+
+      if(scannerMode === 'dict'){
+        // 建檔模式下，只用 GTIN 進行建檔
+        await addDictRow(gtin);
+        return;
+      }
+
     }
 
-    if(scannerMode === 'dict'){
-    await addDictRow(barcode);
-    return;
+    // UDI 解析器：支援 GS1 標準，將長條碼拆解為 GTIN, LOT, EXP
+    function parseUDI(barcode) {
+      let gtin = barcode;
+      let lot = '';
+      let exp = '';
+
+      // 清理不可見字元 (如 ASCII 29 GS 分隔符號)
+      let cleanBarcode = barcode.replace(/[\x00-\x1F\x7F]/g, '');
+
+      // 嘗試解析帶有小括號 (01), (17), (10) 的格式
+      const regexBrackets = /(?:\(01\)|01)(\d{14})(?:.*?(?:\(17\)|17)(\d{6}))?(?:.*?(?:\(10\)|10)([A-Za-z0-9_-]+))?/;
+      const matchBrackets = cleanBarcode.match(regexBrackets);
+
+      if (matchBrackets && matchBrackets[1]) {
+        gtin = matchBrackets[1];
+        if (matchBrackets[2]) exp = matchBrackets[2];
+        if (matchBrackets[3]) lot = matchBrackets[3];
+      } 
+      // 嘗試解析連續字串 (01 開頭)
+      else if (cleanBarcode.startsWith('01') && cleanBarcode.length >= 16) {
+        gtin = cleanBarcode.substring(2, 16);
+        
+        let remaining = cleanBarcode.substring(16);
+        while (remaining.length > 0) {
+          if (remaining.startsWith('17') && remaining.length >= 8) {
+            exp = remaining.substring(2, 8);
+            remaining = remaining.substring(8);
+          } else if (remaining.startsWith('10') && remaining.length > 2) {
+            // 批號通常在最後，長度不定，直到字串結束或遇到其他 AI (簡化處理)
+            // 如果後續還有其他複雜 AI，可能需要更嚴謹的 GS1 Parser
+            lot = remaining.substring(2); 
+            break;
+          } else {
+            // 遇到不認識的 AI，或非標準結尾，跳出迴圈
+            break; 
+          }
+        }
+      }
+
+      return {
+        raw: barcode,
+        gtin: gtin,
+        lot: lot,
+        exp: exp
+      };
     }
 
-    }
-
-    function lookupBarcode(barcode){
+    function lookupBarcode(gtin){
 
     if(isAppsScriptMode()){
 
@@ -1290,7 +1357,7 @@ onclick="submitUse()">
     google.script.run
     .withSuccessHandler(resolve)
     .withFailureHandler(reject)
-    .lookupDressingBarcode(barcode);
+    .lookupDressingBarcode(gtin);
 
     });
 
@@ -1298,7 +1365,7 @@ onclick="submitUse()">
 
     return callDressingBarcodeApi({
     action: 'lookupDressingBarcode',
-    barcode: barcode
+    gtin: gtin
     });
 
     }
@@ -1324,7 +1391,7 @@ onclick="submitUse()">
 
     }
 
-    function reorderBarcode(barcodes){
+    function reorderBarcode(gtins){
 
     if(isAppsScriptMode()){
 
@@ -1333,7 +1400,7 @@ onclick="submitUse()">
     google.script.run
     .withSuccessHandler(resolve)
     .withFailureHandler(reject)
-    .reorderDressingBarcode({ barcodes: barcodes });
+    .reorderDressingBarcode({ barcodes: gtins });
 
     });
 
@@ -1341,12 +1408,12 @@ onclick="submitUse()">
 
     return callDressingBarcodeApi({
     action: 'reorderDressingBarcode',
-    barcodes: barcodes
+    barcodes: gtins
     });
 
     }
 
-    function deleteBarcode(barcode){
+    function deleteBarcode(gtin){
 
     if(isAppsScriptMode()){
 
@@ -1355,7 +1422,7 @@ onclick="submitUse()">
     google.script.run
     .withSuccessHandler(resolve)
     .withFailureHandler(reject)
-    .deleteDressingBarcode({ barcode: barcode });
+    .deleteDressingBarcode({ gtin: gtin });
 
     });
 
@@ -1363,7 +1430,7 @@ onclick="submitUse()">
 
     return callDressingBarcodeApi({
     action: 'deleteDressingBarcode',
-    barcode: barcode
+    gtin: gtin
     });
 
     }
@@ -1385,7 +1452,7 @@ onclick="submitUse()">
 
     return callDressingBarcodeApi({
     action: 'saveDressingBarcode',
-    barcode: data.barcode,
+    gtin: data.gtin,
     dressingName: data.dressingName,
     size: data.size,
     partNumber: data.partNumber
@@ -1605,7 +1672,7 @@ if (window.location.hostname.includes('github.io')) {
   ghFooter.innerHTML = `
     <div style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">
       <span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>
-      <span>v.2.11.1-202605280952</span>
+      <span>v.2.12.1-202605281157</span>
     </div>
   `;
   document.body.appendChild(ghFooter);
@@ -1615,6 +1682,10 @@ if (window.location.hostname.includes('github.io')) {
 </body>
 
 </html>
+
+
+
+
 
 
 

@@ -193,7 +193,8 @@ function Get-ClaspVersionNumberFromOutput {
 
 function Push-GitHubIfRequested {
   param(
-    [pscustomobject]$Config
+    [pscustomobject]$Config,
+    [string]$Action
   )
 
   if ($NoGitHubPrompt) {
@@ -207,17 +208,30 @@ function Push-GitHubIfRequested {
   Write-Host "自動將最新版號與 API 網址同步至 GitHub。"
 
   $defaultMsg = if ($Config) { "Bump version to v$($Config.Version)" } else { "Update version" }
-  $commitMessage =
-    Read-Host "Git commit message（直接按 Enter 使用 '$defaultMsg'，輸入 skip 略過）"
+  
+  if ($Action -eq 'deploy') {
+    $commitMessage =
+      Read-Host "Git commit message（直接按 Enter 使用 '$defaultMsg'，輸入 skip 略過）"
 
-  if ($commitMessage.Trim().ToLower() -eq 'skip') {
-    Write-Host ""
-    Write-Host "已略過 GitHub commit" -ForegroundColor Yellow
-    return
+    if ($commitMessage.Trim().ToLower() -eq 'skip') {
+      Write-Host ""
+      Write-Host "已略過 GitHub commit" -ForegroundColor Yellow
+      return
+    }
+
+    if ([string]::IsNullOrWhiteSpace($commitMessage)) {
+      $commitMessage = $defaultMsg
+    }
   }
+  else {
+    $commitMessage =
+      Read-Host "Git commit message（直接按 Enter 略過上傳 GitHub，輸入內容則進行 commit）"
 
-  if ([string]::IsNullOrWhiteSpace($commitMessage)) {
-    $commitMessage = $defaultMsg
+    if ([string]::IsNullOrWhiteSpace($commitMessage)) {
+      Write-Host ""
+      Write-Host "已略過 GitHub commit" -ForegroundColor Yellow
+      return
+    }
   }
 
   if (-not (Test-CommandExists -Name 'git')) {
@@ -418,4 +432,4 @@ else {
   Write-Host "Push completed with version $($appConfig.Description)"
 }
 
-Push-GitHubIfRequested -Config $appConfig
+Push-GitHubIfRequested -Config $appConfig -Action $Action

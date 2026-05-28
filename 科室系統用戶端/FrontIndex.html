@@ -262,18 +262,7 @@ function goHospitalSignIn(){
 
 function goDressingFront(){
 
-  goPage(
-    'dressingfront'
-  );
-
-}
-
-function goGithubHome(){
-
-window.open(
-'https://ndmc402010104.github.io/plastic-surgery-department-system/',
-'_blank'
-);
+  window.top.location.href = 'https://ndmc402010104.github.io/plastic-surgery-department-system/';
 
 }
 
@@ -344,44 +333,9 @@ onclick="goDressingFront()"
   <span class="entryIcon">敷</span>
   <span>
     <span class="entryTitle">敷料領用登錄</span>
-    <span class="entryDesc">進入 dressingFront，登錄病人敷料領用資料。</span>
+    <span class="entryDesc">開啟敷料領用登錄系統，支援相機掃描條碼功能。</span>
   </span>
-  <span class="arrow">›</span>
-</button>
-
-<button
-class="entryButton github"
-onclick="goGithubHome()"
->
-
-<span class="entryIcon">
-
-GH
-
-</span>
-
-<span>
-
-<span class="entryTitle">
-
-GitHub 首頁（測試）
-
-</span>
-
-<span class="entryDesc">
-
-開啟 GitHub Pages 首頁，測試手機版與相機功能。
-
-</span>
-
-</span>
-
-<span class="arrow">
-
-↗
-
-</span>
-
+  <span class="arrow">↗</span>
 </button>
 
 </div>

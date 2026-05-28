@@ -1,14 +1,15 @@
 const DRESSING_BARCODE_SHEET_ID =
 '1SJIQGgViQo6AhSDvJTNcNDx_KNXEjgTMfJh4R9SIMvk';
 
-const DRESSING_BARCODE_SHEET_NAME =
-'敷料建檔';
+const DRESSING_MASTER_SHEET_NAME =
+'敷料主檔';
 
-const DRESSING_BARCODE_HEADERS = [
-  'barcode',
+const DRESSING_MASTER_HEADERS = [
+  'gtin',
   'dressingName',
   'size',
-  'partNumber'
+  'partNumber',
+  'defaultPayment'
 ];
 
 function handleDressingBarcodeGet(e){
@@ -23,7 +24,7 @@ function handleDressingBarcodeGet(e){
 
     if(action === 'lookupDressingBarcode'){
       return apiOutput_(
-        lookupDressingBarcode_(data.barcode),
+        lookupDressingBarcode_(data.gtin),
         data.callback
       );
     }
@@ -100,7 +101,7 @@ function handleDressingBarcodePost(e){
 
     if(action === 'lookupDressingBarcode'){
       return jsonOutput_(
-        lookupDressingBarcode_(data.barcode)
+        lookupDressingBarcode_(data.gtin)
       );
     }
 
@@ -169,15 +170,15 @@ function errorDressingBarcode_(error, action){
 
 }
 
-function lookupDressingBarcode_(barcode){
+function lookupDressingBarcode_(gtin){
 
   const code =
-    String(barcode || '').trim();
+    String(gtin || '').trim();
 
   if(!code){
     return {
       ok:false,
-      message:'empty barcode'
+      message:'empty gtin'
     };
   }
 
@@ -192,10 +193,11 @@ function lookupDressingBarcode_(barcode){
       ok:true,
       found:false,
       data:{
-        barcode:code,
+        gtin:code,
         dressingName:'',
         size:'',
-        partNumber:''
+        partNumber:'',
+        defaultPayment:''
       }
     };
   }
@@ -203,20 +205,20 @@ function lookupDressingBarcode_(barcode){
   const headers =
     values[0];
 
-  const barcodeCol =
-    headers.indexOf('barcode');
+  const gtinCol =
+    headers.indexOf('gtin');
 
-  if(barcodeCol < 0){
+  if(gtinCol < 0){
     return {
       ok:false,
-      message:'missing barcode header',
+      message:'missing gtin header',
       headers:headers
     };
   }
 
   for(let i = 1; i < values.length; i++){
 
-    if(String(values[i][barcodeCol]).trim() === code){
+    if(String(values[i][gtinCol]).trim() === code){
       return {
         ok:true,
         found:true,
@@ -231,10 +233,11 @@ function lookupDressingBarcode_(barcode){
     ok:true,
     found:false,
     data:{
-      barcode:code,
+      gtin:code,
       dressingName:'',
       size:'',
-      partNumber:''
+      partNumber:'',
+      defaultPayment:''
     }
   };
 
@@ -251,23 +254,23 @@ function saveDressingBarcode_(data){
   const headers =
     values[0];
 
-  const barcode =
-    String(data.barcode || '').trim();
+  const gtin =
+    String(data.gtin || '').trim();
 
-  if(!barcode){
+  if(!gtin){
     return {
       ok:false,
-      message:'empty barcode'
+      message:'empty gtin'
     };
   }
 
-  const barcodeCol =
-    headers.indexOf('barcode');
+  const gtinCol =
+    headers.indexOf('gtin');
 
-  if(barcodeCol < 0){
+  if(gtinCol < 0){
     return {
       ok:false,
-      message:'missing barcode header',
+      message:'missing gtin header',
       headers:headers
     };
   }
@@ -275,17 +278,18 @@ function saveDressingBarcode_(data){
   let targetRow = -1;
 
   for(let i = 1; i < values.length; i++){
-    if(String(values[i][barcodeCol]).trim() === barcode){
+    if(String(values[i][gtinCol]).trim() === gtin){
       targetRow = i + 1;
       break;
     }
   }
 
   const rowData = {
-    barcode: barcode,
+    gtin: gtin,
     dressingName: data.dressingName || '',
     size: data.size || '',
-    partNumber: data.partNumber || ''
+    partNumber: data.partNumber || '',
+    defaultPayment: data.defaultPayment || ''
   };
 
   const row =
@@ -335,28 +339,29 @@ function listDressingBarcode_(){
   const headers =
     values[0];
 
-  const barcodeCol =
-    headers.indexOf('barcode');
+  const gtinCol =
+    headers.indexOf('gtin');
 
-  if(barcodeCol < 0){
-    throw new Error('missing barcode header');
+  if(gtinCol < 0){
+    throw new Error('missing gtin header');
   }
 
   const data = [];
 
   for(let i = 1; i < values.length; i++){
     const row = values[i];
-    const barcode = String(row[barcodeCol] || '').trim();
+    const gtin = String(row[gtinCol] || '').trim();
 
-    if(!barcode){
+    if(!gtin){
       continue;
     }
 
     data.push({
-      barcode: barcode,
+      gtin: gtin,
       dressingName: String(row[headers.indexOf('dressingName')] || ''),
       size: String(row[headers.indexOf('size')] || ''),
-      partNumber: String(row[headers.indexOf('partNumber')] || '')
+      partNumber: String(row[headers.indexOf('partNumber')] || ''),
+      defaultPayment: String(row[headers.indexOf('defaultPayment')] || '')
     });
   }
 
@@ -369,10 +374,10 @@ function listDressingBarcode_(){
 
 function deleteDressingBarcode_(data){
 
-  const barcode = String(data.barcode || '').trim();
+  const gtin = String(data.gtin || '').trim();
 
-  if(!barcode){
-    return { ok: false, message: 'empty barcode' };
+  if(!gtin){
+    return { ok: false, message: 'empty gtin' };
   }
 
   const sheet = getDressingBarcodeSheet_();
@@ -383,12 +388,12 @@ function deleteDressingBarcode_(data){
   }
 
   const headers = values[0];
-  const barcodeCol = headers.indexOf('barcode');
+  const gtinCol = headers.indexOf('gtin');
 
   for(let i = 1; i < values.length; i++){
-    if(String(values[i][barcodeCol]).trim() === barcode){
+    if(String(values[i][gtinCol]).trim() === gtin){
       sheet.deleteRow(i + 1);
-      return { ok: true, deleted: true, barcode: barcode };
+      return { ok: true, deleted: true, gtin: gtin };
     }
   }
 
@@ -399,7 +404,7 @@ function deleteDressingBarcode_(data){
 function reorderDressingBarcode_(data){
 
   const order =
-    String(data.barcodes || '').split(',')
+    String(data.barcodes || '').split(',') // Keeping 'barcodes' in API payload for backwards compat temporarily, though it's now GTINs
       .map(function(item){
         return String(item || '').trim();
       })
@@ -422,17 +427,17 @@ function reorderDressingBarcode_(data){
   }
 
   const headers = values[0];
-  const barcodeCol = headers.indexOf('barcode');
+  const gtinCol = headers.indexOf('gtin');
 
-  if(barcodeCol < 0){
-    return { ok: false, message: 'missing barcode header' };
+  if(gtinCol < 0){
+    return { ok: false, message: 'missing gtin header' };
   }
 
   const dataRows = values.slice(1);
   const rowMap = {};
 
   dataRows.forEach(function(row){
-    const code = String(row[barcodeCol] || '').trim();
+    const code = String(row[gtinCol] || '').trim();
     if(code){
       rowMap[code] = row;
     }
@@ -469,13 +474,19 @@ function getDressingBarcodeSheet_(){
       DRESSING_BARCODE_SHEET_ID
     );
 
-  const sheet =
-    ss.getSheetByName(
-      DRESSING_BARCODE_SHEET_NAME
-    );
+  let sheet = ss.getSheetByName(DRESSING_MASTER_SHEET_NAME);
+  
+  // Fallback check if user hasn't renamed '敷料建檔' to '敷料主檔' yet
+  if (!sheet) {
+    sheet = ss.getSheetByName('敷料建檔');
+    if (sheet) {
+      sheet.setName(DRESSING_MASTER_SHEET_NAME);
+    }
+  }
 
   if(!sheet){
-    throw new Error('找不到工作表：' + DRESSING_BARCODE_SHEET_NAME);
+    // If not found at all, create it
+    sheet = ss.insertSheet(DRESSING_MASTER_SHEET_NAME);
   }
 
   setupDressingBarcodeHeader_(sheet);
@@ -491,7 +502,7 @@ function setupDressingBarcodeHeader_(sheet){
 
   const firstRow =
     lastColumn > 0
-      ? sheet.getRange(1, 1, 1, Math.max(lastColumn, DRESSING_BARCODE_HEADERS.length)).getValues()[0]
+      ? sheet.getRange(1, 1, 1, Math.max(lastColumn, DRESSING_MASTER_HEADERS.length)).getValues()[0]
       : [];
 
   const hasHeader =
@@ -502,8 +513,8 @@ function setupDressingBarcodeHeader_(sheet){
 
   if(!hasHeader){
     sheet
-      .getRange(1, 1, 1, DRESSING_BARCODE_HEADERS.length)
-      .setValues([DRESSING_BARCODE_HEADERS]);
+      .getRange(1, 1, 1, DRESSING_MASTER_HEADERS.length)
+      .setValues([DRESSING_MASTER_HEADERS]);
     return;
   }
 
@@ -513,7 +524,7 @@ function setupDressingBarcodeHeader_(sheet){
     });
 
   const missingHeaders =
-    DRESSING_BARCODE_HEADERS.filter(function(header){
+    DRESSING_MASTER_HEADERS.filter(function(header){
       return headers.indexOf(header) < 0;
     });
 
@@ -550,7 +561,7 @@ function whoamiDressingBarcode_(){
     activeUser:Session.getActiveUser().getEmail(),
     scriptTimeZone:Session.getScriptTimeZone(),
     spreadsheetId:DRESSING_BARCODE_SHEET_ID,
-    sheetName:DRESSING_BARCODE_SHEET_NAME
+    sheetName:DRESSING_MASTER_SHEET_NAME
   };
 
 }
@@ -579,8 +590,8 @@ function jsonOutput_(obj){
 
 }
 
-function lookupDressingBarcode(barcode){
-  return lookupDressingBarcode_(barcode);
+function lookupDressingBarcode(gtin){
+  return lookupDressingBarcode_(gtin);
 }
 
 function saveDressingBarcode(data){
