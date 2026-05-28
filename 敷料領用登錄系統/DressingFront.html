@@ -594,10 +594,6 @@ onclick="submitUse()">
 <button type="button" class="primary" onclick="startDictScanner()">開啟掃描 📷</button>
 </div>
 </div>
-<div style="display:flex; gap:8px; margin-bottom:14px;">
-<input id="dictManualInput" placeholder="手動輸入條碼測試" style="flex:1; padding:10px; border:1px solid #cbd5e1; border-radius:8px;">
-<button type="button" onclick="manualDictScan()">加入清單</button>
-</div>
 <div class="dictTableWrap">
 <table class="dictTable" id="dictTable">
 <thead>
@@ -938,15 +934,159 @@ onclick="submitUse()">
     btn.disabled = false;
     }
 
+    function getDictRowData(tr){
+    return {
+      hospitalCode: tr.querySelector('.dict-hospital-code')?.value.trim() || '',
+      dressingName: tr.querySelector('.dict-name')?.value.trim() || '',
+      size: tr.querySelector('.dict-size')?.value.trim() || '',
+      singleGtin: tr.querySelector('.dict-single-gtin')?.value.trim() || '',
+      boxGtin: tr.querySelector('.dict-box-gtin')?.value.trim() || '',
+      boxQuantity: tr.querySelector('.dict-box-qty')?.value.trim() || '',
+      category: tr.querySelector('.dict-category')?.value.trim() || '',
+      status: tr.querySelector('.dict-status')?.value.trim() || ''
+    };
+    }
+
+    function setDictRowSnapshot(tr){
+    tr.dataset.originalData = JSON.stringify(getDictRowData(tr));
+    tr.dataset.dirty = '0';
+    }
+
+    function isDictRowDirty(tr){
+    if(tr.dataset.isNewRow === '1'){
+    return true;
+    }
+
+    const original = tr.dataset.originalData || '';
+    if(!original){
+    return false;
+    }
+
+    return original !== JSON.stringify(getDictRowData(tr));
+    }
+
+    function updateDictRowEditButtons(tr){
+    const saveBtn = tr.querySelector('.save-btn');
+    const editBtn = tr.querySelector('.edit-btn');
+    const dirty = isDictRowDirty(tr);
+
+    tr.dataset.dirty = dirty ? '1' : '0';
+
+    if(saveBtn){
+    saveBtn.style.display = dirty ? 'inline-block' : 'none';
+    saveBtn.disabled = !dirty;
+    }
+
+    if(editBtn){
+    editBtn.style.display = 'inline-block';
+    editBtn.innerText = tr.classList.contains('editing') ? '返回' : '編輯';
+    }
+    }
+
+    function bindDictRowDirtyWatch(tr){
+    tr.querySelectorAll('input, select').forEach(function(input){
+    if(input.dataset.dirtyWatchBound === '1'){
+    return;
+    }
+
+    input.dataset.dirtyWatchBound = '1';
+
+    input.addEventListener('input', function(){
+    if(tr.classList.contains('editing')){
+    updateDictRowEditButtons(tr);
+    }
+    });
+
+    input.addEventListener('change', function(){
+    if(tr.classList.contains('editing')){
+    updateDictRowEditButtons(tr);
+    }
+    });
+    });
+    }
+
+    function restoreDictRowSnapshot(tr){
+    if(!tr.dataset.originalData){
+    return;
+    }
+
+    let data = {};
+    try{
+    data = JSON.parse(tr.dataset.originalData);
+    }
+    catch(error){
+    data = {};
+    }
+
+    const map = {
+      '.dict-hospital-code': data.hospitalCode,
+      '.dict-name': data.dressingName,
+      '.dict-size': data.size,
+      '.dict-single-gtin': data.singleGtin,
+      '.dict-box-gtin': data.boxGtin,
+      '.dict-box-qty': data.boxQuantity,
+      '.dict-category': data.category,
+      '.dict-status': data.status
+    };
+
+    Object.keys(map).forEach(function(selector){
+    const input = tr.querySelector(selector);
+    if(input){
+    input.value = map[selector] || '';
+    }
+    });
+    }
+
+    function leaveDictEditMode(tr){
+    tr.classList.remove('editing');
+    removeBoxMergePanel(tr);
+    delete tr.dataset.isNewRow;
+    delete tr.dataset.dirty;
+
+    const saveBtn = tr.querySelector('.save-btn');
+    const editBtn = tr.querySelector('.edit-btn');
+
+    if(saveBtn){
+    saveBtn.style.display = 'none';
+    saveBtn.disabled = false;
+    saveBtn.innerText = '儲存';
+    }
+
+    if(editBtn){
+    editBtn.style.display = 'inline-block';
+    editBtn.innerText = '編輯';
+    }
+    }
+
     function editDictRow(btn) {
     const tr = btn.closest('tr');
+
+    if(tr.classList.contains('editing')){
+    if(isDictRowDirty(tr)){
+    const ok = confirm('目前有未儲存變更，確定要返回並放棄修改嗎？');
+    if(!ok){
+    return;
+    }
+    }
+
+    restoreDictRowSnapshot(tr);
+    leaveDictEditMode(tr);
+    const statusEl = tr.querySelector('.dictStatus');
+    if(statusEl){
+    statusEl.innerText = '已返回';
+    statusEl.className = 'dictStatus saved';
+    }
+    return;
+    }
+
     tr.classList.add('editing');
     removeBoxMergePanel(tr);
     Array.from(tr.querySelectorAll('input')).forEach(input => {
     input.disabled = false;
     });
-    tr.querySelector('.edit-btn').style.display = 'none';
-    tr.querySelector('.save-btn').style.display = 'inline-block';
+    setDictRowSnapshot(tr);
+    bindDictRowDirtyWatch(tr);
+    updateDictRowEditButtons(tr);
     tr.querySelector('.dict-name').focus();
     }
     async function saveDictRow(btn) {
@@ -977,12 +1117,7 @@ onclick="submitUse()">
     return;
     }
 
-    if (boxGtin && !boxQty) {
-    statusEl.innerText = '盒裝需填數量';
-    statusEl.className = 'dictStatus error';
-    tr.querySelector('.dict-box-qty').focus();
-    return;
-    }
+    // 盒裝數量可以先略過，之後再補。
 
     if (isBoxMode && tr.dataset.boxMergeMode === 'existing' && !mergeExistingKey) {
     statusEl.innerText = '請選擇要合併的既有敷料，或改選「先暫存盒裝」';
@@ -1013,10 +1148,9 @@ onclick="submitUse()">
     if (res.ok) {
     statusEl.innerText = mergeExistingKey ? '已合併' : '已儲存';
     statusEl.className = 'dictStatus saved';
-    tr.classList.remove('editing');
     tr.dataset.rowKey = singleGtin || boxGtin;
-    tr.querySelector('.save-btn').style.display = 'none';
-    tr.querySelector('.edit-btn').style.display = 'inline-block';
+    setDictRowSnapshot(tr);
+    leaveDictEditMode(tr);
 
     Array.from(tr.querySelectorAll('input')).forEach(input => {
     input.disabled = false;
@@ -1146,12 +1280,11 @@ onclick="submitUse()">
     startDressingScanner();
     }
 
-    async function manualDictScan() {
-    const barcode = document.getElementById('dictManualInput').value.trim();
-    if(!barcode) return;
-    document.getElementById('dictManualInput').value = '';
+    async function manualDictScanForDebug(barcode) {
+    const code = String(barcode || '').trim();
+    if(!code) return;
     scannerMode = 'dict';
-    await handleBarcodeScanResult(barcode);
+    await handleBarcodeScanResult(code);
     }
     function getDictRowKey(tr){
     if(!tr){
@@ -1169,14 +1302,20 @@ onclick="submitUse()">
 
     function setGtinTarget(btn, target) {
     const tr = btn.closest('tr');
+    const scannedGtin = getScannedGtinFromRow(tr);
+
+    if (!scannedGtin) {
+    alert('這列沒有可指定的掃描GTIN');
+    return;
+    }
 
     if (target === 'single') {
-    enterSingleMode(tr);
+    guideDictRowAfterScan(tr, 'single');
     return;
     }
 
     if (target === 'box') {
-    enterBoxMode(tr);
+    guideDictRowAfterScan(tr, 'box');
     return;
     }
     }
@@ -1190,77 +1329,30 @@ onclick="submitUse()">
     ).trim();
     }
 
-    function setStandardFieldsDisabled(tr, disabled){
-    [
-      '.dict-hospital-code',
-      '.dict-name',
-      '.dict-size',
-      '.dict-category',
-      '.dict-status'
-    ].forEach(selector => {
-    const input = tr.querySelector(selector);
-    if(input){
-    input.disabled = disabled;
-    }
-    });
-    }
-
     function removeBoxMergePanel(tr){
     const panel = tr.querySelector('.boxMergePanel');
     if(panel){
     panel.remove();
     }
-    delete tr.dataset.gtinTarget;
     delete tr.dataset.mergeExistingKey;
+    delete tr.dataset.boxMergeMode;
     }
 
-    function enterSingleMode(tr){
-    const scannedGtin = getScannedGtinFromRow(tr);
-    const singleInput = tr.querySelector('.dict-single-gtin');
-    const boxInput = tr.querySelector('.dict-box-gtin');
-
-    if (!scannedGtin) {
-    alert('這列沒有可指定的掃描GTIN');
+    function setDictRowInputsDisabled(tr, disabled){
+    tr.querySelectorAll('input, select').forEach(function(input){
+    if(input.classList.contains('readonly')){
     return;
     }
-
-    removeBoxMergePanel(tr);
-    setStandardFieldsDisabled(tr, false);
-
-    singleInput.value = scannedGtin;
-    boxInput.value = '';
-    tr.dataset.gtinTarget = 'single';
-    tr.dataset.rowKey = scannedGtin;
-
-    tr.classList.add('editing');
-    tr.querySelector('.save-btn').style.display = 'inline-block';
-    tr.querySelector('.edit-btn').style.display = 'none';
-    singleInput.focus();
+    input.disabled = disabled;
+    });
     }
 
-    function enterBoxMode(tr){
-    const scannedGtin = getScannedGtinFromRow(tr);
-    const singleInput = tr.querySelector('.dict-single-gtin');
-    const boxInput = tr.querySelector('.dict-box-gtin');
-    const boxQtyInput = tr.querySelector('.dict-box-qty');
-
-    if (!scannedGtin) {
-    alert('這列沒有可指定的掃描GTIN');
-    return;
-    }
-
-    tr.dataset.gtinTarget = 'box';
-    tr.dataset.rowKey = scannedGtin;
-    singleInput.value = '';
-    boxInput.value = scannedGtin;
-
-    setStandardFieldsDisabled(tr, true);
-    renderBoxMergePanel(tr);
-
+    function unlockDictRowForManualEdit(tr){
+    setDictRowInputsDisabled(tr, false);
     tr.classList.add('editing');
-    tr.querySelector('.save-btn').style.display = 'inline-block';
-    tr.querySelector('.edit-btn').style.display = 'none';
-    boxQtyInput.focus();
+    tr.dataset.isNewRow = tr.dataset.isNewRow || '1';
+    bindDictRowDirtyWatch(tr);
+    updateDictRowEditButtons(tr);
     }
 
     function getExistingDressingItems(){
@@ -1275,11 +1367,11 @@ onclick="submitUse()">
           boxGtin: tr.querySelector('.dict-box-gtin')?.value || '',
           boxQuantity: tr.querySelector('.dict-box-qty')?.value || '',
           category: tr.querySelector('.dict-category')?.value || '',
-          status: tr.querySelector('.dict-status')?.value || ''
+          status: tr.querySelector('.dict-status')?.value || '使用中'
         }));
 
     return items.filter(item =>
-      String(item.singleGtin || item.gtin || item.boxGtin || '').trim()
+      String(item.singleGtin || item.gtin || item.boxGtin || item.dressingName || '').trim()
     );
     }
 
@@ -1287,128 +1379,181 @@ onclick="submitUse()">
     return String(item.singleGtin || item.gtin || item.boxGtin || '').trim();
     }
 
-    function renderBoxMergePanel(tr){
-    removeBoxMergePanel(tr);
-
-    const actionCell = tr.querySelector('td:last-child');
-    const panel = document.createElement('div');
-    panel.className = 'boxMergePanel';
-
-    const items = getExistingDressingItems();
-    const names = Array.from(new Set(
-      items
-        .map(item => String(item.dressingName || '').trim())
-        .filter(Boolean)
-    )).sort();
-
-    panel.innerHTML = `
-      <div><b>盒裝模式</b></div>
-      <div class="boxMergeNote">可綁定既有敷料，也可先暫存只有盒裝GTIN；之後再補單包GTIN。</div>
-      <div class="boxMergeModeBtns">
-        <button type="button" onclick="setBoxMergeMode(this, 'existing')">綁定既有敷料</button>
-        <button type="button" onclick="setBoxMergeMode(this, 'pending')">先暫存盒裝</button>
-      </div>
-      <div class="boxMergeExistingArea">
-        <label>既有敷料名稱</label>
-        <select class="box-merge-name" onchange="refreshBoxMergeSizeOptions(this)">
-          <option value="">請選擇</option>
-          ${names.map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('')}
-        </select>
-        <label>既有規格描述</label>
-        <select class="box-merge-size" onchange="applyBoxMergeSelection(this)">
-          <option value="">請先選敷料名稱</option>
-        </select>
-      </div>
-    `;
-
-    actionCell.appendChild(panel);
-    setBoxMergeMode(panel.querySelector('.boxMergeModeBtns button'), 'existing');
+    function buildNumberedPrompt(title, values){
+    if(!values || values.length === 0){
+    return title + '\n\n目前沒有既有選項，請直接輸入。';
     }
 
-    function setBoxMergeMode(btn, mode){
-    const tr = btn.closest('tr');
-    const panel = tr.querySelector('.boxMergePanel');
-    const existingArea = panel ? panel.querySelector('.boxMergeExistingArea') : null;
-
-    tr.dataset.boxMergeMode = mode;
-    delete tr.dataset.mergeExistingKey;
-
-    if(mode === 'existing'){
-    if(existingArea){
-    existingArea.style.display = 'block';
-    }
-    const statusEl = tr.querySelector('.dictStatus');
-    if(statusEl){
-    statusEl.innerText = '盒裝：請選既有敷料';
-    statusEl.className = 'dictStatus';
-    }
+    return title + '\n\n' +
+      values.map(function(value, index){
+        return (index + 1) + '. ' + value;
+      }).join('\n') +
+      '\n\n請輸入編號，或直接輸入新文字。';
     }
 
-    if(mode === 'pending'){
-    if(existingArea){
-    existingArea.style.display = 'none';
-    }
-    setStandardFieldsDisabled(tr, true);
-    const statusEl = tr.querySelector('.dictStatus');
-    if(statusEl){
-    statusEl.innerText = '盒裝：先暫存，之後再配對';
-    statusEl.className = 'dictStatus';
-    }
-    }
+    function pickValueByPrompt(title, values, defaultValue){
+    const answer = prompt(
+      buildNumberedPrompt(title, values),
+      defaultValue || ''
+    );
+
+    if(answer === null){
+    return null;
     }
 
-    function refreshBoxMergeSizeOptions(select){
-    const tr = select.closest('tr');
-    const name = select.value;
-    const sizeSelect = tr.querySelector('.box-merge-size');
-    const items = getExistingDressingItems()
-      .filter(item => String(item.dressingName || '').trim() === name);
+    const trimmed = String(answer).trim();
+    const index = Number(trimmed);
 
-    const sizes = items.map(item => ({
-      size: String(item.size || '').trim(),
-      key: getItemKey(item),
-      item: item
-    }));
-
-    sizeSelect.innerHTML =
-      '<option value="">請選擇規格</option>' +
-      sizes.map(row =>
-        `<option value="${escapeHtml(row.key)}">${escapeHtml(row.size || '未填規格')}</option>`
-      ).join('');
-
-    delete tr.dataset.mergeExistingKey;
+    if(Number.isInteger(index) && index >= 1 && index <= values.length){
+    return values[index - 1];
     }
 
-    function applyBoxMergeSelection(select){
-    const tr = select.closest('tr');
-    const key = select.value;
-    if(!key){
-    delete tr.dataset.mergeExistingKey;
-    return;
+    return trimmed;
     }
 
-    const item = getExistingDressingItems().find(x => getItemKey(x) === key);
-    if(!item){
-    delete tr.dataset.mergeExistingKey;
-    return;
+    function findExistingItemByNameAndSize(name, size){
+    const cleanName = String(name || '').trim();
+    const cleanSize = String(size || '').trim();
+
+    return getExistingDressingItems().find(function(item){
+    return String(item.dressingName || '').trim() === cleanName
+      && String(item.size || '').trim() === cleanSize;
+    });
     }
 
-    tr.dataset.mergeExistingKey = key;
+    function applyExistingItemToRow(tr, item, keepScannedAs){
+    const scannedGtin = getScannedGtinFromRow(tr);
 
     tr.querySelector('.dict-hospital-code').value = item.hospitalCode || '';
     tr.querySelector('.dict-name').value = item.dressingName || '';
     tr.querySelector('.dict-size').value = item.size || '';
-    tr.querySelector('.dict-single-gtin').value = item.singleGtin || item.gtin || '';
     tr.querySelector('.dict-category').value = item.category || '';
     tr.querySelector('.dict-status').value = item.status || '使用中';
 
-    setStandardFieldsDisabled(tr, true);
+    if(keepScannedAs === 'single'){
+    tr.querySelector('.dict-single-gtin').value = scannedGtin;
+    tr.querySelector('.dict-box-gtin').value = item.boxGtin || '';
+    }
+
+    if(keepScannedAs === 'box'){
+    tr.querySelector('.dict-single-gtin').value = item.singleGtin || item.gtin || '';
+    tr.querySelector('.dict-box-gtin').value = scannedGtin;
+    }
+
+    tr.querySelector('.dict-box-qty').value = item.boxQuantity || tr.querySelector('.dict-box-qty').value || '';
+    tr.dataset.rowKey = tr.querySelector('.dict-single-gtin').value || tr.querySelector('.dict-box-gtin').value || scannedGtin;
+    }
+
+    function guideDictRowAfterScan(tr, forcedTarget){
+    const scannedGtin = getScannedGtinFromRow(tr);
+    if(!scannedGtin){
+    alert('這列沒有可指定的掃描GTIN');
+    return;
+    }
+
+    removeBoxMergePanel(tr);
+    unlockDictRowForManualEdit(tr);
+
+    let target = forcedTarget || '';
+
+    if(!target){
+    const choice = prompt(
+      '步驟 1：請選擇這次掃到的條碼類型\n\n1 = 單包GTIN\n2 = 盒裝GTIN\n\n之後會再請你選擇或輸入敷料名稱與規格。',
+      '1'
+    );
+
+    if(choice === null){
+    const statusEl = tr.querySelector('.dictStatus');
+    if(statusEl){
+    statusEl.innerText = '尚未選擇單包/盒裝';
+    statusEl.className = 'dictStatus error';
+    }
+    return;
+    }
+
+    target = String(choice).trim() === '2' ? 'box' : 'single';
+    }
+
+    tr.dataset.gtinTarget = target;
+
+    if(target === 'single'){
+    tr.querySelector('.dict-single-gtin').value = scannedGtin;
+    }
+
+    if(target === 'box'){
+    tr.querySelector('.dict-box-gtin').value = scannedGtin;
+    if(!tr.querySelector('.dict-single-gtin').value){
+    tr.querySelector('.dict-single-gtin').value = '';
+    }
+    }
+
+    const allItems = getExistingDressingItems();
+    const names = Array.from(new Set(
+      allItems.map(item => String(item.dressingName || '').trim()).filter(Boolean)
+    )).sort();
+
+    const name = pickValueByPrompt(
+      '步驟 2：請選擇或輸入敷料名稱',
+      names,
+      tr.querySelector('.dict-name').value || ''
+    );
+
+    if(name === null){
+    return;
+    }
+
+    tr.querySelector('.dict-name').value = name;
+
+    const sizesForName = Array.from(new Set(
+      allItems
+        .filter(item => String(item.dressingName || '').trim() === String(name).trim())
+        .map(item => String(item.size || '').trim())
+        .filter(Boolean)
+    )).sort();
+
+    const size = pickValueByPrompt(
+      '步驟 3：請選擇或輸入規格描述',
+      sizesForName,
+      tr.querySelector('.dict-size').value || ''
+    );
+
+    if(size === null){
+    return;
+    }
+
+    tr.querySelector('.dict-size').value = size;
+
+    const existingItem = findExistingItemByNameAndSize(name, size);
+
+    if(existingItem){
+    applyExistingItemToRow(tr, existingItem, target);
+    }
+
+    if(target === 'box'){
+    const currentQty = tr.querySelector('.dict-box-qty').value || '';
+    const qty = prompt(
+      '步驟 4：請輸入一盒數量\n\n可以先略過，之後再補。',
+      currentQty
+    );
+
+    if(qty !== null){
+    tr.querySelector('.dict-box-qty').value = String(qty).trim();
+    }
+    }
+
+    unlockDictRowForManualEdit(tr);
 
     const statusEl = tr.querySelector('.dictStatus');
     if(statusEl){
-    statusEl.innerText = '將合併到既有敷料';
+    statusEl.innerText = target === 'box'
+      ? '已設定為盒裝，請確認後儲存'
+      : '已設定為單包，請確認後儲存';
     statusEl.className = 'dictStatus';
     }
+
+    alert(
+      '已完成基本設定。\n\n接下來你可以自由修改任何欄位；確認無誤後，按「儲存」。'
+    );
     }
 
     async function addDictRow(barcode, parsed) {
@@ -1427,14 +1572,15 @@ onclick="submitUse()">
 
     const tr = document.createElement('tr');
     tr.classList.add('editing');
+    tr.dataset.isNewRow = '1';
     tr.dataset.scannedGtin = scannedGtin;
     tr.dataset.rowKey = scannedGtin;
     tr.innerHTML = `
     <td><input class="dict-hospital-code" placeholder="院內碼"></td>
-    <td><input class="dict-name" placeholder="請輸入名稱"></td>
+    <td><input class="dict-name" placeholder="敷料名稱"></td>
     <td><input class="dict-size" placeholder="規格"></td>
     <td>
-      <input class="dict-single-gtin" value="${escapeHtml(scannedGtin)}" placeholder="單包GTIN">
+      <input class="dict-single-gtin" placeholder="單包GTIN">
       <div class="gtinTargetTools">
         <button type="button" onclick="setGtinTarget(this, 'single')">設為單包</button>
       </div>
@@ -1445,7 +1591,7 @@ onclick="submitUse()">
         <button type="button" onclick="setGtinTarget(this, 'box')">設為盒裝</button>
       </div>
     </td>
-    <td><input class="dict-box-qty" placeholder="數量"></td>
+    <td><input class="dict-box-qty" placeholder="可之後補"></td>
     <td><input class="dict-category" placeholder="分類"></td>
     <td><input class="dict-status" value="使用中" placeholder="使用中 / 試用 / 停用"></td>
     <td style="white-space:nowrap;">
@@ -1458,6 +1604,8 @@ onclick="submitUse()">
     </td>
     `;
     document.getElementById('dictTbody').prepend(tr);
+    bindDictRowDirtyWatch(tr);
+    updateDictRowEditButtons(tr);
 
     try {
     const res = await lookupBarcode(scannedGtin);
@@ -1476,19 +1624,18 @@ onclick="submitUse()">
     tr.querySelector('.dictStatus').innerText = matchText;
     tr.querySelector('.dictStatus').className = 'dictStatus saved';
 
-    tr.classList.remove('editing');
-    tr.querySelector('.save-btn').style.display = 'none';
-    tr.querySelector('.edit-btn').style.display = 'inline-block';
+    setDictRowSnapshot(tr);
+    leaveDictEditMode(tr);
     } else {
-    tr.querySelector('.dictStatus').innerText = '新GTIN，請確認設為單包或盒裝';
+    tr.querySelector('.dictStatus').innerText = '新GTIN，開始引導建檔';
     tr.querySelector('.dictStatus').className = 'dictStatus';
-    tr.querySelector('.dict-name').focus();
+    guideDictRowAfterScan(tr);
     }
     } catch (err) {
-    tr.querySelector('.dictStatus').innerText = '查詢失敗';
+    tr.querySelector('.dictStatus').innerText = '查詢失敗，仍可手動建檔';
     tr.querySelector('.dictStatus').className = 'dictStatus error';
-    tr.querySelector('.dict-name').focus();
     console.log(err);
+    guideDictRowAfterScan(tr);
     }
     }
 
@@ -2156,7 +2303,7 @@ if (window.location.hostname.includes('github.io')) {
   ghFooter.innerHTML = `
     <div style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">
       <span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>
-      <span>v.2.14.0-202605290107</span>
+      <span>v.2.14.1-202605290122</span>
     </div>
   `;
   document.body.appendChild(ghFooter);

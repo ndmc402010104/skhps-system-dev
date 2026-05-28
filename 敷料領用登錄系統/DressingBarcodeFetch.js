@@ -38,26 +38,21 @@ DRESSING_MASTER_DISPLAY_NAMES.forEach(function(name, index){
     DRESSING_MASTER_INTERNAL_KEYS[index];
 });
 
-const DRESSING_MASTER_HEADERS =
-DRESSING_MASTER_DISPLAY_NAMES;
-
 function handleDressingBarcodeGet(e){
-
-  const data =
-    e.parameter || {};
-
-  const action =
-    data.action || '';
+  const data = e.parameter || {};
+  const action = data.action || '';
 
   try{
-
     if(action === 'lookupDressingBarcode'){
       return apiOutput_(
-        lookupDressingBarcode_(
-          data.gtin ||
-          data.singleGtin ||
-          data.boxGtin
-        ),
+        lookupDressingBarcode_(data.gtin || data.singleGtin || data.boxGtin),
+        data.callback
+      );
+    }
+
+    if(action === 'findDressingPairCandidates'){
+      return apiOutput_(
+        findDressingPairCandidates_(data),
         data.callback
       );
     }
@@ -70,126 +65,76 @@ function handleDressingBarcodeGet(e){
     }
 
     if(action === 'listDressingBarcode'){
-      return apiOutput_(
-        listDressingBarcode_(),
-        data.callback
-      );
+      return apiOutput_(listDressingBarcode_(), data.callback);
     }
 
     if(action === 'deleteDressingBarcode'){
-      return apiOutput_(
-        deleteDressingBarcode_(data),
-        data.callback
-      );
+      return apiOutput_(deleteDressingBarcode_(data), data.callback);
     }
 
     if(action === 'reorderDressingBarcode'){
-      return apiOutput_(
-        reorderDressingBarcode_(data),
-        data.callback
-      );
+      return apiOutput_(reorderDressingBarcode_(data), data.callback);
     }
 
     if(action === 'ping'){
-      return apiOutput_(
-        pingDressingBarcode_(),
-        data.callback
-      );
+      return apiOutput_(pingDressingBarcode_(), data.callback);
     }
 
     if(action === 'whoami'){
-      return apiOutput_(
-        whoamiDressingBarcode_(),
-        data.callback
-      );
+      return apiOutput_(whoamiDressingBarcode_(), data.callback);
     }
 
-    return apiOutput_(
-      {
-        ok:false,
-        message:'unknown action'
-      },
-      data.callback
-    );
+    return apiOutput_({ ok:false, message:'unknown action' }, data.callback);
 
+  } catch(error){
+    return apiOutput_(errorDressingBarcode_(error, action), data.callback);
   }
-  catch(error){
-    return apiOutput_(
-      errorDressingBarcode_(error, action),
-      data.callback
-    );
-  }
-
 }
 
 function handleDressingBarcodePost(e){
-
-  const data =
-    JSON.parse(e.postData.contents || '{}');
-
-  const action =
-    data.action || '';
+  const data = JSON.parse(e.postData.contents || '{}');
+  const action = data.action || '';
 
   try{
-
     if(action === 'lookupDressingBarcode'){
       return jsonOutput_(
-        lookupDressingBarcode_(
-          data.gtin ||
-          data.singleGtin ||
-          data.boxGtin
-        )
+        lookupDressingBarcode_(data.gtin || data.singleGtin || data.boxGtin)
       );
+    }
+
+    if(action === 'findDressingPairCandidates'){
+      return jsonOutput_(findDressingPairCandidates_(data));
     }
 
     if(action === 'saveDressingBarcode'){
-      return jsonOutput_(
-        saveDressingBarcode_(data)
-      );
+      return jsonOutput_(saveDressingBarcode_(data));
     }
 
     if(action === 'listDressingBarcode'){
-      return jsonOutput_(
-        listDressingBarcode_()
-      );
+      return jsonOutput_(listDressingBarcode_());
     }
 
     if(action === 'deleteDressingBarcode'){
-      return jsonOutput_(
-        deleteDressingBarcode_(data)
-      );
+      return jsonOutput_(deleteDressingBarcode_(data));
     }
 
     if(action === 'reorderDressingBarcode'){
-      return jsonOutput_(
-        reorderDressingBarcode_(data)
-      );
+      return jsonOutput_(reorderDressingBarcode_(data));
     }
 
     if(action === 'ping'){
-      return jsonOutput_(
-        pingDressingBarcode_()
-      );
+      return jsonOutput_(pingDressingBarcode_());
     }
 
     if(action === 'whoami'){
-      return jsonOutput_(
-        whoamiDressingBarcode_()
-      );
+      return jsonOutput_(whoamiDressingBarcode_());
     }
 
-    return jsonOutput_({
-      ok:false,
-      message:'unknown action'
-    });
+    return jsonOutput_({ ok:false, message:'unknown action' });
 
+  } catch(error){
+    return jsonOutput_(errorDressingBarcode_(error, action));
   }
-  catch(error){
-    return jsonOutput_(
-      errorDressingBarcode_(error, action)
-    );
-  }
-
 }
 
 function normalizeDressingCode_(value){
@@ -198,68 +143,72 @@ function normalizeDressingCode_(value){
     .trim();
 }
 
-function addDressingAliases_(obj){
-
-  obj.gtin =
-    normalizeDressingCode_(obj.gtin);
-
-  obj.singleGtin =
-    obj.gtin;
-
-  obj.boxGtin =
-    normalizeDressingCode_(obj.boxGtin);
-
-  obj.boxQuantity =
-    obj.boxQuantity === undefined
-      ? ''
-      : obj.boxQuantity;
-
-  obj.status =
-    obj.status || '使用中';
-
-  return obj;
-
+function normalizeDressingText_(value){
+  return String(value || '')
+    .trim()
+    .replace(/\s+/g, '')
+    .replace(/[×Xx＊]/g, '*')
+    .toLowerCase();
 }
 
-function getDressingRowKey_(obj){
-  return normalizeDressingCode_(
-    obj.gtin ||
-    obj.singleGtin ||
-    obj.boxGtin
-  );
+function addDressingAliases_(obj){
+  obj.gtin = normalizeDressingCode_(obj.gtin);
+  obj.singleGtin = obj.gtin;
+  obj.boxGtin = normalizeDressingCode_(obj.boxGtin);
+  obj.boxQuantity = obj.boxQuantity === undefined ? '' : obj.boxQuantity;
+  obj.status = obj.status || '使用中';
+  return obj;
+}
+
+function getDressingBarcodeSheet_(){
+  const ss = SpreadsheetApp.openById(DRESSING_BARCODE_SHEET_ID);
+  let sheet = ss.getSheetByName(DRESSING_MASTER_SHEET_NAME);
+
+  if(!sheet){
+    sheet = ss.insertSheet(DRESSING_MASTER_SHEET_NAME);
+  }
+
+  setupDressingBarcodeHeader_(sheet);
+  return sheet;
+}
+
+function getDressingTable_(){
+  const sheet = getDressingBarcodeSheet_();
+  const values = sheet.getDataRange().getValues();
+  const headers = values[0] || [];
+
+  return {
+    sheet: sheet,
+    values: values,
+    headers: headers,
+    gtinCol: headers.indexOf(DRESSING_KEY_TO_DISPLAY_MAP.gtin),
+    boxGtinCol: headers.indexOf(DRESSING_KEY_TO_DISPLAY_MAP.boxGtin),
+    nameCol: headers.indexOf(DRESSING_KEY_TO_DISPLAY_MAP.dressingName),
+    sizeCol: headers.indexOf(DRESSING_KEY_TO_DISPLAY_MAP.size)
+  };
 }
 
 function lookupDressingBarcode_(gtin){
-
-  const code =
-    normalizeDressingCode_(gtin);
+  const code = normalizeDressingCode_(gtin);
 
   if(!code){
-    return {
-      ok:false,
-      message:'empty gtin'
-    };
+    return { ok:false, message:'empty gtin' };
   }
 
-  const sheet =
-    getDressingBarcodeSheet_();
+  const table = getDressingTable_();
 
-  const values =
-    sheet.getDataRange().getValues();
+  const emptyData = addDressingAliases_({
+    gtin: code,
+    hospitalCode: '',
+    dressingName: '',
+    size: '',
+    category: '',
+    boxGtin: '',
+    boxQuantity: '',
+    status: '使用中'
+  });
 
-  const emptyData =
-    addDressingAliases_({
-      gtin:code,
-      hospitalCode:'',
-      dressingName:'',
-      size:'',
-      category:'',
-      boxGtin:'',
-      boxQuantity:'',
-      status:'使用中'
-    });
-
-  if(values.length <= 1){
+  if(table.values.length <= 1){
     return {
       ok:true,
       found:false,
@@ -270,39 +219,29 @@ function lookupDressingBarcode_(gtin){
     };
   }
 
-  const headers =
-    values[0];
-
-  const gtinCol =
-    headers.indexOf(DRESSING_KEY_TO_DISPLAY_MAP.gtin);
-
-  const boxGtinCol =
-    headers.indexOf(DRESSING_KEY_TO_DISPLAY_MAP.boxGtin);
-
-  if(gtinCol < 0){
+  if(table.gtinCol < 0){
     return {
       ok:false,
       message:'missing gtin header',
-      headers:headers
+      headers:table.headers
     };
   }
 
-  for(let i = 1; i < values.length; i++){
+  for(let i = 1; i < table.values.length; i++){
+    const row = table.values[i];
 
     const singleCode =
-      normalizeDressingCode_(values[i][gtinCol]);
+      normalizeDressingCode_(row[table.gtinCol]);
 
     const boxCode =
-      boxGtinCol >= 0
-        ? normalizeDressingCode_(values[i][boxGtinCol])
+      table.boxGtinCol >= 0
+        ? normalizeDressingCode_(row[table.boxGtinCol])
         : '';
 
     if(singleCode === code || boxCode === code){
-
-      const obj =
-        addDressingAliases_(
-          rowToObject_(headers, values[i])
-        );
+      const obj = addDressingAliases_(
+        rowToObject_(table.headers, row)
+      );
 
       const isBox =
         boxCode === code && singleCode !== code;
@@ -313,14 +252,10 @@ function lookupDressingBarcode_(gtin){
         row:i + 1,
         matchType:isBox ? 'boxGtin' : 'singleGtin',
         packageType:isBox ? 'box' : 'single',
-        unitQuantity:isBox
-          ? Number(obj.boxQuantity || 1)
-          : 1,
+        unitQuantity:isBox ? Number(obj.boxQuantity || 1) : 1,
         data:obj
       };
-
     }
-
   }
 
   return {
@@ -331,30 +266,75 @@ function lookupDressingBarcode_(gtin){
     unitQuantity:1,
     data:emptyData
   };
+}
 
+function findDressingPairCandidates_(data){
+  const nameKey = normalizeDressingText_(data.dressingName);
+  const sizeKey = normalizeDressingText_(data.size);
+  const targetType = String(data.targetType || '').trim();
+
+  if(!nameKey || !sizeKey){
+    return {
+      ok:true,
+      candidates:[]
+    };
+  }
+
+  const table = getDressingTable_();
+
+  if(table.values.length <= 1){
+    return {
+      ok:true,
+      candidates:[]
+    };
+  }
+
+  const candidates = [];
+
+  for(let i = 1; i < table.values.length; i++){
+    const row = table.values[i];
+    const obj = addDressingAliases_(
+      rowToObject_(table.headers, row)
+    );
+
+    const sameName =
+      normalizeDressingText_(obj.dressingName) === nameKey;
+
+    const sameSize =
+      normalizeDressingText_(obj.size) === sizeKey;
+
+    if(!sameName || !sameSize){
+      continue;
+    }
+
+    if(targetType === 'box' && obj.boxGtin){
+      continue;
+    }
+
+    if(targetType === 'single' && obj.gtin){
+      continue;
+    }
+
+    candidates.push({
+      row:i + 1,
+      data:obj
+    });
+  }
+
+  return {
+    ok:true,
+    candidates:candidates
+  };
 }
 
 function saveDressingBarcode_(data){
-
-  const sheet =
-    getDressingBarcodeSheet_();
-
-  const values =
-    sheet.getDataRange().getValues();
-
-  const headers =
-    values[0];
+  const table = getDressingTable_();
 
   const gtin =
-    normalizeDressingCode_(
-      data.gtin ||
-      data.singleGtin
-    );
+    normalizeDressingCode_(data.gtin || data.singleGtin);
 
   const boxGtin =
-    normalizeDressingCode_(
-      data.boxGtin
-    );
+    normalizeDressingCode_(data.boxGtin);
 
   if(!gtin && !boxGtin){
     return {
@@ -363,30 +343,24 @@ function saveDressingBarcode_(data){
     };
   }
 
-  const gtinCol =
-    headers.indexOf(DRESSING_KEY_TO_DISPLAY_MAP.gtin);
-
-  const boxGtinCol =
-    headers.indexOf(DRESSING_KEY_TO_DISPLAY_MAP.boxGtin);
-
-  if(gtinCol < 0){
+  if(table.gtinCol < 0){
     return {
       ok:false,
       message:'missing gtin header',
-      headers:headers
+      headers:table.headers
     };
   }
 
   let targetRow = -1;
+  let targetReason = '';
 
-  for(let i = 1; i < values.length; i++){
-
+  for(let i = 1; i < table.values.length; i++){
     const rowSingle =
-      normalizeDressingCode_(values[i][gtinCol]);
+      normalizeDressingCode_(table.values[i][table.gtinCol]);
 
     const rowBox =
-      boxGtinCol >= 0
-        ? normalizeDressingCode_(values[i][boxGtinCol])
+      table.boxGtinCol >= 0
+        ? normalizeDressingCode_(table.values[i][table.boxGtinCol])
         : '';
 
     if(
@@ -394,92 +368,162 @@ function saveDressingBarcode_(data){
       (boxGtin && rowBox === boxGtin)
     ){
       targetRow = i + 1;
+      targetReason = 'gtin';
       break;
     }
+  }
 
+  if(targetRow < 0){
+    const nameKey = normalizeDressingText_(data.dressingName);
+    const sizeKey = normalizeDressingText_(data.size);
+
+    if(nameKey && sizeKey){
+      const pairCandidates = [];
+
+      for(let i = 1; i < table.values.length; i++){
+        const row = table.values[i];
+        const obj = addDressingAliases_(
+          rowToObject_(table.headers, row)
+        );
+
+        const sameName =
+          normalizeDressingText_(obj.dressingName) === nameKey;
+
+        const sameSize =
+          normalizeDressingText_(obj.size) === sizeKey;
+
+        if(!sameName || !sameSize){
+          continue;
+        }
+
+        const canMergeBox =
+          boxGtin && !obj.boxGtin;
+
+        const canMergeSingle =
+          gtin && !obj.gtin;
+
+        if(canMergeBox || canMergeSingle){
+          pairCandidates.push({
+            row:i + 1,
+            data:obj
+          });
+        }
+      }
+
+      if(pairCandidates.length === 1){
+        targetRow = pairCandidates[0].row;
+        targetReason = 'name_size_pair';
+      }
+
+      if(pairCandidates.length > 1){
+        return {
+          ok:false,
+          message:'找到多筆同名同規格資料，請先在前端明確選擇要合併哪一筆',
+          candidates:pairCandidates
+        };
+      }
+    }
+  }
+
+  let existingObj = null;
+
+  if(targetRow > 0){
+    existingObj = addDressingAliases_(
+      rowToObject_(
+        table.headers,
+        table.values[targetRow - 1]
+      )
+    );
   }
 
   const rowData = {
-    hospitalCode:data.hospitalCode || '',
-    dressingName:data.dressingName || '',
-    size:data.size || '',
-    gtin:gtin,
-    boxGtin:boxGtin,
-    boxQuantity:data.boxQuantity || '',
-    category:data.category || '',
-    status:data.status || '使用中'
+    hospitalCode:
+      data.hospitalCode ||
+      (existingObj ? existingObj.hospitalCode : '') ||
+      '',
+    dressingName:
+      data.dressingName ||
+      (existingObj ? existingObj.dressingName : '') ||
+      '',
+    size:
+      data.size ||
+      (existingObj ? existingObj.size : '') ||
+      '',
+    gtin:
+      gtin ||
+      (existingObj ? existingObj.gtin : '') ||
+      '',
+    boxGtin:
+      boxGtin ||
+      (existingObj ? existingObj.boxGtin : '') ||
+      '',
+    boxQuantity:
+      data.boxQuantity ||
+      (existingObj ? existingObj.boxQuantity : '') ||
+      '',
+    category:
+      data.category ||
+      (existingObj ? existingObj.category : '') ||
+      '',
+    status:
+      data.status ||
+      (existingObj ? existingObj.status : '') ||
+      '使用中'
   };
 
   const row =
-    objectToRow_(rowData, headers);
+    objectToRow_(rowData, table.headers);
 
   if(targetRow > 0){
-
-    sheet
-      .getRange(targetRow, 1, 1, headers.length)
+    table.sheet
+      .getRange(targetRow, 1, 1, table.headers.length)
       .setValues([row]);
 
     return {
       ok:true,
       mode:'updated',
+      mergeReason:targetReason,
       row:targetRow,
       data:addDressingAliases_(rowData)
     };
-
   }
 
-  sheet.appendRow(row);
+  table.sheet.appendRow(row);
 
   return {
     ok:true,
     mode:'created',
-    row:sheet.getLastRow(),
+    mergeReason:'',
+    row:table.sheet.getLastRow(),
     data:addDressingAliases_(rowData)
   };
-
 }
 
 function listDressingBarcode_(){
+  const table = getDressingTable_();
 
-  const sheet =
-    getDressingBarcodeSheet_();
-
-  const values =
-    sheet.getDataRange().getValues();
-
-  if(values.length <= 1){
+  if(table.values.length <= 1){
     return {
       ok:true,
       data:[]
     };
   }
 
-  const headers =
-    values[0];
-
-  const gtinCol =
-    headers.indexOf(DRESSING_KEY_TO_DISPLAY_MAP.gtin);
-
-  const boxGtinCol =
-    headers.indexOf(DRESSING_KEY_TO_DISPLAY_MAP.boxGtin);
-
-  if(gtinCol < 0){
+  if(table.gtinCol < 0){
     throw new Error('missing gtin header');
   }
 
   const data = [];
 
-  for(let i = 1; i < values.length; i++){
-
-    const row =
-      values[i];
+  for(let i = 1; i < table.values.length; i++){
+    const row = table.values[i];
 
     const gtin =
-      normalizeDressingCode_(row[gtinCol]);
+      normalizeDressingCode_(row[table.gtinCol]);
 
     const boxGtin =
-      boxGtinCol >= 0
-        ? normalizeDressingCode_(row[boxGtinCol])
+      table.boxGtinCol >= 0
+        ? normalizeDressingCode_(row[table.boxGtinCol])
         : '';
 
     if(!gtin && !boxGtin){
@@ -488,21 +532,18 @@ function listDressingBarcode_(){
 
     data.push(
       addDressingAliases_(
-        rowToObject_(headers, row)
+        rowToObject_(table.headers, row)
       )
     );
-
   }
 
   return {
     ok:true,
     data:data
   };
-
 }
 
 function deleteDressingBarcode_(data){
-
   const code =
     normalizeDressingCode_(
       data.gtin ||
@@ -517,13 +558,9 @@ function deleteDressingBarcode_(data){
     };
   }
 
-  const sheet =
-    getDressingBarcodeSheet_();
+  const table = getDressingTable_();
 
-  const values =
-    sheet.getDataRange().getValues();
-
-  if(values.length <= 1){
+  if(table.values.length <= 1){
     return {
       ok:true,
       deleted:false,
@@ -531,36 +568,25 @@ function deleteDressingBarcode_(data){
     };
   }
 
-  const headers =
-    values[0];
-
-  const gtinCol =
-    headers.indexOf(DRESSING_KEY_TO_DISPLAY_MAP.gtin);
-
-  const boxGtinCol =
-    headers.indexOf(DRESSING_KEY_TO_DISPLAY_MAP.boxGtin);
-
-  for(let i = 1; i < values.length; i++){
-
+  for(let i = 1; i < table.values.length; i++){
     const rowSingle =
-      gtinCol >= 0
-        ? normalizeDressingCode_(values[i][gtinCol])
+      table.gtinCol >= 0
+        ? normalizeDressingCode_(table.values[i][table.gtinCol])
         : '';
 
     const rowBox =
-      boxGtinCol >= 0
-        ? normalizeDressingCode_(values[i][boxGtinCol])
+      table.boxGtinCol >= 0
+        ? normalizeDressingCode_(table.values[i][table.boxGtinCol])
         : '';
 
     if(rowSingle === code || rowBox === code){
-      sheet.deleteRow(i + 1);
+      table.sheet.deleteRow(i + 1);
       return {
         ok:true,
         deleted:true,
         gtin:code
       };
     }
-
   }
 
   return {
@@ -568,11 +594,9 @@ function deleteDressingBarcode_(data){
     deleted:false,
     message:'not found'
   };
-
 }
 
 function reorderDressingBarcode_(data){
-
   const order =
     String(data.barcodes || '')
       .split(',')
@@ -590,29 +614,16 @@ function reorderDressingBarcode_(data){
     };
   }
 
-  const sheet =
-    getDressingBarcodeSheet_();
+  const table = getDressingTable_();
 
-  const values =
-    sheet.getDataRange().getValues();
-
-  if(values.length <= 1){
+  if(table.values.length <= 1){
     return {
       ok:true,
       ordered:order
     };
   }
 
-  const headers =
-    values[0];
-
-  const gtinCol =
-    headers.indexOf(DRESSING_KEY_TO_DISPLAY_MAP.gtin);
-
-  const boxGtinCol =
-    headers.indexOf(DRESSING_KEY_TO_DISPLAY_MAP.boxGtin);
-
-  if(gtinCol < 0){
+  if(table.gtinCol < 0){
     return {
       ok:false,
       message:'missing gtin header'
@@ -620,18 +631,17 @@ function reorderDressingBarcode_(data){
   }
 
   const dataRows =
-    values.slice(1);
+    table.values.slice(1);
 
   const rowMap = {};
 
   dataRows.forEach(function(row){
-
     const singleCode =
-      normalizeDressingCode_(row[gtinCol]);
+      normalizeDressingCode_(row[table.gtinCol]);
 
     const boxCode =
-      boxGtinCol >= 0
-        ? normalizeDressingCode_(row[boxGtinCol])
+      table.boxGtinCol >= 0
+        ? normalizeDressingCode_(row[table.boxGtinCol])
         : '';
 
     const key =
@@ -640,18 +650,15 @@ function reorderDressingBarcode_(data){
     if(key){
       rowMap[key] = row;
     }
-
   });
 
   const newRows = [];
 
   order.forEach(function(code){
-
     if(rowMap[code]){
       newRows.push(rowMap[code]);
       delete rowMap[code];
     }
-
   });
 
   Object.keys(rowMap).forEach(function(code){
@@ -659,51 +666,22 @@ function reorderDressingBarcode_(data){
   });
 
   if(newRows.length > 0){
-
-    sheet
-      .getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn())
+    table.sheet
+      .getRange(2, 1, table.sheet.getLastRow() - 1, table.sheet.getLastColumn())
       .clearContent();
 
-    sheet
-      .getRange(2, 1, newRows.length, headers.length)
+    table.sheet
+      .getRange(2, 1, newRows.length, table.headers.length)
       .setValues(newRows);
-
   }
 
   return {
     ok:true,
     ordered:order
   };
-
-}
-
-function getDressingBarcodeSheet_(){
-
-  const ss =
-    SpreadsheetApp.openById(
-      DRESSING_BARCODE_SHEET_ID
-    );
-
-  let sheet =
-    ss.getSheetByName(
-      DRESSING_MASTER_SHEET_NAME
-    );
-
-  if(!sheet){
-    sheet =
-      ss.insertSheet(
-        DRESSING_MASTER_SHEET_NAME
-      );
-  }
-
-  setupDressingBarcodeHeader_(sheet);
-
-  return sheet;
-
 }
 
 function setupDressingBarcodeHeader_(sheet){
-
   const lastColumn =
     sheet.getLastColumn();
 
@@ -714,10 +692,7 @@ function setupDressingBarcodeHeader_(sheet){
           1,
           1,
           1,
-          Math.max(
-            lastColumn,
-            DRESSING_MASTER_DISPLAY_NAMES.length
-          )
+          Math.max(lastColumn, DRESSING_MASTER_DISPLAY_NAMES.length)
         )
         .getValues()[0]
       : [];
@@ -729,20 +704,10 @@ function setupDressingBarcodeHeader_(sheet){
       .trim() !== '';
 
   if(!hasHeader){
-
     sheet
-      .getRange(
-        1,
-        1,
-        1,
-        DRESSING_MASTER_DISPLAY_NAMES.length
-      )
-      .setValues([
-        DRESSING_MASTER_DISPLAY_NAMES
-      ]);
-
+      .getRange(1, 1, 1, DRESSING_MASTER_DISPLAY_NAMES.length)
+      .setValues([DRESSING_MASTER_DISPLAY_NAMES]);
     return;
-
   }
 
   const headers =
@@ -756,60 +721,40 @@ function setupDressingBarcodeHeader_(sheet){
     });
 
   if(missingHeaders.length > 0){
-
     sheet
-      .getRange(
-        1,
-        lastColumn + 1,
-        1,
-        missingHeaders.length
-      )
-      .setValues([
-        missingHeaders
-      ]);
-
+      .getRange(1, lastColumn + 1, 1, missingHeaders.length)
+      .setValues([missingHeaders]);
   }
-
 }
 
 function rowToObject_(headers, row){
-
   const obj = {};
 
   headers.forEach(function(header, index){
-
     const key =
       DRESSING_DISPLAY_TO_KEY_MAP[header];
 
     if(key){
       obj[key] = row[index];
     }
-
   });
 
   return addDressingAliases_(obj);
-
 }
 
 function objectToRow_(obj, displayHeaders){
-
   return displayHeaders.map(function(displayHeader){
-
     const key =
       DRESSING_DISPLAY_TO_KEY_MAP[displayHeader];
 
     return obj[key] !== undefined
       ? obj[key]
       : '';
-
   });
-
 }
 
 function pingDressingBarcode_(){
-
-  const sheet =
-    getDressingBarcodeSheet_();
+  const sheet = getDressingBarcodeSheet_();
 
   return {
     ok:true,
@@ -817,19 +762,12 @@ function pingDressingBarcode_(){
     lastRow:sheet.getLastRow(),
     lastColumn:sheet.getLastColumn(),
     headers:sheet
-      .getRange(
-        1,
-        1,
-        1,
-        sheet.getLastColumn()
-      )
+      .getRange(1, 1, 1, sheet.getLastColumn())
       .getValues()[0]
   };
-
 }
 
 function whoamiDressingBarcode_(){
-
   return {
     ok:true,
     effectiveUser:Session.getEffectiveUser().getEmail(),
@@ -838,11 +776,9 @@ function whoamiDressingBarcode_(){
     spreadsheetId:DRESSING_BARCODE_SHEET_ID,
     sheetName:DRESSING_MASTER_SHEET_NAME
   };
-
 }
 
 function errorDressingBarcode_(error, action){
-
   return {
     ok:false,
     action:action || '',
@@ -853,23 +789,15 @@ function errorDressingBarcode_(error, action){
       ? String(error.stack).slice(0, 800)
       : ''
   };
-
 }
 
 function jsonOutput_(obj){
-
   return ContentService
-    .createTextOutput(
-      JSON.stringify(obj)
-    )
-    .setMimeType(
-      ContentService.MimeType.JSON
-    );
-
+    .createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
 }
 
 function apiOutput_(obj, callback){
-
   const callbackName =
     String(callback || '').trim();
 
@@ -877,23 +805,17 @@ function apiOutput_(obj, callback){
     callbackName &&
     /^[A-Za-z_$][0-9A-Za-z_$]*(\.[A-Za-z_$][0-9A-Za-z_$]*)*$/.test(callbackName)
   ){
-
     return ContentService
       .createTextOutput(
         callbackName + '(' + JSON.stringify(obj) + ');'
       )
-      .setMimeType(
-        ContentService.MimeType.JAVASCRIPT
-      );
-
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
   }
 
   return jsonOutput_(obj);
-
 }
 
 function extractGtinFromBarcodeString(barcodeString){
-
   const raw =
     String(barcodeString || '');
 
@@ -911,7 +833,6 @@ function extractGtinFromBarcodeString(barcodeString){
   }
 
   return cleaned;
-
 }
 
 function lookupDressingBarcode(gtin){
