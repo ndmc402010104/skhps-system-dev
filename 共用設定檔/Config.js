@@ -173,6 +173,32 @@ const BACKEND_STATUS_SHEET_NAME =
 
 
 // ========================================
+// Dressing System Google Sheet
+// 敷料系統資料庫
+// ========================================
+
+const DRESSING_SHEET_ID =
+'1SJIQGgViQo6AhSDvJTNcNDx_KNXEjgTMfJh4R9SIMvk';
+
+
+
+// ========================================
+// Dressing Sheet Names
+// 敷料系統工作表名稱
+// ========================================
+
+const DRESSING_DICT_SHEET_NAME =
+'敷料主檔';
+
+const DRESSING_STOCK_SHEET_NAME =
+'庫存批號檔';
+
+const DRESSING_USAGE_SHEET_NAME =
+'領用記錄';
+
+
+
+// ========================================
 // QR Meeting Query
 // QR 頁面顯示會議範圍
 // ========================================

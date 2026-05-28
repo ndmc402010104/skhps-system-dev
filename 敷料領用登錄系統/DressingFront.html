@@ -538,10 +538,14 @@ onclick="submitUse()">
 <table class="dictTable" id="dictTable">
 <thead>
 <tr>
-<th style="width:110px;">條碼</th>
+<th style="width:100px;">院內碼</th>
+<th style="width:140px;">單包GTIN</th>
 <th>敷料名稱</th>
-<th style="width:90px;">規格</th>
-<th style="width:130px;">料號</th>
+<th style="width:100px;">規格描述</th>
+<th style="width:100px;">敷料分類</th>
+<th style="width:140px;">包裝GTIN</th>
+<th style="width:70px;">數量</th>
+<th style="width:80px;">類型</th>
 <th style="width:80px;">狀態</th>
 <th style="width:130px;">操作</th>
 </tr>
@@ -613,16 +617,21 @@ onclick="submitUse()">
     res.data.forEach(item => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-    <td><input class="dict-barcode readonly" value="${item.barcode}" readonly></td>
-    <td><input class="dict-name" value="${item.dressingName}"></td>
+    <td><input class="dict-hospital-code" value="${item.hospitalCode || ''}"></td>
+    <td><input class="dict-barcode readonly" value="${item.singleGtin || item.barcode || ''}" readonly></td>
+    <td><input class="dict-name" value="${item.dressingName || ''}"></td>
     <td><input class="dict-size" value="${item.size || ''}"></td>
-    <td><input class="dict-part-number" value="${item.partNumber || ''}"></td>
-    <td><span class="dictStatus saved">已建檔</span></td>
+    <td><input class="dict-category" value="${item.category || ''}"></td>
+    <td><input class="dict-box-gtin" value="${item.boxGtin || ''}"></td>
+    <td><input class="dict-box-qty" value="${item.boxQuantity || ''}"></td>
+    <td><input class="dict-barcode-type" value="${item.barcodeType || ''}"></td>
+    <td><input class="dict-status" value="${item.status || ''}"></td>
     <td style="white-space:nowrap;">
     <span class="dragHandle">☰</span>
     <button type="button" class="dictActionBtn edit-btn" onclick="editDictRow(this)">編輯</button>
     <button type="button" class="dictActionBtn save-btn primary" style="display:none;" onclick="saveDictRow(this)">儲存</button>
     <button type="button" class="dictActionBtn danger" onclick="deleteDictRow(this)">刪除</button>
+    <div class="dictStatus saved" style="font-size:12px; margin-top:4px;">已建檔</div>
     </td>
     `;
     tbody.appendChild(tr);
@@ -864,10 +873,15 @@ onclick="submitUse()">
 
     async function saveDictRow(btn) {
     const tr = btn.closest('tr');
+    const hospitalCode = tr.querySelector('.dict-hospital-code').value.trim();
     const barcode = tr.querySelector('.dict-barcode').value.trim();
     const name = tr.querySelector('.dict-name').value.trim();
     const size = tr.querySelector('.dict-size').value.trim();
-    const partNumber = tr.querySelector('.dict-part-number').value.trim();
+    const category = tr.querySelector('.dict-category').value.trim();
+    const boxGtin = tr.querySelector('.dict-box-gtin').value.trim();
+    const boxQty = tr.querySelector('.dict-box-qty').value.trim();
+    const barcodeType = tr.querySelector('.dict-barcode-type').value.trim();
+    const statusVal = tr.querySelector('.dict-status').value.trim();
     const statusEl = tr.querySelector('.dictStatus');
 
     if (!name) {
@@ -882,7 +896,17 @@ onclick="submitUse()">
     btn.innerText = '...';
 
     try {
-    const res = await saveBarcode({ barcode: barcode, dressingName: name, size: size, partNumber: partNumber });
+    const res = await saveBarcode({ 
+        hospitalCode: hospitalCode,
+        singleGtin: barcode, 
+        dressingName: name, 
+        size: size, 
+        category: category,
+        boxGtin: boxGtin,
+        boxQuantity: boxQty,
+        barcodeType: barcodeType,
+        status: statusVal
+    });
     if (res.ok) {
     statusEl.innerText = '已儲存';
     statusEl.className = 'dictStatus saved';
