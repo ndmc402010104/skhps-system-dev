@@ -24,6 +24,7 @@ background:
 radial-gradient(circle at top left,rgba(37,99,235,.1),transparent 30rem),
 linear-gradient(180deg,#fbfdff 0%,#f4f7fb 100%);
 font-family:Arial,"Noto Sans TC","Microsoft JhengHei",sans-serif;
+overflow-x:hidden;
 }
 
 .shell{
@@ -150,79 +151,101 @@ font-weight:bold;
 margin-bottom:14px;
 }
 
-.formTableWrap {
-width: 100%;
-overflow-x: auto;
--webkit-overflow-scrolling: touch;
-margin-top: 14px;
-}
-.formTableWrap table {
-margin-top: 0;
-min-width: 1020px; /* 確保在手機上不會被過度擠壓 */
-}
-
-table{
-width:100%;
-border-collapse:collapse;
-table-layout:fixed;
-}
-
 .formTableWrap,
 .dictTableWrap{
 width:100%;
+max-width:100%;
 overflow-x:auto;
+overflow-y:hidden;
 -webkit-overflow-scrolling:touch;
+margin-top:14px;
+border:1px solid #dbe4ef;
+border-radius:8px;
+background:#ffffff;
+}
+
+.formTableWrap table,
+.dictTable{
+border-collapse:collapse;
+table-layout:fixed;
+margin:0;
 }
 
 .formTableWrap table{
+width:1120px;
 min-width:1120px;
 }
 
 .dictTable{
-min-width:1380px;
+width:1540px;
+min-width:1540px;
 }
 
-th{
-background:#f1f5f9;
-}
-
-th,
-td{
+.formTableWrap th,
+.formTableWrap td,
+.dictTable th,
+.dictTable td{
 border:1px solid #dbe4ef;
 padding:10px;
 vertical-align:middle;
+box-sizing:border-box;
 }
 
-th:nth-child(1),
-td:nth-child(1){
-width:70px;
+.formTableWrap th,
+.dictTable th{
+background:#f1f5f9;
+font-weight:bold;
+}
+
+.formTableWrap th:nth-child(1),
+.formTableWrap td:nth-child(1){
+width:90px;
 text-align:center;
 }
 
-th:nth-child(2),
-td:nth-child(2){
-width:170px;
+.formTableWrap th:nth-child(2),
+.formTableWrap td:nth-child(2){
+width:190px;
 }
 
-th:nth-child(3),
-td:nth-child(3){
+.formTableWrap th:nth-child(3),
+.formTableWrap td:nth-child(3){
 width:340px;
 }
 
-th:nth-child(4),
-td:nth-child(4){
-width:100px;
+.formTableWrap th:nth-child(4),
+.formTableWrap td:nth-child(4){
+width:110px;
 }
 
-th:nth-child(5),
-td:nth-child(5){
-width:180px;
+.formTableWrap th:nth-child(5),
+.formTableWrap td:nth-child(5){
+width:190px;
 }
 
-th:nth-child(6),
-td:nth-child(6){
-width:220px;
+.formTableWrap th:nth-child(6),
+.formTableWrap td:nth-child(6){
+width:200px;
 }
+
+.dictTable th:nth-child(1),
+.dictTable td:nth-child(1){width:110px;}
+.dictTable th:nth-child(2),
+.dictTable td:nth-child(2){width:200px;}
+.dictTable th:nth-child(3),
+.dictTable td:nth-child(3){width:130px;}
+.dictTable th:nth-child(4),
+.dictTable td:nth-child(4){width:190px;}
+.dictTable th:nth-child(5),
+.dictTable td:nth-child(5){width:190px;}
+.dictTable th:nth-child(6),
+.dictTable td:nth-child(6){width:100px;}
+.dictTable th:nth-child(7),
+.dictTable td:nth-child(7){width:140px;}
+.dictTable th:nth-child(8),
+.dictTable td:nth-child(8){width:120px;}
+.dictTable th:nth-child(9),
+.dictTable td:nth-child(9){width:460px;}
 
 input:not([type="radio"]){
 width:100%;
@@ -324,7 +347,9 @@ border-top: 1px solid #dbe4ef;
 display: flex;
 justify-content: space-between;
 align-items: center;
+gap:12px;
 margin-bottom: 14px;
+flex-wrap:wrap;
 }
 .dictHeader h2 {
 margin: 0;
@@ -333,23 +358,14 @@ font-size: 20px;
 .dictToolbar {
 display: flex;
 gap: 10px;
+flex-wrap:wrap;
+justify-content:flex-end;
 }
-.dictTable {
-width: 100%;
-border-collapse: collapse;
-margin-top: 10px;
-table-layout: fixed;
+.dictTable th,
+.dictTable td{
+text-align:left;
 }
-.dictTable th, .dictTable td {
-border: 1px solid #dbe4ef;
-padding: 10px;
-text-align: left;
-vertical-align: middle;
-}
-.dictTable th {
-background: #f1f5f9;
-font-weight: bold;
-}
+
 .dictTable input,
 .dictTable select {
 width: 100%;
@@ -488,17 +504,27 @@ padding:104px 16px 72px;
 
 .card{
 padding:18px;
-overflow-x:auto;
+overflow-x:visible;
 }
 
 .scannerBox{
 margin:24px auto;
 }
 
-.dictTableWrap {
-overflow-x: auto;
+.formTableWrap,
+.dictTableWrap{
+max-width:calc(100vw - 32px);
 }
-.dictTable { min-width: 1380px; }
+
+.formTableWrap table{
+width:1120px;
+min-width:1120px;
+}
+
+.dictTable{
+width:1540px;
+min-width:1540px;
+}
 }
 
 </style>
@@ -2333,7 +2359,7 @@ if (window.location.hostname.includes('github.io')) {
   ghFooter.innerHTML = `
     <div style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">
       <span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>
-      <span>v.2.14.2-202605290138</span>
+      <span>v.2.14.2-202605290142</span>
     </div>
   `;
   document.body.appendChild(ghFooter);
@@ -2343,6 +2369,7 @@ if (window.location.hostname.includes('github.io')) {
 </body>
 
 </html>
+
 
 
 
