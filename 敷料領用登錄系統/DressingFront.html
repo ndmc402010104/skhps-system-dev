@@ -372,6 +372,24 @@ font-size: 13px;
 margin-right: 2px;
 }
 
+.gtinTargetTools{
+display:flex;
+gap:6px;
+margin-top:6px;
+flex-wrap:wrap;
+}
+.gtinTargetTools button{
+padding:4px 7px;
+font-size:12px;
+}
+.scanMeta{
+font-size:12px;
+color:#64748b;
+margin-top:4px;
+line-height:1.4;
+}
+
+
 .dictTable.reorder-mode tr { 
 cursor: grab; 
 transition: all .2s ease;
@@ -538,20 +556,19 @@ onclick="submitUse()">
 <table class="dictTable" id="dictTable">
 <thead>
 <tr>
-<th style="width:100px;">院內碼</th>
-<th style="width:140px;">單包GTIN</th>
-<th>敷料名稱</th>
-<th style="width:100px;">規格描述</th>
-<th style="width:100px;">敷料分類</th>
-<th style="width:140px;">包裝GTIN</th>
-<th style="width:70px;">數量</th>
-<th style="width:80px;">類型</th>
-<th style="width:80px;">狀態</th>
-<th style="width:130px;">操作</th>
+<th style="width:100px;">院內碼</th> <!-- hospitalCode -->
+<th style="width:200px;">敷料名稱</th> <!-- dressingName -->
+<th style="width:120px;">規格描述</th> <!-- size -->
+<th style="width:140px;">單包GTIN</th> <!-- gtin -->
+<th style="width:140px;">包裝GTIN</th> <!-- boxGtin -->
+<th style="width:80px;">一盒數量</th> <!-- boxQuantity -->
+<th style="width:120px;">敷料分類</th> <!-- category -->
+<th style="width:80px;">狀態</th> <!-- status -->
+<th style="width:100px;">操作</th> <!-- frontend only -->
 </tr>
 </thead>
 <tbody id="dictTbody">
-<tr id="dictEmptyRow"><td colspan="6" style="text-align:center; color:#64748b; padding:20px;">尚未掃描任何條碼，請點擊上方開啟掃描</td></tr>
+<tr id="dictEmptyRow"><td colspan="9" style="text-align:center; color:#64748b; padding:20px;">尚未掃描任何條碼，請點擊上方開啟掃描</td></tr>
 </tbody>
 </table>
 </div>
@@ -587,6 +604,15 @@ onclick="submitUse()">
     let isReorderMode = false;
     let initialOrder = [];
 
+    function escapeHtml(value){
+    return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+    }
+
     function isAppsScriptMode(){
 
     return typeof google !== 'undefined'
@@ -608,7 +634,7 @@ onclick="submitUse()">
     document.getElementById('saveOrderBtn').style.display = 'none';
 
     const tbody = document.getElementById('dictTbody');
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#64748b; padding:20px;">載入中...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:#64748b; padding:20px;">載入中...</td></tr>';
     
     try {
     const res = await listBarcode();
@@ -616,16 +642,16 @@ onclick="submitUse()">
     tbody.innerHTML = '';
     res.data.forEach(item => {
     const tr = document.createElement('tr');
+    tr.dataset.rowKey = item.singleGtin || item.gtin || item.barcode || item.boxGtin || '';
     tr.innerHTML = `
-    <td><input class="dict-hospital-code" value="${item.hospitalCode || ''}"></td>
-    <td><input class="dict-barcode readonly" value="${item.singleGtin || item.barcode || ''}" readonly></td>
-    <td><input class="dict-name" value="${item.dressingName || ''}"></td>
-    <td><input class="dict-size" value="${item.size || ''}"></td>
-    <td><input class="dict-category" value="${item.category || ''}"></td>
-    <td><input class="dict-box-gtin" value="${item.boxGtin || ''}"></td>
-    <td><input class="dict-box-qty" value="${item.boxQuantity || ''}"></td>
-    <td><input class="dict-barcode-type" value="${item.barcodeType || ''}"></td>
-    <td><input class="dict-status" value="${item.status || ''}"></td>
+    <td><input class="dict-hospital-code" value="${escapeHtml(item.hospitalCode || '')}"></td>
+    <td><input class="dict-name" value="${escapeHtml(item.dressingName || '')}"></td>
+    <td><input class="dict-size" value="${escapeHtml(item.size || '')}"></td>
+    <td><input class="dict-single-gtin" value="${escapeHtml(item.singleGtin || item.gtin || item.barcode || '')}"></td>
+    <td><input class="dict-box-gtin" value="${escapeHtml(item.boxGtin || '')}"></td>
+    <td><input class="dict-box-qty" value="${escapeHtml(item.boxQuantity || '')}"></td>
+    <td><input class="dict-category" value="${escapeHtml(item.category || '')}"></td>
+    <td><input class="dict-status" value="${escapeHtml(item.status || '使用中')}"></td>
     <td style="white-space:nowrap;">
     <span class="dragHandle">☰</span>
     <button type="button" class="dictActionBtn edit-btn" onclick="editDictRow(this)">編輯</button>
@@ -637,10 +663,10 @@ onclick="submitUse()">
     tbody.appendChild(tr);
     });
     } else {
-    tbody.innerHTML = '<tr id="dictEmptyRow"><td colspan="6" style="text-align:center; color:#64748b; padding:20px;">目前尚無任何敷料資料</td></tr>';
+    tbody.innerHTML = '<tr id="dictEmptyRow"><td colspan="9" style="text-align:center; color:#64748b; padding:20px;">目前尚無任何敷料資料</td></tr>';
     }
     } catch (err) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#dc2626; padding:20px;">讀取失敗：' + (err.message || err) + '</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:#dc2626; padding:20px;">讀取失敗：' + (err.message || err) + '</td></tr>';
     }
     }
 
@@ -655,7 +681,7 @@ onclick="submitUse()">
         if (rows.length === 0) return;
         
         isReorderMode = true;
-        initialOrder = Array.from(rows).map(r => r.querySelector('.dict-barcode').value);
+        initialOrder = Array.from(rows).map(r => getDictRowKey(r));
 
         document.getElementById('dictTable').classList.add('reorder-mode');
         document.getElementById('reorderBtn').innerText = '返回';
@@ -699,8 +725,8 @@ onclick="submitUse()">
         });
 
         rows.sort((a, b) => {
-            const aVal = a.querySelector('.dict-barcode').value;
-            const bVal = b.querySelector('.dict-barcode').value;
+            const aVal = getDictRowKey(a);
+            const bVal = getDictRowKey(b);
             return initialOrder.indexOf(aVal) - initialOrder.indexOf(bVal);
         });
 
@@ -709,7 +735,7 @@ onclick="submitUse()">
 
     function checkOrderChanged() {
         const rows = document.querySelectorAll('#dictTbody tr:not(#dictEmptyRow)');
-        const currentOrder = Array.from(rows).map(r => r.querySelector('.dict-barcode').value);
+        const currentOrder = Array.from(rows).map(r => getDictRowKey(r));
         
         let changed = false;
         if (currentOrder.length !== initialOrder.length) {
@@ -734,7 +760,7 @@ onclick="submitUse()">
         draggedRow = this;
         if (e.dataTransfer) {
             e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/plain', this.querySelector('.dict-barcode').value);
+            e.dataTransfer.setData('text/plain', getDictRowKey(this));
         }
         setTimeout(() => this.classList.add('dragging'), 0);
     }
@@ -820,9 +846,9 @@ onclick="submitUse()">
     const barcodes = [];
     
     rows.forEach(tr => {
-    const input = tr.querySelector('.dict-barcode');
-    if (input && input.value) {
-    barcodes.push(input.value);
+    const code = getDictRowKey(tr);
+    if (code) {
+    barcodes.push(code);
     }
     });
     
@@ -870,23 +896,34 @@ onclick="submitUse()">
     tr.querySelector('.save-btn').style.display = 'inline-block';
     tr.querySelector('.dict-name').focus();
     }
-
     async function saveDictRow(btn) {
     const tr = btn.closest('tr');
     const hospitalCode = tr.querySelector('.dict-hospital-code').value.trim();
-    const barcode = tr.querySelector('.dict-barcode').value.trim();
+    const singleGtin = tr.querySelector('.dict-single-gtin').value.trim();
+    const boxGtin = tr.querySelector('.dict-box-gtin').value.trim();
     const name = tr.querySelector('.dict-name').value.trim();
     const size = tr.querySelector('.dict-size').value.trim();
     const category = tr.querySelector('.dict-category').value.trim();
-    const boxGtin = tr.querySelector('.dict-box-gtin').value.trim();
     const boxQty = tr.querySelector('.dict-box-qty').value.trim();
-    const barcodeType = tr.querySelector('.dict-barcode-type').value.trim();
-    const statusVal = tr.querySelector('.dict-status').value.trim();
+    const statusVal = tr.querySelector('.dict-status').value.trim() || '使用中';
     const statusEl = tr.querySelector('.dictStatus');
 
     if (!name) {
     statusEl.innerText = '缺少名稱';
     statusEl.className = 'dictStatus error';
+    return;
+    }
+
+    if (!singleGtin && !boxGtin) {
+    statusEl.innerText = '缺少GTIN';
+    statusEl.className = 'dictStatus error';
+    return;
+    }
+
+    if (boxGtin && !boxQty) {
+    statusEl.innerText = '盒裝需填數量';
+    statusEl.className = 'dictStatus error';
+    tr.querySelector('.dict-box-qty').focus();
     return;
     }
 
@@ -898,33 +935,36 @@ onclick="submitUse()">
     try {
     const res = await saveBarcode({ 
         hospitalCode: hospitalCode,
-        singleGtin: barcode, 
+        singleGtin: singleGtin,
+        gtin: singleGtin,
         dressingName: name, 
         size: size, 
         category: category,
         boxGtin: boxGtin,
         boxQuantity: boxQty,
-        barcodeType: barcodeType,
         status: statusVal
     });
     if (res.ok) {
     statusEl.innerText = '已儲存';
     statusEl.className = 'dictStatus saved';
     tr.classList.remove('editing');
+    tr.dataset.rowKey = singleGtin || boxGtin;
     tr.querySelector('.save-btn').style.display = 'none';
     tr.querySelector('.edit-btn').style.display = 'inline-block';
     } else {
-    statusEl.innerText = '儲存失敗';
+    statusEl.innerText = res.message || '儲存失敗';
     statusEl.className = 'dictStatus error';
     }
     } catch(err) {
     statusEl.innerText = '儲存錯誤';
     statusEl.className = 'dictStatus error';
+    console.log(err);
     }
 
     btn.disabled = false;
     btn.innerText = '儲存';
     }
+
 
     async function batchSaveDict() {
     const editingRows = document.querySelectorAll('#dictTbody tr.editing');
@@ -967,14 +1007,7 @@ onclick="submitUse()">
     async function deleteDictRow(btn) {
     if (confirm('確定要移除此列嗎？')) {
     const tr = btn.closest('tr');
-    const barcodeInput = tr.querySelector('.dict-barcode');
-
-    if (!barcodeInput) {
-    tr.remove();
-    return;
-    }
-
-    const barcode = barcodeInput.value.trim();
+    const barcode = getDictRowKey(tr);
     if (!barcode) {
     tr.remove();
     return;
@@ -989,7 +1022,7 @@ onclick="submitUse()">
     tr.remove();
     const tbody = document.getElementById('dictTbody');
     if (tbody.querySelectorAll('tr').length === 0) {
-    tbody.innerHTML = '<tr id="dictEmptyRow"><td colspan="6" style="text-align:center; color:#64748b; padding:20px;">尚未掃描任何條碼，請點擊上方開啟掃描</td></tr>';
+    tbody.innerHTML = '<tr id="dictEmptyRow"><td colspan="9" style="text-align:center; color:#64748b; padding:20px;">尚未掃描任何條碼，請點擊上方開啟掃描</td></tr>';
     }
     } else {
     alert('刪除失敗：' + (res.message || '未知錯誤'));
@@ -1017,61 +1050,121 @@ onclick="submitUse()">
     scannerMode = 'dict';
     await handleBarcodeScanResult(barcode);
     }
+    function getDictRowKey(tr){
+    if(!tr){
+    return '';
+    }
+    const singleInput = tr.querySelector('.dict-single-gtin');
+    const boxInput = tr.querySelector('.dict-box-gtin');
+    return String(
+      (singleInput && singleInput.value) ||
+      (boxInput && boxInput.value) ||
+      tr.dataset.rowKey ||
+      ''
+    ).trim();
+    }
 
-    async function addDictRow(barcode) {
+    function setGtinTarget(btn, target) {
+    const tr = btn.closest('tr');
+    const scannedGtin = tr.dataset.scannedGtin || getDictRowKey(tr);
+    const singleInput = tr.querySelector('.dict-single-gtin');
+    const boxInput = tr.querySelector('.dict-box-gtin');
+    const boxQtyInput = tr.querySelector('.dict-box-qty');
+
+    if (!scannedGtin) {
+    alert('這列沒有可指定的掃描GTIN');
+    return;
+    }
+
+    if (target === 'single') {
+    singleInput.value = scannedGtin;
+    boxInput.value = '';
+    tr.dataset.rowKey = scannedGtin;
+    singleInput.focus();
+    }
+
+    if (target === 'box') {
+    boxInput.value = scannedGtin;
+    singleInput.value = '';
+    tr.dataset.rowKey = scannedGtin;
+    boxQtyInput.focus();
+    }
+
+    tr.classList.add('editing');
+    tr.querySelector('.save-btn').style.display = 'inline-block';
+    tr.querySelector('.edit-btn').style.display = 'none';
+    }
+
+    async function addDictRow(barcode, parsed) {
     const emptyRow = document.getElementById('dictEmptyRow');
     if (emptyRow) emptyRow.remove();
 
-    const existingInput = document.querySelector(`input.dict-barcode[value="${barcode}"]`);
+    const scannedGtin = String(barcode || '').trim();
+
+    const existingInput = Array.from(document.querySelectorAll('.dict-single-gtin, .dict-box-gtin'))
+    .find(input => input.value.trim() === scannedGtin);
     if (existingInput) {
-    alert('此條碼已在清單中');
+    alert('此 GTIN 已在清單中');
     existingInput.closest('tr').querySelector('.dict-name').focus();
     return;
     }
 
     const tr = document.createElement('tr');
-    tr.classList.add('editing'); // 預設新掃描的進入編輯模式
+    tr.classList.add('editing');
+    tr.dataset.scannedGtin = scannedGtin;
+    tr.dataset.rowKey = scannedGtin;
     tr.innerHTML = `
     <td><input class="dict-hospital-code" placeholder="院內碼"></td>
-    <td><input class="dict-barcode readonly" value="${barcode}" readonly></td>
     <td><input class="dict-name" placeholder="請輸入名稱"></td>
-    <td><input class="dict-size" placeholder="尺寸"></td>
-    <td><input class="dict-category" placeholder="分類"></td>
-    <td><input class="dict-box-gtin" placeholder="外盒"></td>
+    <td><input class="dict-size" placeholder="規格"></td>
+    <td>
+      <input class="dict-single-gtin" value="${escapeHtml(scannedGtin)}" placeholder="單包GTIN">
+      <div class="gtinTargetTools">
+        <button type="button" onclick="setGtinTarget(this, 'single')">設為單包</button>
+      </div>
+    </td>
+    <td>
+      <input class="dict-box-gtin" placeholder="盒裝GTIN">
+      <div class="gtinTargetTools">
+        <button type="button" onclick="setGtinTarget(this, 'box')">設為盒裝</button>
+      </div>
+    </td>
     <td><input class="dict-box-qty" placeholder="數量"></td>
-    <td><input class="dict-barcode-type" placeholder="類型"></td>
-    <td><input class="dict-status" placeholder="狀態"></td>
+    <td><input class="dict-category" placeholder="分類"></td>
+    <td><input class="dict-status" value="使用中" placeholder="使用中 / 試用 / 停用"></td>
     <td style="white-space:nowrap;">
     <span class="dragHandle">☰</span>
     <button type="button" class="dictActionBtn edit-btn" style="display:none;" onclick="editDictRow(this)">編輯</button>
     <button type="button" class="dictActionBtn save-btn primary" onclick="saveDictRow(this)">儲存</button>
     <button type="button" class="dictActionBtn danger" onclick="deleteDictRow(this)">刪除</button>
     <div class="dictStatus" style="font-size:12px; margin-top:4px;">查詢中...</div>
+    <div class="scanMeta">掃描GTIN：${escapeHtml(scannedGtin)}${parsed && parsed.lot ? '<br>批號：' + escapeHtml(parsed.lot) : ''}${parsed && parsed.exp ? '<br>效期：' + escapeHtml(parsed.exp) : ''}</div>
     </td>
     `;
     document.getElementById('dictTbody').prepend(tr);
 
     try {
-    const res = await lookupBarcode(barcode);
+    const res = await lookupBarcode(scannedGtin);
     if (res.found) {
     tr.querySelector('.dict-hospital-code').value = res.data.hospitalCode || '';
     tr.querySelector('.dict-name').value = res.data.dressingName || '';
     tr.querySelector('.dict-size').value = res.data.size || '';
-    tr.querySelector('.dict-category').value = res.data.category || '';
+    tr.querySelector('.dict-single-gtin').value = res.data.singleGtin || res.data.gtin || '';
     tr.querySelector('.dict-box-gtin').value = res.data.boxGtin || '';
     tr.querySelector('.dict-box-qty').value = res.data.boxQuantity || '';
-    tr.querySelector('.dict-barcode-type').value = res.data.barcodeType || '';
-    tr.querySelector('.dict-status').value = res.data.status || '';
-    
-    tr.querySelector('.dictStatus').innerText = '已建檔';
+    tr.querySelector('.dict-category').value = res.data.category || '';
+    tr.querySelector('.dict-status').value = res.data.status || '使用中';
+    tr.dataset.rowKey = getDictRowKey(tr);
+
+    const matchText = res.matchType === 'boxGtin' ? '已建檔：盒裝GTIN' : '已建檔：單包GTIN';
+    tr.querySelector('.dictStatus').innerText = matchText;
     tr.querySelector('.dictStatus').className = 'dictStatus saved';
-    
-    // 已存在的條碼，自動關閉編輯模式
+
     tr.classList.remove('editing');
     tr.querySelector('.save-btn').style.display = 'none';
     tr.querySelector('.edit-btn').style.display = 'inline-block';
     } else {
-    tr.querySelector('.dictStatus').innerText = '新條碼';
+    tr.querySelector('.dictStatus').innerText = '新GTIN，請確認設為單包或盒裝';
     tr.querySelector('.dictStatus').className = 'dictStatus';
     tr.querySelector('.dict-name').focus();
     }
@@ -1079,8 +1172,10 @@ onclick="submitUse()">
     tr.querySelector('.dictStatus').innerText = '查詢失敗';
     tr.querySelector('.dictStatus').className = 'dictStatus error';
     tr.querySelector('.dict-name').focus();
+    console.log(err);
     }
     }
+
 
     function startUse(){
 
@@ -1299,27 +1394,37 @@ onclick="submitUse()">
     }
 
     }
-
     async function handleBarcodeScanResult(barcode){
 
-      // 解析 UDI
       const parsed = parseUDI(barcode);
       const gtin = parsed.gtin || barcode;
 
       if(scannerMode === 'row'){
         if(activeDressingInput){
-          // 領用模式下，顯示解析後的 GTIN，並可考慮同時儲存 LOT/EXP 到隱藏欄位供後續寫入 UsageLog
           activeDressingInput.value = gtin; 
-          activeDressingInput.dataset.lot = parsed.lot;
-          activeDressingInput.dataset.exp = parsed.exp;
-          activeDressingInput.dataset.raw = parsed.raw;
-          
-          // 若有找到對應名稱，可直接替換顯示名稱，並在 tooltip 提示批號
+          activeDressingInput.dataset.gtin = gtin;
+          activeDressingInput.dataset.lot = parsed.lot || '';
+          activeDressingInput.dataset.exp = parsed.exp || '';
+          activeDressingInput.dataset.raw = parsed.raw || barcode;
+          activeDressingInput.dataset.packageType = '';
+          activeDressingInput.dataset.unitQuantity = '1';
+
           try {
             const res = await lookupBarcode(gtin);
             if (res.found && res.data.dressingName) {
-              activeDressingInput.value = res.data.dressingName;
-              activeDressingInput.title = `GTIN: ${gtin}\nLOT: ${parsed.lot}\nEXP: ${parsed.exp}`;
+              const sizeText = res.data.size ? ` ${res.data.size}` : '';
+              const packageText = res.packageType === 'box' ? '（盒裝）' : '';
+              activeDressingInput.value = `${res.data.dressingName}${sizeText}${packageText}`;
+              activeDressingInput.dataset.packageType = res.packageType || '';
+              activeDressingInput.dataset.unitQuantity = String(res.unitQuantity || 1);
+              activeDressingInput.title =
+                `GTIN: ${gtin}\n包裝: ${res.packageType || ''}\n數量: ${res.unitQuantity || 1}\nLOT: ${parsed.lot || ''}\nEXP: ${parsed.exp || ''}`;
+
+              const row = activeDressingInput.closest('tr');
+              const qtyInput = row ? row.querySelector('.quantity') : null;
+              if (qtyInput && res.packageType === 'box') {
+                qtyInput.value = res.unitQuantity || res.data.boxQuantity || 1;
+              }
             }
           } catch(e) {
             console.log('查詢失敗', e);
@@ -1329,59 +1434,82 @@ onclick="submitUse()">
       }
 
       if(scannerMode === 'dict'){
-        // 建檔模式下，只用 GTIN 進行建檔
-        await addDictRow(gtin);
+        await addDictRow(gtin, parsed);
         return;
       }
 
     }
 
+
     // UDI 解析器：支援 GS1 標準，將長條碼拆解為 GTIN, LOT, EXP
     function parseUDI(barcode) {
-      let gtin = barcode;
+      const raw = String(barcode || '');
+      const GS = String.fromCharCode(29);
+
+      let text = raw
+        .replace(/[()]/g, '')
+        .trim();
+
+      let gtin = '';
       let lot = '';
       let exp = '';
 
-      // 清理不可見字元 (如 ASCII 29 GS 分隔符號)
-      let cleanBarcode = barcode.replace(/[\x00-\x1F\x7F]/g, '');
+      function formatExp(yymmdd) {
+        if (!yymmdd || yymmdd.length !== 6) return '';
+        const yy = yymmdd.substring(0, 2);
+        const mm = yymmdd.substring(2, 4);
+        const dd = yymmdd.substring(4, 6);
+        return `20${yy}-${mm}-${dd}`;
+      }
 
-      // 嘗試解析帶有小括號 (01), (17), (10) 的格式
-      const regexBrackets = /(?:\(01\)|01)(\d{14})(?:.*?(?:\(17\)|17)(\d{6}))?(?:.*?(?:\(10\)|10)([A-Za-z0-9_-]+))?/;
-      const matchBrackets = cleanBarcode.match(regexBrackets);
+      let i = 0;
 
-      if (matchBrackets && matchBrackets[1]) {
-        gtin = matchBrackets[1];
-        if (matchBrackets[2]) exp = matchBrackets[2];
-        if (matchBrackets[3]) lot = matchBrackets[3];
-      } 
-      // 嘗試解析連續字串 (01 開頭)
-      else if (cleanBarcode.startsWith('01') && cleanBarcode.length >= 16) {
-        gtin = cleanBarcode.substring(2, 16);
-        
-        let remaining = cleanBarcode.substring(16);
-        while (remaining.length > 0) {
-          if (remaining.startsWith('17') && remaining.length >= 8) {
-            exp = remaining.substring(2, 8);
-            remaining = remaining.substring(8);
-          } else if (remaining.startsWith('10') && remaining.length > 2) {
-            // 批號通常在最後，長度不定，直到字串結束或遇到其他 AI (簡化處理)
-            // 如果後續還有其他複雜 AI，可能需要更嚴謹的 GS1 Parser
-            lot = remaining.substring(2); 
-            break;
-          } else {
-            // 遇到不認識的 AI，或非標準結尾，跳出迴圈
-            break; 
-          }
+      while (i < text.length) {
+        const ai2 = text.substring(i, i + 2);
+
+        if (ai2 === '01' && i + 16 <= text.length) {
+          gtin = text.substring(i + 2, i + 16);
+          i += 16;
+          continue;
         }
+
+        if (ai2 === '17' && i + 8 <= text.length) {
+          exp = formatExp(text.substring(i + 2, i + 8));
+          i += 8;
+          continue;
+        }
+
+        if (ai2 === '10' && i + 2 <= text.length) {
+          const start = i + 2;
+          let end = text.indexOf(GS, start);
+
+          if (end === -1) {
+            const nextAiMatch = text.substring(start).match(/(17\d{6}|21[A-Za-z0-9]{1,20}|30\d{1,8})/);
+            end = nextAiMatch && nextAiMatch.index > 0
+              ? start + nextAiMatch.index
+              : text.length;
+          }
+
+          lot = text.substring(start, end);
+          i = end;
+          continue;
+        }
+
+        i++;
+      }
+
+      if (!gtin) {
+        gtin = raw.replace(/[\x00-\x1F\x7F]/g, '').trim();
       }
 
       return {
-        raw: barcode,
+        raw: raw,
         gtin: gtin,
         lot: lot,
         exp: exp
       };
     }
+
 
     function lookupBarcode(gtin){
 
@@ -1487,10 +1615,15 @@ onclick="submitUse()">
 
     return callDressingBarcodeApi({
     action: 'saveDressingBarcode',
-    gtin: data.gtin,
+    hospitalCode: data.hospitalCode,
+    singleGtin: data.singleGtin || data.gtin,
+    gtin: data.singleGtin || data.gtin,
     dressingName: data.dressingName,
     size: data.size,
-    partNumber: data.partNumber
+    category: data.category,
+    boxGtin: data.boxGtin,
+    boxQuantity: data.boxQuantity,
+    status: data.status
     });
 
     }
@@ -1707,7 +1840,7 @@ if (window.location.hostname.includes('github.io')) {
   ghFooter.innerHTML = `
     <div style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">
       <span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>
-      <span>v.2.13.1-202605281543</span>
+      <span>v.2.13.3-202605290050</span>
     </div>
   `;
   document.body.appendChild(ghFooter);
@@ -1717,4 +1850,12 @@ if (window.location.hostname.includes('github.io')) {
 </body>
 
 </html>
+
+
+
+
+
+
+
+
 
