@@ -416,7 +416,7 @@ margin:24px auto;
 .dictTableWrap {
 overflow-x: auto;
 }
-.dictTable { min-width: 800px; }
+.dictTable { min-width: 1200px; }
 }
 
 </style>
@@ -1008,16 +1008,21 @@ onclick="submitUse()">
     const tr = document.createElement('tr');
     tr.classList.add('editing'); // 預設新掃描的進入編輯模式
     tr.innerHTML = `
+    <td><input class="dict-hospital-code" placeholder="院內碼"></td>
     <td><input class="dict-barcode readonly" value="${barcode}" readonly></td>
     <td><input class="dict-name" placeholder="請輸入名稱"></td>
-    <td><input class="dict-size" placeholder="請輸入尺寸"></td>
-    <td><input class="dict-part-number" placeholder="請輸入料號"></td>
-    <td><span class="dictStatus">查詢中...</span></td>
+    <td><input class="dict-size" placeholder="尺寸"></td>
+    <td><input class="dict-category" placeholder="分類"></td>
+    <td><input class="dict-box-gtin" placeholder="外盒"></td>
+    <td><input class="dict-box-qty" placeholder="數量"></td>
+    <td><input class="dict-barcode-type" placeholder="類型"></td>
+    <td><input class="dict-status" placeholder="狀態"></td>
     <td style="white-space:nowrap;">
     <span class="dragHandle">☰</span>
     <button type="button" class="dictActionBtn edit-btn" style="display:none;" onclick="editDictRow(this)">編輯</button>
     <button type="button" class="dictActionBtn save-btn primary" onclick="saveDictRow(this)">儲存</button>
     <button type="button" class="dictActionBtn danger" onclick="deleteDictRow(this)">刪除</button>
+    <div class="dictStatus" style="font-size:12px; margin-top:4px;">查詢中...</div>
     </td>
     `;
     document.getElementById('dictTbody').prepend(tr);
@@ -1025,9 +1030,15 @@ onclick="submitUse()">
     try {
     const res = await lookupBarcode(barcode);
     if (res.found) {
+    tr.querySelector('.dict-hospital-code').value = res.data.hospitalCode || '';
     tr.querySelector('.dict-name').value = res.data.dressingName || '';
     tr.querySelector('.dict-size').value = res.data.size || '';
-    tr.querySelector('.dict-part-number').value = res.data.partNumber || '';
+    tr.querySelector('.dict-category').value = res.data.category || '';
+    tr.querySelector('.dict-box-gtin').value = res.data.boxGtin || '';
+    tr.querySelector('.dict-box-qty').value = res.data.boxQuantity || '';
+    tr.querySelector('.dict-barcode-type').value = res.data.barcodeType || '';
+    tr.querySelector('.dict-status').value = res.data.status || '';
+    
     tr.querySelector('.dictStatus').innerText = '已建檔';
     tr.querySelector('.dictStatus').className = 'dictStatus saved';
     
@@ -1671,6 +1682,25 @@ if (window.location.hostname.includes('github.io')) {
   
   ghFooter.innerHTML = `
     <div style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">
+      <span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>
+      <span>v.2.12.1-202605281157</span>
+    </div>
+  `;
+  document.body.appendChild(ghFooter);
+}
+</script>
+
+</body>
+
+</html>
+
+
+
+
+
+
+
+style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">
       <span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>
       <span>v.2.12.1-202605281157</span>
     </div>

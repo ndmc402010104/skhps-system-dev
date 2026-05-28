@@ -5,11 +5,15 @@ const DRESSING_MASTER_SHEET_NAME =
 '敷料主檔';
 
 const DRESSING_MASTER_HEADERS = [
-  'gtin',
+  'hospitalCode',
   'dressingName',
   'size',
-  'partNumber',
-  'defaultPayment'
+  'category',
+  'boxGtin',
+  'boxQuantity',
+  'gtin',
+  'barcodeType',
+  'status'
 ];
 
 function handleDressingBarcodeGet(e){
@@ -194,10 +198,14 @@ function lookupDressingBarcode_(gtin){
       found:false,
       data:{
         gtin:code,
+        hospitalCode:'',
         dressingName:'',
         size:'',
-        partNumber:'',
-        defaultPayment:''
+        category:'',
+        boxGtin:'',
+        boxQuantity:'',
+        barcodeType:'',
+        status:''
       }
     };
   }
@@ -234,10 +242,14 @@ function lookupDressingBarcode_(gtin){
     found:false,
     data:{
       gtin:code,
+      hospitalCode:'',
       dressingName:'',
       size:'',
-      partNumber:'',
-      defaultPayment:''
+      category:'',
+      boxGtin:'',
+      boxQuantity:'',
+      barcodeType:'',
+      status:''
     }
   };
 
@@ -286,10 +298,14 @@ function saveDressingBarcode_(data){
 
   const rowData = {
     gtin: gtin,
+    hospitalCode: data.hospitalCode || '',
     dressingName: data.dressingName || '',
     size: data.size || '',
-    partNumber: data.partNumber || '',
-    defaultPayment: data.defaultPayment || ''
+    category: data.category || '',
+    boxGtin: data.boxGtin || '',
+    boxQuantity: data.boxQuantity || '',
+    barcodeType: data.barcodeType || '',
+    status: data.status || ''
   };
 
   const row =
@@ -358,10 +374,14 @@ function listDressingBarcode_(){
 
     data.push({
       gtin: gtin,
+      hospitalCode: String(row[headers.indexOf('hospitalCode')] || ''),
       dressingName: String(row[headers.indexOf('dressingName')] || ''),
       size: String(row[headers.indexOf('size')] || ''),
-      partNumber: String(row[headers.indexOf('partNumber')] || ''),
-      defaultPayment: String(row[headers.indexOf('defaultPayment')] || '')
+      category: String(row[headers.indexOf('category')] || ''),
+      boxGtin: String(row[headers.indexOf('boxGtin')] || ''),
+      boxQuantity: String(row[headers.indexOf('boxQuantity')] || ''),
+      barcodeType: String(row[headers.indexOf('barcodeType')] || ''),
+      status: String(row[headers.indexOf('status')] || '')
     });
   }
 
