@@ -158,7 +158,7 @@ margin-top: 14px;
 }
 .formTableWrap table {
 margin-top: 0;
-min-width: 1020px; /* 確保在手機上不會被過度擠壓 */
+min-width: 1120px; /* 保留完整欄位，手機用橫向捲動 */
 }
 
 table{
@@ -318,9 +318,17 @@ font-size: 20px;
 .dictToolbar {
 display: flex;
 gap: 10px;
+flex-wrap: wrap;
+justify-content: flex-end;
+}
+.dictTableWrap {
+width: 100%;
+overflow-x: auto;
+-webkit-overflow-scrolling: touch;
 }
 .dictTable {
 width: 100%;
+min-width: 1280px;
 border-collapse: collapse;
 margin-top: 10px;
 table-layout: fixed;
@@ -335,7 +343,8 @@ vertical-align: middle;
 background: #f1f5f9;
 font-weight: bold;
 }
-.dictTable input {
+.dictTable input,
+.dictTable select {
 width: 100%;
 padding: 8px;
 border: 1px solid transparent;
@@ -348,12 +357,14 @@ text-overflow: ellipsis;
 pointer-events: none;
 transition: all .2s;
 }
-tr.editing input:not(.readonly) {
+tr.editing input:not(.readonly),
+tr.editing select:not(.readonly) {
 border-color: #cbd5e1;
 background: #fff;
 pointer-events: auto;
 }
-tr.editing input:not(.readonly):focus {
+tr.editing input:not(.readonly):focus,
+tr.editing select:not(.readonly):focus {
 border-color: #2563eb;
 outline: none;
 box-shadow: 0 0 0 3px rgba(37,99,235,.15);
@@ -429,7 +440,8 @@ line-height:1.4;
 color:#64748b;
 margin-top:6px;
 }
-input:disabled{
+input:disabled,
+select:disabled{
 background:#f1f5f9 !important;
 color:#64748b !important;
 }
@@ -464,6 +476,16 @@ color: #1e293b;
 
 @media(max-width:720px){
 
+.dictHeader{
+flex-direction: column;
+align-items: stretch;
+gap: 10px;
+}
+
+.dictToolbar{
+justify-content: flex-start;
+}
+
 body{
 padding:104px 16px 72px;
 }
@@ -480,7 +502,7 @@ margin:24px auto;
 .dictTableWrap {
 overflow-x: auto;
 }
-.dictTable { min-width: 1200px; }
+.dictTable { min-width: 1280px; }
 }
 
 </style>
@@ -656,6 +678,24 @@ onclick="submitUse()">
     .replace(/'/g, '&#39;');
     }
 
+
+    function normalizeDressingStatus(value){
+    const status = String(value || '').trim();
+    return ['使用中', '試用', '停用'].includes(status)
+      ? status
+      : '使用中';
+    }
+
+    function renderStatusSelect(value){
+    const current = normalizeDressingStatus(value);
+    return `
+    <select class="dict-status" disabled>
+      <option value="使用中" ${current === '使用中' ? 'selected' : ''}>使用中</option>
+      <option value="試用" ${current === '試用' ? 'selected' : ''}>試用</option>
+      <option value="停用" ${current === '停用' ? 'selected' : ''}>停用</option>
+    </select>`;
+    }
+
     function isAppsScriptMode(){
 
     return typeof google !== 'undefined'
@@ -695,10 +735,11 @@ onclick="submitUse()">
     <td><input class="dict-box-gtin" value="${escapeHtml(item.boxGtin || '')}"></td>
     <td><input class="dict-box-qty" value="${escapeHtml(item.boxQuantity || '')}"></td>
     <td><input class="dict-category" value="${escapeHtml(item.category || '')}"></td>
-    <td><input class="dict-status" value="${escapeHtml(item.status || '使用中')}"></td>
+    <td>${renderStatusSelect(item.status || '使用中')}</td>
     <td style="white-space:nowrap;">
     <span class="dragHandle">☰</span>
     <button type="button" class="dictActionBtn edit-btn" onclick="editDictRow(this)">編輯</button>
+    <button type="button" class="dictActionBtn save-btn primary" style="display:none;" onclick="saveDictRow(this)">儲存</button>
     <button type="button" class="dictActionBtn danger" onclick="deleteDictRow(this)">刪除</button>
     <div class="dictStatus saved" style="font-size:12px; margin-top:4px;">已建檔</div>
     </td>
@@ -965,26 +1006,20 @@ onclick="submitUse()">
     }
 
     function updateDictRowEditButtons(tr){
+    const saveBtn = tr.querySelector('.save-btn');
     const editBtn = tr.querySelector('.edit-btn');
     const dirty = isDictRowDirty(tr);
 
     tr.dataset.dirty = dirty ? '1' : '0';
 
+    if(saveBtn){
+    saveBtn.style.display = dirty ? 'inline-block' : 'none';
+    saveBtn.disabled = !dirty;
+    }
+
     if(editBtn){
     editBtn.style.display = 'inline-block';
-
-    if(tr.classList.contains('editing')){
-    editBtn.innerText = dirty ? '儲存' : '返回';
-
-    if(dirty){
-    editBtn.classList.add('primary');
-    } else {
-    editBtn.classList.remove('primary');
-    }
-    } else {
-    editBtn.innerText = '編輯';
-    editBtn.classList.remove('primary');
-    }
+    editBtn.innerText = tr.classList.contains('editing') ? '返回' : '編輯';
     }
     }
 
@@ -1048,16 +1083,19 @@ onclick="submitUse()">
     delete tr.dataset.isNewRow;
     delete tr.dataset.dirty;
 
+    const saveBtn = tr.querySelector('.save-btn');
     const editBtn = tr.querySelector('.edit-btn');
+
+    if(saveBtn){
+    saveBtn.style.display = 'none';
+    saveBtn.disabled = false;
+    saveBtn.innerText = '儲存';
+    }
 
     if(editBtn){
     editBtn.style.display = 'inline-block';
     editBtn.innerText = '編輯';
-    editBtn.classList.remove('primary');
-    editBtn.disabled = false;
     }
-
-    updateDictRowEditButtons(tr);
     }
 
     function editDictRow(btn) {
@@ -1065,8 +1103,10 @@ onclick="submitUse()">
 
     if(tr.classList.contains('editing')){
     if(isDictRowDirty(tr)){
-    saveDictRow(btn);
+    const ok = confirm('目前有未儲存變更，確定要返回並放棄修改嗎？');
+    if(!ok){
     return;
+    }
     }
 
     restoreDictRowSnapshot(tr);
@@ -1081,7 +1121,7 @@ onclick="submitUse()">
 
     tr.classList.add('editing');
     removeBoxMergePanel(tr);
-    Array.from(tr.querySelectorAll('input')).forEach(input => {
+    Array.from(tr.querySelectorAll('input, select')).forEach(input => {
     input.disabled = false;
     });
     setDictRowSnapshot(tr);
@@ -1089,7 +1129,6 @@ onclick="submitUse()">
     updateDictRowEditButtons(tr);
     tr.querySelector('.dict-name').focus();
     }
-
     async function saveDictRow(btn) {
     const tr = btn.closest('tr');
     const hospitalCode = tr.querySelector('.dict-hospital-code').value.trim();
@@ -1117,6 +1156,8 @@ onclick="submitUse()">
     statusEl.className = 'dictStatus error';
     return;
     }
+
+    // 盒裝數量可以先略過，之後再補。
 
     if (isBoxMode && tr.dataset.boxMergeMode === 'existing' && !mergeExistingKey) {
     statusEl.innerText = '請選擇要合併的既有敷料，或改選「先暫存盒裝」';
@@ -1151,7 +1192,7 @@ onclick="submitUse()">
     setDictRowSnapshot(tr);
     leaveDictEditMode(tr);
 
-    Array.from(tr.querySelectorAll('input')).forEach(input => {
+    Array.from(tr.querySelectorAll('input, select')).forEach(input => {
     input.disabled = false;
     });
 
@@ -1170,13 +1211,7 @@ onclick="submitUse()">
     }
 
     btn.disabled = false;
-
-    if(tr.classList.contains('editing')){
-    updateDictRowEditButtons(tr);
-    } else {
-    btn.innerText = '編輯';
-    btn.classList.remove('primary');
-    }
+    btn.innerText = '儲存';
     }
 
 
@@ -1197,9 +1232,9 @@ onclick="submitUse()">
 
     // 依序執行，避免同時寫入導致 Google Sheet 衝突
     for (const tr of editingRows) {
-    const mainBtn = tr.querySelector('.edit-btn');
-    if (mainBtn && isDictRowDirty(tr)) {
-    await saveDictRow(mainBtn);
+    const saveBtn = tr.querySelector('.save-btn');
+    if (saveBtn) {
+    await saveDictRow(saveBtn);
     if (!tr.classList.contains('editing')) {
     successCount++;
     } else {
@@ -1598,10 +1633,11 @@ onclick="submitUse()">
     </td>
     <td><input class="dict-box-qty" placeholder="可之後補"></td>
     <td><input class="dict-category" placeholder="分類"></td>
-    <td><input class="dict-status" value="使用中" placeholder="使用中 / 試用 / 停用"></td>
+    <td>${renderStatusSelect('使用中')}</td>
     <td style="white-space:nowrap;">
     <span class="dragHandle">☰</span>
-    <button type="button" class="dictActionBtn edit-btn primary" onclick="editDictRow(this)">儲存</button>
+    <button type="button" class="dictActionBtn edit-btn" style="display:none;" onclick="editDictRow(this)">編輯</button>
+    <button type="button" class="dictActionBtn save-btn primary" onclick="saveDictRow(this)">儲存</button>
     <button type="button" class="dictActionBtn danger" onclick="deleteDictRow(this)">刪除</button>
     <div class="dictStatus" style="font-size:12px; margin-top:4px;">查詢中...</div>
     <div class="scanMeta">掃描GTIN：${escapeHtml(scannedGtin)}${parsed && parsed.lot ? '<br>批號：' + escapeHtml(parsed.lot) : ''}${parsed && parsed.exp ? '<br>效期：' + escapeHtml(parsed.exp) : ''}</div>
@@ -2307,7 +2343,7 @@ if (window.location.hostname.includes('github.io')) {
   ghFooter.innerHTML = `
     <div style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">
       <span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>
-      <span>v.2.14.2-202605290132</span>
+      <span>v.2.14.2-202605290136</span>
     </div>
   `;
   document.body.appendChild(ghFooter);
