@@ -1,13 +1,11 @@
 ﻿<!DOCTYPE html>
 <html>
-
 <head>
 <base target="_top">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>敷料領用</title>
 
-<!-- 強制瀏覽器不使用快取，方便開發測試 -->
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -15,2329 +13,1985 @@
 <script src="https://unpkg.com/html5-qrcode"></script>
 
 <style>
+:root{
+  --bg:#f4f7fb;
+  --card:#ffffff;
+  --line:#dbe4ef;
+  --text:#172033;
+  --muted:#64748b;
+  --primary:#2563eb;
+  --danger-bg:#fee2e2;
+  --danger:#991b1b;
+}
+
+*{ box-sizing:border-box; }
+
+html,body{
+  margin:0;
+  min-height:100%;
+  color:var(--text);
+  background:
+    radial-gradient(circle at top left,rgba(37,99,235,.1),transparent 30rem),
+    linear-gradient(180deg,#fbfdff 0%,var(--bg) 100%);
+  font-family:Arial,"Noto Sans TC","Microsoft JhengHei",sans-serif;
+}
 
 body{
-margin:0;
-padding:118px 24px 82px;
-color:#172033;
-background:
-radial-gradient(circle at top left,rgba(37,99,235,.1),transparent 30rem),
-linear-gradient(180deg,#fbfdff 0%,#f4f7fb 100%);
-font-family:Arial,"Noto Sans TC","Microsoft JhengHei",sans-serif;
-overflow-x:hidden;
+  padding:118px 24px 82px;
+  overflow-x:hidden;
 }
 
 .shell{
-max-width:1400px;
-margin:0 auto;
+  width:100%;
+  max-width:1400px;
+  margin:0 auto;
 }
 
-.pageHero{
-margin-bottom:24px;
-}
+.pageHero{ margin-bottom:24px; }
 
 .pageMap{
-display:flex;
-align-items:center;
-gap:8px;
-margin-bottom:24px;
-color:#64748b;
-font-size:13px;
-font-weight:700;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin-bottom:24px;
+  color:var(--muted);
+  font-size:13px;
+  font-weight:700;
 }
 
 .pageMapLink{
-border:0;
-padding:0;
-background:transparent;
-color:#2563eb;
-font:inherit;
-cursor:pointer;
+  border:0;
+  padding:0;
+  background:transparent;
+  color:var(--primary);
+  font:inherit;
+  cursor:pointer;
 }
 
-.pageMapCurrent{
-color:#172033;
-}
-
-.pageMapSep{
-color:#94a3b8;
-}
+.pageMapCurrent{ color:var(--text); }
+.pageMapSep{ color:#94a3b8; }
 
 .eyebrow{
-margin:0 0 10px;
-color:#1d4ed8;
-font-size:13px;
-font-weight:800;
+  margin:0 0 10px;
+  color:#1d4ed8;
+  font-size:13px;
+  font-weight:800;
 }
 
 h1{
-margin:0;
-font-size:clamp(28px,4vw,42px);
-line-height:1.18;
-letter-spacing:0;
+  margin:0;
+  font-size:clamp(28px,4vw,42px);
+  line-height:1.18;
 }
 
 .pageLead{
-margin:12px 0 0;
-color:#475569;
-font-size:16px;
-line-height:1.7;
+  margin:12px 0 0;
+  color:#475569;
+  font-size:16px;
+  line-height:1.7;
 }
 
 .card{
-max-width:1400px;
-background:white;
-padding:28px;
-border:1px solid #dbe4ef;
-border-radius:8px;
-box-shadow:0 8px 24px rgba(15,23,42,.06);
+  width:100%;
+  background:var(--card);
+  padding:28px;
+  border:1px solid var(--line);
+  border-radius:8px;
+  box-shadow:0 8px 24px rgba(15,23,42,.06);
+  overflow:visible;
 }
 
 button{
-padding:8px 14px;
-font-size:15px;
-cursor:pointer;
-border-radius:8px;
-border:1px solid #d6dde7;
-background:#ffffff;
-color:#334155;
+  padding:8px 14px;
+  font-size:15px;
+  cursor:pointer;
+  border-radius:8px;
+  border:1px solid #d6dde7;
+  background:#ffffff;
+  color:#334155;
+  white-space:nowrap;
+}
+
+button:disabled{
+  opacity:.55;
+  cursor:not-allowed;
 }
 
 .primary{
-background:#2563eb;
-color:white;
-border:none;
+  background:var(--primary);
+  color:white;
+  border:none;
 }
 
 .danger{
-background:#fee2e2;
-color:#991b1b;
+  background:var(--danger-bg);
+  color:var(--danger);
 }
 
 #formArea{
-display:none;
-margin-top:20px;
+  display:none;
+  margin-top:20px;
 }
 
-.infoRow{
-margin-bottom:12px;
-}
+.infoRow{ margin-bottom:12px; }
 
 .infoRow label{
-display:inline-block;
-width:130px;
-font-weight:bold;
+  display:inline-block;
+  width:130px;
+  font-weight:bold;
 }
 
-input{
-padding:7px;
-border:1px solid #cbd5e1;
-border-radius:8px;
-box-sizing:border-box;
-font-size:16px;
+input,select{
+  padding:7px;
+  border:1px solid #cbd5e1;
+  border-radius:8px;
+  box-sizing:border-box;
+  font-size:16px;
+}
+
+input:disabled,
+select:disabled{
+  background:#f1f5f9 !important;
+  color:#64748b !important;
 }
 
 .patientBlock{
-margin-top:20px;
-padding:18px;
-background:#f8fafc;
-border:1px solid #dbe4ef;
-border-radius:8px;
+  margin-top:20px;
+  padding:18px;
+  background:#f8fafc;
+  border:1px solid var(--line);
+  border-radius:8px;
 }
 
 .patientTitle{
-font-size:20px;
-font-weight:bold;
-margin-bottom:14px;
+  font-size:20px;
+  font-weight:bold;
+  margin-bottom:14px;
 }
 
-.formTableWrap,
-.dictTableWrap{
-width:100%;
-max-width:100%;
-overflow-x:auto;
-overflow-y:hidden;
--webkit-overflow-scrolling:touch;
-margin-top:14px;
-border:1px solid #dbe4ef;
-border-radius:8px;
-background:#ffffff;
+/* 領用表：獨立控制，不再用全域 nth-child */
+.useTableWrap{
+  width:100%;
+  overflow-x:auto;
+  -webkit-overflow-scrolling:touch;
+  margin-top:14px;
+  border:1px solid var(--line);
+  border-radius:8px;
+  background:#fff;
 }
 
-.formTableWrap table,
-.dictTable{
-border-collapse:collapse;
-table-layout:fixed;
-margin:0;
+.useTable{
+  width:100%;
+  min-width:1020px;
+  border-collapse:collapse;
+  table-layout:fixed;
 }
 
-.formTableWrap table{
-width:1120px;
-min-width:1120px;
+.useTable th,
+.useTable td{
+  border-bottom:1px solid var(--line);
+  border-right:1px solid var(--line);
+  padding:10px;
+  vertical-align:middle;
 }
 
-.dictTable{
-width:1540px;
-min-width:1540px;
+.useTable th{
+  background:#f1f5f9;
+  text-align:left;
 }
 
-.formTableWrap th,
-.formTableWrap td,
-.dictTable th,
-.dictTable td{
-border:1px solid #dbe4ef;
-padding:10px;
-vertical-align:middle;
-box-sizing:border-box;
+.useTable th:last-child,
+.useTable td:last-child{
+  border-right:0;
 }
 
-.formTableWrap th,
-.dictTable th{
-background:#f1f5f9;
-font-weight:bold;
+.useTable tr:last-child td{
+  border-bottom:0;
 }
 
-.formTableWrap th:nth-child(1),
-.formTableWrap td:nth-child(1){
-width:90px;
-text-align:center;
-}
+.useTable .col-action{ width:80px; text-align:center; }
+.useTable .col-charge{ width:170px; }
+.useTable .col-dressing{ width:360px; }
+.useTable .col-qty{ width:100px; }
+.useTable .col-pay{ width:180px; }
+.useTable .col-doctor{ width:220px; }
 
-.formTableWrap th:nth-child(2),
-.formTableWrap td:nth-child(2){
-width:190px;
-}
-
-.formTableWrap th:nth-child(3),
-.formTableWrap td:nth-child(3){
-width:340px;
-}
-
-.formTableWrap th:nth-child(4),
-.formTableWrap td:nth-child(4){
-width:110px;
-}
-
-.formTableWrap th:nth-child(5),
-.formTableWrap td:nth-child(5){
-width:190px;
-}
-
-.formTableWrap th:nth-child(6),
-.formTableWrap td:nth-child(6){
-width:200px;
-}
-
-.dictTable th:nth-child(1),
-.dictTable td:nth-child(1){width:110px;}
-.dictTable th:nth-child(2),
-.dictTable td:nth-child(2){width:200px;}
-.dictTable th:nth-child(3),
-.dictTable td:nth-child(3){width:130px;}
-.dictTable th:nth-child(4),
-.dictTable td:nth-child(4){width:190px;}
-.dictTable th:nth-child(5),
-.dictTable td:nth-child(5){width:190px;}
-.dictTable th:nth-child(6),
-.dictTable td:nth-child(6){width:100px;}
-.dictTable th:nth-child(7),
-.dictTable td:nth-child(7){width:140px;}
-.dictTable th:nth-child(8),
-.dictTable td:nth-child(8){width:120px;}
-.dictTable th:nth-child(9),
-.dictTable td:nth-child(9){width:460px;}
-
-input:not([type="radio"]){
-width:100%;
-}
+input:not([type="radio"]){ width:100%; }
 
 .radioGroup{
-display:flex;
-align-items:center;
-gap:14px;
-padding-left:6px;
+  display:flex;
+  align-items:center;
+  gap:14px;
+  padding-left:6px;
 }
 
 .radioGroup label{
-display:flex;
-align-items:center;
-gap:6px;
-margin:0;
-white-space:nowrap;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  margin:0;
+  white-space:nowrap;
 }
 
-.radioGroup input{
-margin:0;
-}
-
-.quantity{
-width:100%;
-}
+.radioGroup input{ margin:0; }
 
 .dressingInputGroup{
-display:flex;
-gap:8px;
-align-items:center;
+  display:flex;
+  gap:8px;
+  align-items:center;
 }
 
-.dressingInputGroup .dressingName{
-flex:1;
-}
+.dressingInputGroup .dressingName{ flex:1; }
 
 .cameraBtn{
-white-space:nowrap;
-padding:7px 10px;
+  white-space:nowrap;
+  padding:7px 10px;
 }
 
 .actions{
-margin-top:14px;
-display:flex;
-gap:10px;
+  margin-top:14px;
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
 }
 
+/* 掃描視窗 */
 .scannerOverlay{
-display:none;
-position:fixed;
-inset:0;
-z-index:999;
-background:rgba(15,23,42,.72);
-padding:24px;
-box-sizing:border-box;
+  display:none;
+  position:fixed;
+  inset:0;
+  z-index:999;
+  background:rgba(15,23,42,.72);
+  padding:24px;
 }
 
 .scannerBox{
-max-width:520px;
-margin:60px auto;
-background:white;
-border-radius:12px;
-padding:18px;
-box-shadow:0 16px 40px rgba(15,23,42,.25);
+  max-width:520px;
+  margin:60px auto;
+  background:white;
+  border-radius:12px;
+  padding:18px;
+  box-shadow:0 16px 40px rgba(15,23,42,.25);
 }
 
 .scannerTitle{
-margin:0 0 12px;
-font-size:20px;
-font-weight:800;
+  margin:0 0 12px;
+  font-size:20px;
+  font-weight:800;
 }
 
 .scannerHint{
-margin:0 0 12px;
-color:#64748b;
-font-size:14px;
-line-height:1.6;
+  margin:0 0 12px;
+  color:var(--muted);
+  font-size:14px;
+  line-height:1.6;
 }
 
-#scannerReader{
-width:100%;
-}
+#scannerReader{ width:100%; }
 
 .scannerActions{
-margin-top:12px;
-display:flex;
-justify-content:flex-end;
+  margin-top:12px;
+  display:flex;
+  justify-content:flex-end;
 }
 
-.dictArea {
-display: none;
-margin-top: 24px;
-padding-top: 24px;
-border-top: 1px solid #dbe4ef;
-}
-.dictHeader {
-display: flex;
-justify-content: space-between;
-align-items: center;
-gap:12px;
-margin-bottom: 14px;
-flex-wrap:wrap;
-}
-.dictHeader h2 {
-margin: 0;
-font-size: 20px;
-}
-.dictToolbar {
-display: flex;
-gap: 10px;
-flex-wrap:wrap;
-justify-content:flex-end;
-}
-.dictTable th,
-.dictTable td{
-text-align:left;
+/* 建檔區 */
+.dictArea{
+  display:none;
+  margin-top:24px;
+  padding-top:24px;
+  border-top:1px solid var(--line);
 }
 
-.dictTable input,
-.dictTable select {
-width: 100%;
-padding: 8px;
-border: 1px solid transparent;
-background: transparent;
-font-size: 15px;
-color: #172033;
-box-sizing: border-box;
-border-radius: 6px;
-text-overflow: ellipsis;
-pointer-events: none;
-transition: all .2s;
-}
-tr.editing input:not(.readonly),
-tr.editing select:not(.readonly) {
-border-color: #cbd5e1;
-background: #fff;
-pointer-events: auto;
-}
-tr.editing input:not(.readonly):focus,
-tr.editing select:not(.readonly):focus {
-border-color: #2563eb;
-outline: none;
-box-shadow: 0 0 0 3px rgba(37,99,235,.15);
-}
-.dictStatus {
-font-size: 14px;
-font-weight: bold;
-color: #64748b;
-}
-.dictStatus.saved { color: #15803d; }
-.dictStatus.error { color: #dc2626; }
-
-.dictActionBtn {
-padding: 6px 10px;
-font-size: 13px;
-margin-right: 2px;
+.dictHeader{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:16px;
+  margin-bottom:14px;
 }
 
-.gtinTargetTools{
-display:flex;
-gap:6px;
-margin-top:6px;
-flex-wrap:wrap;
-}
-.gtinTargetTools button{
-padding:4px 7px;
-font-size:12px;
-}
-.scanMeta{
-font-size:12px;
-color:#64748b;
-margin-top:4px;
-line-height:1.4;
+.dictHeader h2{
+  margin:0;
+  font-size:20px;
 }
 
-
-.boxMergePanel{
-margin-top:8px;
-padding:8px;
-border:1px dashed #cbd5e1;
-border-radius:8px;
-background:#f8fafc;
-font-size:12px;
-color:#475569;
-}
-.boxMergePanel label{
-display:block;
-font-weight:700;
-margin:6px 0 4px;
-}
-.boxMergePanel select{
-width:100%;
-padding:6px;
-border:1px solid #cbd5e1;
-border-radius:6px;
-background:#fff;
-font-size:13px;
-box-sizing:border-box;
-}
-.boxMergeModeBtns{
-display:flex;
-gap:6px;
-flex-wrap:wrap;
-margin:6px 0;
-}
-.boxMergeModeBtns button{
-padding:4px 7px;
-font-size:12px;
-}
-.boxMergeNote{
-font-size:12px;
-line-height:1.4;
-color:#64748b;
-margin-top:6px;
-}
-input:disabled{
-background:#f1f5f9 !important;
-color:#64748b !important;
+.dictToolbar{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
 }
 
-
-
-.dictTable.reorder-mode tr { 
-cursor: grab; 
-transition: all .2s ease;
-}
-.dictTable.reorder-mode tr:hover {
-background-color: #f8fafc;
-}
-.dictTable.reorder-mode tr:active { cursor: grabbing; }
-.dictTable tr.dragging { opacity: 0.95; background: #ffffff !important; box-shadow: 0 10px 25px rgba(37,99,235,.15); transform: scale(1.01); position: relative; z-index: 10; }
-.dictTable tr.drag-over { box-shadow: inset 0 3px 0 #2563eb; }
-.dictTable tr.drag-over-bottom { box-shadow: inset 0 -3px 0 #2563eb; }
-.dragHandle { display: none; cursor: grab; font-size: 20px; color: #cbd5e1; margin-right: 12px; vertical-align: middle; transition: color .2s; }
-.reorder-mode .dragHandle { display: inline-block; }
-.reorder-mode tr:hover .dragHandle { color: #64748b; }
-.reorder-mode .dictActionBtn { display: none !important; }
-
-#reorderBtn {
-background: #f8fafc;
-color: #475569;
-border: 1px solid #cbd5e1;
-}
-#reorderBtn:hover {
-background: #f1f5f9;
-color: #1e293b;
+.dictLoadStatus{
+  font-size:13px;
+  color:var(--muted);
+  font-weight:700;
+  margin:8px 0 0;
 }
 
-@media(max-width:720px){
-
-body{
-padding:104px 16px 72px;
-}
-
-.card{
-padding:18px;
-overflow-x:visible;
-}
-
-.scannerBox{
-margin:24px auto;
-}
-
-.formTableWrap,
+/* 建檔表：專屬 wrapper，永遠不裁切左側 */
 .dictTableWrap{
-max-width:calc(100vw - 32px);
-}
-
-.formTableWrap table{
-width:1120px;
-min-width:1120px;
+  width:100%;
+  max-width:100%;
+  overflow-x:auto;
+  overflow-y:visible;
+  -webkit-overflow-scrolling:touch;
+  border:1px solid var(--line);
+  border-radius:8px;
+  background:#fff;
 }
 
 .dictTable{
-width:1540px;
-min-width:1540px;
-}
+  width:100%;
+  min-width:1220px;
+  border-collapse:collapse;
+  table-layout:fixed;
 }
 
+.dictTable th,
+.dictTable td{
+  border-bottom:1px solid var(--line);
+  border-right:1px solid var(--line);
+  padding:10px;
+  text-align:left;
+  vertical-align:middle;
+}
+
+.dictTable th{
+  background:#f1f5f9;
+  font-weight:800;
+}
+
+.dictTable th:last-child,
+.dictTable td:last-child{
+  border-right:0;
+}
+
+.dictTable tr:last-child td{
+  border-bottom:0;
+}
+
+.dictTable input,
+.dictTable select{
+  width:100%;
+  padding:8px;
+  border:1px solid transparent;
+  background:transparent;
+  font-size:15px;
+  color:var(--text);
+  border-radius:6px;
+  text-overflow:ellipsis;
+  pointer-events:none;
+}
+
+tr.editing input:not(.readonly),
+tr.editing select:not(.readonly){
+  border-color:#cbd5e1;
+  background:#fff;
+  pointer-events:auto;
+}
+
+tr.editing input:not(.readonly):focus,
+tr.editing select:not(.readonly):focus{
+  border-color:var(--primary);
+  outline:none;
+  box-shadow:0 0 0 3px rgba(37,99,235,.15);
+}
+
+.dictTable .col-code{ width:110px; }
+.dictTable .col-name{ width:220px; }
+.dictTable .col-size{ width:130px; }
+.dictTable .col-single{ width:170px; }
+.dictTable .col-box{ width:170px; }
+.dictTable .col-boxqty{ width:100px; }
+.dictTable .col-category{ width:140px; }
+.dictTable .col-status{ width:120px; }
+.dictTable .col-actions{ width:160px; }
+
+.dictStatus{
+  font-size:12px;
+  font-weight:bold;
+  color:var(--muted);
+  margin-top:4px;
+  line-height:1.4;
+  white-space:normal;
+}
+
+.dictStatus.saved{ color:#15803d; }
+.dictStatus.error{ color:#dc2626; }
+
+.dictActionBtn{
+  padding:6px 10px;
+  font-size:13px;
+  margin-right:2px;
+  margin-bottom:4px;
+}
+
+.gtinTargetTools{
+  display:flex;
+  gap:6px;
+  margin-top:6px;
+  flex-wrap:wrap;
+}
+
+.gtinTargetTools button{
+  padding:4px 7px;
+  font-size:12px;
+}
+
+.scanMeta{
+  font-size:12px;
+  color:var(--muted);
+  margin-top:4px;
+  line-height:1.4;
+  white-space:normal;
+}
+
+.dictTable.reorder-mode tr{ 
+  cursor:grab; 
+  transition:all .2s ease;
+}
+
+.dictTable.reorder-mode tr:hover{ background-color:#f8fafc; }
+.dictTable.reorder-mode tr:active{ cursor:grabbing; }
+
+.dictTable tr.dragging{
+  opacity:.95;
+  background:#ffffff !important;
+  box-shadow:0 10px 25px rgba(37,99,235,.15);
+  transform:scale(1.01);
+  position:relative;
+  z-index:10;
+}
+
+.dictTable tr.drag-over{ box-shadow:inset 0 3px 0 var(--primary); }
+.dictTable tr.drag-over-bottom{ box-shadow:inset 0 -3px 0 var(--primary); }
+
+.dragHandle{
+  display:none;
+  cursor:grab;
+  font-size:20px;
+  color:#cbd5e1;
+  margin-right:12px;
+  vertical-align:middle;
+}
+
+.reorder-mode .dragHandle{ display:inline-block; }
+.reorder-mode tr:hover .dragHandle{ color:#64748b; }
+.reorder-mode .dictActionBtn{ display:none !important; }
+
+#reorderBtn{
+  background:#f8fafc;
+  color:#475569;
+  border:1px solid #cbd5e1;
+}
+
+#reorderBtn:hover{
+  background:#f1f5f9;
+  color:#1e293b;
+}
+
+@media(max-width:960px){
+  body{
+    padding:104px 8px 72px;
+  }
+
+  .shell{
+    max-width:none;
+    width:100%;
+  }
+
+  .card{
+    padding:12px;
+    border-radius:8px;
+  }
+
+  .dictHeader{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+
+  .dictToolbar{
+    width:100%;
+  }
+
+  .dictToolbar button{
+    flex:1 1 auto;
+  }
+
+  .useTable th,
+  .useTable td,
+  .dictTable th,
+  .dictTable td{
+    padding:8px;
+  }
+
+  .dictTable{
+    min-width:1220px;
+  }
+
+  .useTable{
+    min-width:1020px;
+  }
+
+  .scannerBox{
+    margin:24px auto;
+  }
+}
 </style>
 
 <script>
-
 let APP_ENTRY_URL = '<?= appEntryUrl ?>';
 
-// 如果在 GitHub 上，Apps Script 標籤不會被解析，需要使用真實的網址來發送 API
 if (APP_ENTRY_URL.includes('<' + '?=') || APP_ENTRY_URL.trim() === '') {
-  // ★ 重要：請將下方網址替換成你真實的 Google Apps Script 部署網址 (結尾是 /exec) ★
   APP_ENTRY_URL = 'https://script.google.com/macros/s/AKfycbwbz8pXfU68j2aFeF_AaDmmG6Vco3JsPSw-PGyYeLu0AF3vCfzaZJQFOjORnwSw8Xp4/exec'; 
 }
 
 function goHome(){
-
-window.top.location.href =
-APP_ENTRY_URL;
-
+  window.top.location.href = APP_ENTRY_URL;
 }
-
 </script>
-
 </head>
 
 <body>
-
 <main class="shell">
 
 <?!= include('共用設定檔/AppHeader', { subtitle: '敷料領用登錄', onClick: 'goHome()', maxWidth: '1400px' }) ?>
 
 <nav class="pageMap" aria-label="頁面地圖">
-<button class="pageMapLink" onclick="goHome()">首頁</button>
-<span class="pageMapSep">/</span>
-<span class="pageMapCurrent">敷料領用登錄</span>
+  <button class="pageMapLink" onclick="goHome()">首頁</button>
+  <span class="pageMapSep">/</span>
+  <span class="pageMapCurrent">敷料領用登錄</span>
 </nav>
 
 <section class="pageHero">
-<p class="eyebrow">敷料作業</p>
-<h1>敷料領用登錄</h1>
-<p class="pageLead">登錄病人敷料領用資料，包含品項、數量與相關醫師資訊。</p>
+  <p class="eyebrow">敷料作業</p>
+  <h1>敷料領用登錄</h1>
+  <p class="pageLead">登錄病人敷料領用資料，包含品項、數量與相關醫師資訊。</p>
 </section>
 
 <div class="card">
-
-<button
-class="primary"
-onclick="startUse()">
-
-開始領用
-
-</button>
-
-<button
-type="button"
-class="primary"
-onclick="openDressingDict()"
-style="margin-left:10px;">
-
-敷料建檔 📷
-
-</button>
-
+  <button class="primary" onclick="startUse()">開始領用</button>
+  <button type="button" class="primary" onclick="openDressingDict()" style="margin-left:10px;">敷料建檔 📷</button>
 </div>
 
 <div id="formArea">
+  <div class="infoRow">
+    <label>領用日期與時間：</label>
+    <input id="useDateTime" readonly>
+  </div>
 
-<div class="infoRow">
-<label>領用日期與時間：</label>
-<input id="useDateTime" readonly>
-</div>
+  <div class="infoRow">
+    <label>領用人：</label>
+    <input id="userName">
+  </div>
 
-<div class="infoRow">
-<label>領用人：</label>
-<input id="userName">
-</div>
+  <div class="infoRow">
+    <label>領用單位：</label>
+    <input id="unitName">
+  </div>
 
-<div class="infoRow">
-<label>領用單位：</label>
-<input id="unitName">
-</div>
+  <div id="patientArea"></div>
 
-<div id="patientArea"></div>
-
-<div class="actions">
-
-<button type="button" onclick="addPatientBlock()">
-下一個病人
-</button>
-
-<button
-type="button"
-class="primary"
-onclick="submitUse()">
-
-送出
-
-</button>
-
-</div>
-
+  <div class="actions">
+    <button type="button" onclick="addPatientBlock()">下一個病人</button>
+    <button type="button" class="primary" onclick="submitUse()">送出</button>
+  </div>
 </div>
 
 <div id="dictArea" class="dictArea">
-<div class="dictHeader">
-<h2>敷料條碼建檔清單</h2>
-<div class="dictToolbar">
-<button type="button" id="batchSaveBtn" onclick="batchSaveDict()">批次儲存</button>
-<button type="button" id="reorderBtn" onclick="toggleReorderMode()">更改排序</button>
-<button type="button" id="saveOrderBtn" class="primary" style="display:none;" onclick="saveDictOrder()">儲存排序</button>
-<button type="button" class="primary" onclick="startDictScanner()">開啟掃描 📷</button>
-</div>
-</div>
-<div class="dictTableWrap">
-<table class="dictTable" id="dictTable">
-<thead>
-<tr>
-<th style="width:100px;">院內碼</th> <!-- hospitalCode -->
-<th style="width:200px;">敷料名稱</th> <!-- dressingName -->
-<th style="width:120px;">規格描述</th> <!-- size -->
-<th style="width:140px;">單包GTIN</th> <!-- gtin -->
-<th style="width:140px;">包裝GTIN</th> <!-- boxGtin -->
-<th style="width:80px;">一盒數量</th> <!-- boxQuantity -->
-<th style="width:120px;">敷料分類</th> <!-- category -->
-<th style="width:80px;">狀態</th> <!-- status -->
-<th style="width:100px;">操作</th> <!-- frontend only -->
-</tr>
-</thead>
-<tbody id="dictTbody">
-<tr id="dictEmptyRow"><td colspan="9" style="text-align:center; color:#64748b; padding:20px;">尚未掃描任何條碼，請點擊上方開啟掃描</td></tr>
-</tbody>
-</table>
-</div>
-</div>
+  <div class="dictHeader">
+    <div>
+      <h2>敷料條碼建檔清單</h2>
+      <div id="dictLoadStatus" class="dictLoadStatus">尚未讀取敷料主檔</div>
+    </div>
+    <div class="dictToolbar">
+      <button type="button" id="batchSaveBtn" onclick="batchSaveDict()">批次儲存</button>
+      <button type="button" id="reorderBtn" onclick="toggleReorderMode()">更改排序</button>
+      <button type="button" id="saveOrderBtn" class="primary" style="display:none;" onclick="saveDictOrder()">儲存排序</button>
+      <button type="button" id="dictScanBtn" class="primary" onclick="startDictScanner()" disabled>開啟掃描 📷</button>
+    </div>
+  </div>
 
+  <div class="dictTableWrap">
+    <table class="dictTable" id="dictTable">
+      <thead>
+        <tr>
+          <th class="col-code">院內碼</th>
+          <th class="col-name">敷料名稱</th>
+          <th class="col-size">規格描述</th>
+          <th class="col-single">單包GTIN</th>
+          <th class="col-box">包裝GTIN</th>
+          <th class="col-boxqty">一盒數量</th>
+          <th class="col-category">敷料分類</th>
+          <th class="col-status">狀態</th>
+          <th class="col-actions">操作</th>
+        </tr>
+      </thead>
+      <tbody id="dictTbody">
+        <tr id="dictEmptyRow"><td colspan="9" style="text-align:center; color:#64748b; padding:20px;">尚未讀取敷料主檔</td></tr>
+      </tbody>
+    </table>
+  </div>
 </div>
 
 <div id="scannerOverlay" class="scannerOverlay">
-
-<div class="scannerBox">
-
-<h3 class="scannerTitle">掃描 QR code / 條碼</h3>
-
-<p class="scannerHint">
-請將 QR code 或傳統條碼對準畫面。掃描成功後會自動填入敷料名稱。
-</p>
-
-<div id="scannerReader"></div>
-
-<div class="scannerActions">
-<button type="button" onclick="closeDressingScanner()">關閉</button>
-</div>
-
-</div>
-
+  <div class="scannerBox">
+    <h3 class="scannerTitle">掃描 QR code / 條碼</h3>
+    <p class="scannerHint">請將 QR code 或傳統條碼對準畫面。掃描成功後會自動解析 GTIN、批號與效期。</p>
+    <div id="scannerReader"></div>
+    <div class="scannerActions">
+      <button type="button" onclick="closeDressingScanner()">關閉</button>
+    </div>
+  </div>
 </div>
 
 <script>
-    let patientCount = 0;
-    let dressingScanner = null;
-    let activeDressingInput = null;
-    let scannerMode = '';
-    let isReorderMode = false;
-    let initialOrder = [];
-    let dressingMasterCache = [];
+let patientCount = 0;
+let dressingScanner = null;
+let activeDressingInput = null;
+let scannerMode = '';
+let isReorderMode = false;
+let initialOrder = [];
+let dressingMasterCache = [];
+let dictLoaded = false;
+let draggedRow = null;
 
-    function escapeHtml(value){
-    return String(value ?? '')
+function escapeHtml(value){
+  return String(value ?? '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
-    }
+}
 
-    function isAppsScriptMode(){
+function isAppsScriptMode(){
+  return typeof google !== 'undefined' && google.script && google.script.run;
+}
 
-    return typeof google !== 'undefined'
-    && google.script
-    && google.script.run;
+function setDictLoadState(state, message){
+  const scanBtn = document.getElementById('dictScanBtn');
+  const status = document.getElementById('dictLoadStatus');
 
-    }
+  if(status){
+    status.innerText = message || '';
+  }
 
-    function openDressingDict(){
-    document.getElementById('formArea').style.display = 'none';
-    document.getElementById('dictArea').style.display = 'block';
-    loadDictList();
-    }
+  if(scanBtn){
+    scanBtn.disabled = state !== 'ready';
+  }
 
-    async function loadDictList() {
-    isReorderMode = false;
-    document.getElementById('dictTable').classList.remove('reorder-mode');
-    document.getElementById('reorderBtn').innerText = '更改排序';
-    document.getElementById('saveOrderBtn').style.display = 'none';
+  dictLoaded = state === 'ready';
+}
 
-    const tbody = document.getElementById('dictTbody');
-    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:#64748b; padding:20px;">載入中...</td></tr>';
-    
-    try {
+function openDressingDict(){
+  document.getElementById('formArea').style.display = 'none';
+  document.getElementById('dictArea').style.display = 'block';
+  loadDictList();
+}
+
+function makeStatusSelect(value){
+  const current = value || '使用中';
+  const options = ['使用中','試用','停用'];
+  return `<select class="dict-status">${options.map(opt =>
+    `<option value="${escapeHtml(opt)}"${opt === current ? ' selected' : ''}>${escapeHtml(opt)}</option>`
+  ).join('')}</select>`;
+}
+
+async function loadDictList(){
+  isReorderMode = false;
+  document.getElementById('dictTable').classList.remove('reorder-mode');
+  document.getElementById('reorderBtn').innerText = '更改排序';
+  document.getElementById('saveOrderBtn').style.display = 'none';
+  document.getElementById('batchSaveBtn').style.display = 'inline-block';
+
+  setDictLoadState('loading', '正在讀取敷料主檔，讀取完成後才能開啟掃描');
+
+  const tbody = document.getElementById('dictTbody');
+  tbody.innerHTML =
+    '<tr><td colspan="9" style="text-align:center; color:#64748b; padding:20px;">載入中...</td></tr>';
+
+  try{
     const res = await listBarcode();
-    if (res.ok && res.data && res.data.length > 0) {
+
+    if(!res || !res.ok){
+      throw new Error((res && res.message) || '主檔讀取失敗');
+    }
+
     dressingMasterCache = res.data || [];
     tbody.innerHTML = '';
-    res.data.forEach(item => {
-    const tr = document.createElement('tr');
-    tr.dataset.rowKey = item.singleGtin || item.gtin || item.barcode || item.boxGtin || '';
-    tr.innerHTML = `
-    <td><input class="dict-hospital-code" value="${escapeHtml(item.hospitalCode || '')}"></td>
-    <td><input class="dict-name" value="${escapeHtml(item.dressingName || '')}"></td>
-    <td><input class="dict-size" value="${escapeHtml(item.size || '')}"></td>
-    <td><input class="dict-single-gtin" value="${escapeHtml(item.singleGtin || item.gtin || item.barcode || '')}"></td>
-    <td><input class="dict-box-gtin" value="${escapeHtml(item.boxGtin || '')}"></td>
-    <td><input class="dict-box-qty" value="${escapeHtml(item.boxQuantity || '')}"></td>
-    <td><input class="dict-category" value="${escapeHtml(item.category || '')}"></td>
-    <td><select class="dict-status">
-      <option value="使用中" ${String(item.status || '使用中') === '使用中' ? 'selected' : ''}>使用中</option>
-      <option value="試用" ${String(item.status || '') === '試用' ? 'selected' : ''}>試用</option>
-      <option value="停用" ${String(item.status || '') === '停用' ? 'selected' : ''}>停用</option>
-    </select></td>
-    <td style="white-space:nowrap;">
-    <span class="dragHandle">☰</span>
-    <button type="button" class="dictActionBtn edit-btn" onclick="editDictRow(this)">編輯</button>
-    <button type="button" class="dictActionBtn danger" onclick="deleteDictRow(this)">刪除</button>
-    <div class="dictStatus saved" style="font-size:12px; margin-top:4px;">已建檔</div>
-    </td>
-    `;
-    tbody.appendChild(tr);
-    });
+
+    if(dressingMasterCache.length > 0){
+      dressingMasterCache.forEach(function(item){
+        tbody.appendChild(createDictRow(item, false));
+      });
+
+      setDictLoadState('ready', `已讀取 ${dressingMasterCache.length} 筆敷料資料，可以開啟掃描`);
     } else {
+      tbody.innerHTML =
+        '<tr id="dictEmptyRow"><td colspan="9" style="text-align:center; color:#64748b; padding:20px;">目前主檔無資料；可開啟掃描新增第一筆</td></tr>';
+
+      setDictLoadState('ready', '主檔目前無資料；可開啟掃描新增第一筆');
+    }
+  } catch(err){
     dressingMasterCache = [];
-    tbody.innerHTML = '<tr id="dictEmptyRow"><td colspan="9" style="text-align:center; color:#64748b; padding:20px;">目前尚無任何敷料資料</td></tr>';
-    }
-    } catch (err) {
-    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:#dc2626; padding:20px;">讀取失敗：' + (err.message || err) + '</td></tr>';
-    }
-    }
+    tbody.innerHTML =
+      '<tr><td colspan="9" style="text-align:center; color:#dc2626; padding:20px;">讀取失敗：' +
+      escapeHtml(err.message || err) +
+      '</td></tr>';
 
-    let draggedRow = null;
-    function toggleReorderMode() {
-        if (isReorderMode) {
-            cancelReorderMode();
-            return;
-        }
+    setDictLoadState('error', '敷料主檔讀取失敗，請確認後端 sheet gid 與權限；未讀到資料前不能掃描');
+  }
+}
 
-        const rows = document.querySelectorAll('#dictTbody tr:not(#dictEmptyRow)');
-        if (rows.length === 0) return;
-        
-        isReorderMode = true;
-        initialOrder = Array.from(rows).map(r => getDictRowKey(r));
+function createDictRow(item, isNew){
+  const tr = document.createElement('tr');
+  tr.dataset.rowKey = item.singleGtin || item.gtin || item.boxGtin || '';
+  if(isNew){
+    tr.classList.add('editing');
+    tr.dataset.isNewRow = '1';
+  }
 
-        document.getElementById('dictTable').classList.add('reorder-mode');
-        document.getElementById('reorderBtn').innerText = '返回';
-        document.getElementById('saveOrderBtn').style.display = 'none';
-        document.getElementById('batchSaveBtn').style.display = 'none';
-        
-        rows.forEach(row => {
-            row.setAttribute('draggable', 'true');
-            row.addEventListener('dragstart', handleDragStart);
-            row.addEventListener('dragend', handleDragEnd);
-            row.addEventListener('dragover', handleDragOver);
-            row.addEventListener('drop', handleDrop);
-            
-            // 加入手機觸控支援
-            row.addEventListener('touchstart', handleTouchStart, {passive: false});
-            row.addEventListener('touchmove', handleTouchMove, {passive: false});
-            row.addEventListener('touchend', handleTouchEnd);
-        });
-    }
+  tr.innerHTML = `
+    <td><input class="dict-hospital-code" value="${escapeHtml(item.hospitalCode || '')}" placeholder="院內碼"></td>
+    <td><input class="dict-name" value="${escapeHtml(item.dressingName || '')}" placeholder="敷料名稱"></td>
+    <td><input class="dict-size" value="${escapeHtml(item.size || '')}" placeholder="規格"></td>
+    <td>
+      <input class="dict-single-gtin" value="${escapeHtml(item.singleGtin || item.gtin || '')}" placeholder="單包GTIN">
+      ${isNew ? '<div class="gtinTargetTools"><button type="button" onclick="setGtinTarget(this, \'single\')">設為單包</button></div>' : ''}
+    </td>
+    <td>
+      <input class="dict-box-gtin" value="${escapeHtml(item.boxGtin || '')}" placeholder="盒裝GTIN">
+      ${isNew ? '<div class="gtinTargetTools"><button type="button" onclick="setGtinTarget(this, \'box\')">設為盒裝</button></div>' : ''}
+    </td>
+    <td><input class="dict-box-qty" value="${escapeHtml(item.boxQuantity || '')}" placeholder="可之後補"></td>
+    <td><input class="dict-category" value="${escapeHtml(item.category || '')}" placeholder="分類"></td>
+    <td>${makeStatusSelect(item.status || '使用中')}</td>
+    <td style="white-space:nowrap;">
+      <span class="dragHandle">☰</span>
+      <button type="button" class="dictActionBtn edit-main-btn" onclick="handleDictMainButton(this)">${isNew ? '儲存' : '編輯'}</button>
+      <button type="button" class="dictActionBtn danger" onclick="deleteDictRow(this)">刪除</button>
+      <div class="dictStatus ${isNew ? '' : 'saved'}">${isNew ? '新資料，請確認後儲存' : '已建檔'}</div>
+      ${isNew && item.scanMeta ? item.scanMeta : ''}
+    </td>
+  `;
 
-    function cancelReorderMode() {
-        isReorderMode = false;
-        document.getElementById('dictTable').classList.remove('reorder-mode');
-        document.getElementById('reorderBtn').innerText = '更改排序';
-        document.getElementById('saveOrderBtn').style.display = 'none';
-        document.getElementById('batchSaveBtn').style.display = 'inline-block';
+  bindDictRowDirtyWatch(tr);
 
-        const tbody = document.getElementById('dictTbody');
-        const rows = Array.from(tbody.querySelectorAll('tr:not(#dictEmptyRow)'));
-        
-        rows.forEach(row => {
-            row.removeAttribute('draggable');
-            row.removeEventListener('dragstart', handleDragStart);
-            row.removeEventListener('dragend', handleDragEnd);
-            row.removeEventListener('dragover', handleDragOver);
-            row.removeEventListener('drop', handleDrop);
-            
-            row.removeEventListener('touchstart', handleTouchStart);
-            row.removeEventListener('touchmove', handleTouchMove);
-            row.removeEventListener('touchend', handleTouchEnd);
-        });
+  if(isNew){
+    tr.dataset.originalData = JSON.stringify({});
+    tr.dataset.dirty = '1';
+    updateDictMainButton(tr);
+  } else {
+    setDictRowSnapshot(tr);
+    leaveDictEditMode(tr);
+  }
 
-        rows.sort((a, b) => {
-            const aVal = getDictRowKey(a);
-            const bVal = getDictRowKey(b);
-            return initialOrder.indexOf(aVal) - initialOrder.indexOf(bVal);
-        });
+  return tr;
+}
 
-        rows.forEach(r => tbody.appendChild(r));
-    }
+function getDictRowData(tr){
+  return {
+    hospitalCode: tr.querySelector('.dict-hospital-code')?.value.trim() || '',
+    dressingName: tr.querySelector('.dict-name')?.value.trim() || '',
+    size: tr.querySelector('.dict-size')?.value.trim() || '',
+    singleGtin: tr.querySelector('.dict-single-gtin')?.value.trim() || '',
+    boxGtin: tr.querySelector('.dict-box-gtin')?.value.trim() || '',
+    boxQuantity: tr.querySelector('.dict-box-qty')?.value.trim() || '',
+    category: tr.querySelector('.dict-category')?.value.trim() || '',
+    status: tr.querySelector('.dict-status')?.value.trim() || ''
+  };
+}
 
-    function checkOrderChanged() {
-        const rows = document.querySelectorAll('#dictTbody tr:not(#dictEmptyRow)');
-        const currentOrder = Array.from(rows).map(r => getDictRowKey(r));
-        
-        let changed = false;
-        if (currentOrder.length !== initialOrder.length) {
-            changed = true;
-        } else {
-            for(let i=0; i<initialOrder.length; i++) {
-                if (initialOrder[i] !== currentOrder[i]) {
-                    changed = true;
-                    break;
-                }
-            }
-        }
+function setDictRowSnapshot(tr){
+  tr.dataset.originalData = JSON.stringify(getDictRowData(tr));
+  tr.dataset.dirty = '0';
+}
 
-        if (changed) {
-            document.getElementById('saveOrderBtn').style.display = 'inline-block';
-        } else {
-            document.getElementById('saveOrderBtn').style.display = 'none';
-        }
-    }
-
-    function handleDragStart(e) {
-        draggedRow = this;
-        if (e.dataTransfer) {
-            e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/plain', getDictRowKey(this));
-        }
-        setTimeout(() => this.classList.add('dragging'), 0);
-    }
-
-    function handleDragEnd(e) {
-        this.classList.remove('dragging');
-        draggedRow = null;
-        document.querySelectorAll('#dictTbody tr').forEach(r => r.classList.remove('drag-over', 'drag-over-bottom'));
-    }
-
-    function handleDragOver(e) {
-        e.preventDefault();
-        if (!draggedRow || this === draggedRow) return false;
-        
-        const rect = this.getBoundingClientRect();
-        const midpoint = rect.top + rect.height / 2;
-
-        this.classList.remove('drag-over', 'drag-over-bottom');
-        if (e.clientY < midpoint) {
-            this.classList.add('drag-over');
-        } else {
-            this.classList.add('drag-over-bottom');
-        }
-        return false;
-    }
-
-    function handleDrop(e) {
-        e.preventDefault();
-        if (!draggedRow || this === draggedRow) return false;
-
-        this.classList.remove('drag-over', 'drag-over-bottom');
-
-        const rect = this.getBoundingClientRect();
-        const midpoint = rect.top + rect.height / 2;
-
-        if (e.clientY < midpoint) {
-            this.parentNode.insertBefore(draggedRow, this);
-        } else {
-            this.parentNode.insertBefore(draggedRow, this.nextSibling);
-        }
-        
-        checkOrderChanged();
-
-        return false;
-    }
-
-    // --- 手機版專屬拖曳邏輯 ---
-    function handleTouchStart(e) {
-        if (!e.target.classList.contains('dragHandle')) return;
-        draggedRow = this;
-        this.classList.add('dragging');
-    }
-
-    function handleTouchMove(e) {
-        if (!draggedRow || draggedRow !== this) return;
-        e.preventDefault(); // 重要：拖曳時阻止手機畫面上下滾動
-        
-        const touch = e.touches[0];
-        const targetElement = document.elementFromPoint(touch.clientX, touch.clientY);
-        if (!targetElement) return;
-        
-        const targetRow = targetElement.closest('tr');
-        if (!targetRow || targetRow === draggedRow || targetRow.id === 'dictEmptyRow' || targetRow.parentNode !== draggedRow.parentNode) {
-            return;
-        }
-        
-        const rect = targetRow.getBoundingClientRect();
-        const midpoint = rect.top + rect.height / 2;
-        
-        // 即時替換順序
-        targetRow.parentNode.insertBefore(draggedRow, touch.clientY < midpoint ? targetRow : targetRow.nextSibling);
-    }
-
-    function handleTouchEnd(e) {
-        if (!draggedRow) return;
-        this.classList.remove('dragging');
-        draggedRow = null;
-        checkOrderChanged();
-    }
-
-    async function saveDictOrder() {
-    const rows = document.querySelectorAll('#dictTbody tr:not(#dictEmptyRow)');
-    const barcodes = [];
-    
-    rows.forEach(tr => {
-    const code = getDictRowKey(tr);
-    if (code) {
-    barcodes.push(code);
-    }
-    });
-    
-    if (barcodes.length === 0) return;
-
-    const btn = document.getElementById('saveOrderBtn');
-    btn.innerText = '儲存中...';
-    btn.disabled = true;
-
-    try {
-    const res = await reorderBarcode(barcodes.join(','));
-    if (res.ok) {
-    isReorderMode = false;
-    btn.style.display = 'none';
-    document.getElementById('reorderBtn').innerText = '更改排序';
-    document.getElementById('batchSaveBtn').style.display = 'inline-block';
-    document.getElementById('dictTable').classList.remove('reorder-mode');
-    
-    rows.forEach(r => {
-        r.removeAttribute('draggable');
-        r.removeEventListener('dragstart', handleDragStart);
-        r.removeEventListener('dragend', handleDragEnd);
-        r.removeEventListener('dragover', handleDragOver);
-        r.removeEventListener('drop', handleDrop);
-        
-        r.removeEventListener('touchstart', handleTouchStart);
-        r.removeEventListener('touchmove', handleTouchMove);
-        r.removeEventListener('touchend', handleTouchEnd);
-    });
-    } else {
-    alert('排序儲存失敗');
-    }
-    } catch (err) {
-    alert('儲存錯誤：' + err.message);
-    }
-    
-    btn.innerText = '儲存排序';
-    btn.disabled = false;
-    }
-
-    function getDictRowData(tr){
-    return {
-      hospitalCode: tr.querySelector('.dict-hospital-code')?.value.trim() || '',
-      dressingName: tr.querySelector('.dict-name')?.value.trim() || '',
-      size: tr.querySelector('.dict-size')?.value.trim() || '',
-      singleGtin: tr.querySelector('.dict-single-gtin')?.value.trim() || '',
-      boxGtin: tr.querySelector('.dict-box-gtin')?.value.trim() || '',
-      boxQuantity: tr.querySelector('.dict-box-qty')?.value.trim() || '',
-      category: tr.querySelector('.dict-category')?.value.trim() || '',
-      status: tr.querySelector('.dict-status')?.value.trim() || ''
-    };
-    }
-
-    function setDictRowSnapshot(tr){
-    tr.dataset.originalData = JSON.stringify(getDictRowData(tr));
-    tr.dataset.dirty = '0';
-    }
-
-    function isDictRowDirty(tr){
-    if(tr.dataset.isNewRow === '1'){
+function isDictRowDirty(tr){
+  if(tr.dataset.isNewRow === '1'){
     return true;
-    }
+  }
 
-    const original = tr.dataset.originalData || '';
-    if(!original){
+  const original = tr.dataset.originalData || '';
+  if(!original){
     return false;
-    }
+  }
 
-    return original !== JSON.stringify(getDictRowData(tr));
-    }
+  return original !== JSON.stringify(getDictRowData(tr));
+}
 
-    function updateDictRowEditButtons(tr){
-    const editBtn = tr.querySelector('.edit-btn');
-    const dirty = isDictRowDirty(tr);
-
-    tr.dataset.dirty = dirty ? '1' : '0';
-
-    if(editBtn){
-    editBtn.style.display = 'inline-block';
-
-    if(tr.classList.contains('editing')){
-    editBtn.innerText = dirty ? '儲存' : '返回';
-
-    if(dirty){
-    editBtn.classList.add('primary');
-    } else {
-    editBtn.classList.remove('primary');
-    }
-    } else {
-    editBtn.innerText = '編輯';
-    editBtn.classList.remove('primary');
-    }
-    }
-    }
-
-    function bindDictRowDirtyWatch(tr){
-    tr.querySelectorAll('input, select').forEach(function(input){
+function bindDictRowDirtyWatch(tr){
+  tr.querySelectorAll('input, select').forEach(function(input){
     if(input.dataset.dirtyWatchBound === '1'){
-    return;
+      return;
     }
 
     input.dataset.dirtyWatchBound = '1';
 
     input.addEventListener('input', function(){
-    if(tr.classList.contains('editing')){
-    updateDictRowEditButtons(tr);
-    }
+      if(tr.classList.contains('editing')){
+        updateDictMainButton(tr);
+      }
     });
 
     input.addEventListener('change', function(){
-    if(tr.classList.contains('editing')){
-    updateDictRowEditButtons(tr);
-    }
+      if(tr.classList.contains('editing')){
+        updateDictMainButton(tr);
+      }
     });
-    });
-    }
+  });
+}
 
-    function restoreDictRowSnapshot(tr){
-    if(!tr.dataset.originalData){
+function updateDictMainButton(tr){
+  const btn = tr.querySelector('.edit-main-btn');
+  if(!btn){
     return;
-    }
+  }
 
-    let data = {};
-    try{
-    data = JSON.parse(tr.dataset.originalData);
-    }
-    catch(error){
+  const dirty = isDictRowDirty(tr);
+  tr.dataset.dirty = dirty ? '1' : '0';
+
+  if(!tr.classList.contains('editing')){
+    btn.innerText = '編輯';
+    btn.classList.remove('primary');
+    return;
+  }
+
+  btn.innerText = dirty ? '儲存' : '返回';
+
+  if(dirty){
+    btn.classList.add('primary');
+  } else {
+    btn.classList.remove('primary');
+  }
+}
+
+function setDictInputsEnabled(tr, enabled){
+  tr.querySelectorAll('input, select').forEach(function(input){
+    input.disabled = !enabled;
+  });
+}
+
+function restoreDictRowSnapshot(tr){
+  let data = {};
+  try{
+    data = JSON.parse(tr.dataset.originalData || '{}');
+  } catch(error){
     data = {};
-    }
+  }
 
-    const map = {
-      '.dict-hospital-code': data.hospitalCode,
-      '.dict-name': data.dressingName,
-      '.dict-size': data.size,
-      '.dict-single-gtin': data.singleGtin,
-      '.dict-box-gtin': data.boxGtin,
-      '.dict-box-qty': data.boxQuantity,
-      '.dict-category': data.category,
-      '.dict-status': data.status
-    };
+  const map = {
+    '.dict-hospital-code': data.hospitalCode,
+    '.dict-name': data.dressingName,
+    '.dict-size': data.size,
+    '.dict-single-gtin': data.singleGtin,
+    '.dict-box-gtin': data.boxGtin,
+    '.dict-box-qty': data.boxQuantity,
+    '.dict-category': data.category,
+    '.dict-status': data.status || '使用中'
+  };
 
-    Object.keys(map).forEach(function(selector){
+  Object.keys(map).forEach(function(selector){
     const input = tr.querySelector(selector);
     if(input){
-    input.value = map[selector] || '';
+      input.value = map[selector] || '';
     }
-    });
-    }
+  });
+}
 
-    function leaveDictEditMode(tr){
-    tr.classList.remove('editing');
-    removeBoxMergePanel(tr);
-    delete tr.dataset.isNewRow;
-    delete tr.dataset.dirty;
+function enterDictEditMode(tr){
+  tr.classList.add('editing');
+  setDictInputsEnabled(tr, true);
+  setDictRowSnapshot(tr);
+  bindDictRowDirtyWatch(tr);
+  updateDictMainButton(tr);
 
-    const editBtn = tr.querySelector('.edit-btn');
+  const nameInput = tr.querySelector('.dict-name');
+  if(nameInput){
+    nameInput.focus();
+  }
+}
 
-    if(editBtn){
-    editBtn.style.display = 'inline-block';
-    editBtn.innerText = '編輯';
-    editBtn.classList.remove('primary');
-    editBtn.disabled = false;
-    }
+function leaveDictEditMode(tr){
+  tr.classList.remove('editing');
+  delete tr.dataset.isNewRow;
+  setDictInputsEnabled(tr, false);
+  updateDictMainButton(tr);
+}
 
-    updateDictRowEditButtons(tr);
-    }
+async function handleDictMainButton(btn){
+  const tr = btn.closest('tr');
 
-    function editDictRow(btn) {
-    const tr = btn.closest('tr');
-
-    if(tr.classList.contains('editing')){
-    if(isDictRowDirty(tr)){
-    saveDictRow(btn);
+  if(!tr.classList.contains('editing')){
+    enterDictEditMode(tr);
     return;
-    }
+  }
 
-    restoreDictRowSnapshot(tr);
-    leaveDictEditMode(tr);
-    const statusEl = tr.querySelector('.dictStatus');
-    if(statusEl){
+  if(isDictRowDirty(tr)){
+    await saveDictRow(btn);
+    return;
+  }
+
+  restoreDictRowSnapshot(tr);
+  leaveDictEditMode(tr);
+
+  const statusEl = tr.querySelector('.dictStatus');
+  if(statusEl){
     statusEl.innerText = '已返回';
     statusEl.className = 'dictStatus saved';
-    }
-    return;
-    }
+  }
+}
 
-    tr.classList.add('editing');
-    removeBoxMergePanel(tr);
-    Array.from(tr.querySelectorAll('input')).forEach(input => {
-    input.disabled = false;
-    });
-    setDictRowSnapshot(tr);
-    bindDictRowDirtyWatch(tr);
-    updateDictRowEditButtons(tr);
-    tr.querySelector('.dict-name').focus();
-    }
+async function saveDictRow(btn){
+  const tr = btn.closest('tr');
+  const data = getDictRowData(tr);
+  const statusEl = tr.querySelector('.dictStatus');
 
-    async function saveDictRow(btn) {
-    const tr = btn.closest('tr');
-    const hospitalCode = tr.querySelector('.dict-hospital-code').value.trim();
-    const singleGtin = tr.querySelector('.dict-single-gtin').value.trim();
-    const boxGtin = tr.querySelector('.dict-box-gtin').value.trim();
-    const name = tr.querySelector('.dict-name').value.trim();
-    const size = tr.querySelector('.dict-size').value.trim();
-    const category = tr.querySelector('.dict-category').value.trim();
-    const boxQty = tr.querySelector('.dict-box-qty').value.trim();
-    const statusVal = tr.querySelector('.dict-status').value.trim() || '使用中';
-    const statusEl = tr.querySelector('.dictStatus');
-
-    const isBoxMode = tr.dataset.gtinTarget === 'box';
-    const mergeExistingKey = tr.dataset.mergeExistingKey || '';
-    const isPendingBoxOnly = isBoxMode && !mergeExistingKey && boxGtin && !singleGtin;
-
-    if (!singleGtin && !boxGtin) {
+  if(!data.singleGtin && !data.boxGtin){
     statusEl.innerText = '缺少GTIN';
     statusEl.className = 'dictStatus error';
     return;
-    }
+  }
 
-    if (!isPendingBoxOnly && !name) {
+  const isBoxOnly = data.boxGtin && !data.singleGtin;
+  if(!isBoxOnly && !data.dressingName){
     statusEl.innerText = '缺少名稱';
     statusEl.className = 'dictStatus error';
     return;
-    }
+  }
 
-    if (isBoxMode && tr.dataset.boxMergeMode === 'existing' && !mergeExistingKey) {
-    statusEl.innerText = '請選擇要合併的既有敷料，或改選「先暫存盒裝」';
-    statusEl.className = 'dictStatus error';
-    return;
-    }
+  statusEl.innerText = '儲存中...';
+  statusEl.className = 'dictStatus';
+  btn.disabled = true;
+  btn.innerText = '...';
 
-    statusEl.innerText = '儲存中...';
-    statusEl.className = 'dictStatus';
-    btn.disabled = true;
-    btn.innerText = '...';
-
-    try {
-    const dataToSave = {
-        hospitalCode: hospitalCode,
-        singleGtin: singleGtin,
-        gtin: singleGtin,
-        dressingName: name,
-        size: size,
-        category: category,
-        boxGtin: boxGtin,
-        boxQuantity: boxQty,
-        status: statusVal
-    };
-
-    const res = await saveBarcode(dataToSave);
-
-    if (res.ok) {
-    statusEl.innerText = mergeExistingKey ? '已合併' : '已儲存';
-    statusEl.className = 'dictStatus saved';
-    tr.dataset.rowKey = singleGtin || boxGtin;
-    setDictRowSnapshot(tr);
-    leaveDictEditMode(tr);
-
-    Array.from(tr.querySelectorAll('input')).forEach(input => {
-    input.disabled = false;
+  try{
+    const res = await saveBarcode({
+      hospitalCode: data.hospitalCode,
+      singleGtin: data.singleGtin,
+      gtin: data.singleGtin,
+      dressingName: data.dressingName,
+      size: data.size,
+      category: data.category,
+      boxGtin: data.boxGtin,
+      boxQuantity: data.boxQuantity,
+      status: data.status || '使用中'
     });
 
-    if (mergeExistingKey) {
-    alert('已將盒裝GTIN合併到既有敷料主檔');
-    await loadDictList();
+    if(res.ok){
+      tr.dataset.rowKey = data.singleGtin || data.boxGtin;
+      statusEl.innerText = res.mergeReason ? '已合併/儲存' : '已儲存';
+      statusEl.className = 'dictStatus saved';
+      setDictRowSnapshot(tr);
+      leaveDictEditMode(tr);
+      await loadDictList();
+      return;
     }
-    } else {
+
     statusEl.innerText = res.message || '儲存失敗';
     statusEl.className = 'dictStatus error';
-    }
-    } catch(err) {
+  } catch(err){
     statusEl.innerText = '儲存錯誤';
     statusEl.className = 'dictStatus error';
     console.log(err);
-    }
+  }
 
-    btn.disabled = false;
+  btn.disabled = false;
+  updateDictMainButton(tr);
+}
 
-    if(tr.classList.contains('editing')){
-    updateDictRowEditButtons(tr);
-    } else {
-    btn.innerText = '編輯';
-    btn.classList.remove('primary');
-    }
-    }
-
-
-    async function batchSaveDict() {
-    const editingRows = document.querySelectorAll('#dictTbody tr.editing');
-    if (editingRows.length === 0) {
-    alert('目前沒有需要儲存的項目（請先修改或新增敷料）');
+async function batchSaveDict(){
+  const editingRows = document.querySelectorAll('#dictTbody tr.editing');
+  if(editingRows.length === 0){
+    alert('目前沒有需要儲存的項目');
     return;
+  }
+
+  const btn = document.getElementById('batchSaveBtn');
+  const originalText = btn.innerText;
+  btn.innerText = '批次處理中...';
+  btn.disabled = true;
+
+  let successCount = 0;
+  let failCount = 0;
+
+  for(const tr of editingRows){
+    const mainBtn = tr.querySelector('.edit-main-btn');
+    if(mainBtn && isDictRowDirty(tr)){
+      await saveDictRow(mainBtn);
+      if(!tr.classList.contains('editing')){
+        successCount++;
+      } else {
+        failCount++;
+      }
     }
+  }
 
-    const btn = document.getElementById('batchSaveBtn');
-    const originalText = btn.innerText;
-    btn.innerText = '批次處理中...';
-    btn.disabled = true;
+  btn.innerText = originalText;
+  btn.disabled = false;
 
-    let successCount = 0;
-    let failCount = 0;
+  alert(`批次儲存完成！\n成功：${successCount} 筆\n失敗：${failCount} 筆`);
+}
 
-    // 依序執行，避免同時寫入導致 Google Sheet 衝突
-    for (const tr of editingRows) {
-    const mainBtn = tr.querySelector('.edit-btn');
-    if (mainBtn && isDictRowDirty(tr)) {
-    await saveDictRow(mainBtn);
-    if (!tr.classList.contains('editing')) {
-    successCount++;
-    } else {
-    failCount++;
-    }
-    }
-    }
+async function deleteDictRow(btn){
+  const tr = btn.closest('tr');
 
-    btn.innerText = originalText;
-    btn.disabled = false;
-
-    if (failCount > 0) {
-    alert(`批次儲存完成！\n成功：${successCount} 筆\n失敗：${failCount} 筆\n\n（可能有部分名稱未填寫或網路錯誤）`);
-    } else {
-    alert(`批次儲存成功！共更新 ${successCount} 筆項目。`);
-    }
-    }
-
-    async function deleteDictRow(btn) {
-
-    const tr = btn.closest('tr');
-
-    // 尚未儲存的新掃描列：只刪前端，不呼叫後端
-    if (tr.classList.contains('editing')) {
+  if(tr.classList.contains('editing') && tr.dataset.isNewRow === '1'){
     tr.remove();
     ensureDictEmptyRow();
     return;
-    }
+  }
 
-    if (!confirm('確定要刪除此筆已建檔資料嗎？')) {
+  if(!confirm('確定要刪除此筆已建檔資料嗎？')){
     return;
-    }
+  }
 
-    const singleInput = tr.querySelector('.dict-single-gtin');
-    const boxInput = tr.querySelector('.dict-box-gtin');
-    const gtin =
-      singleInput && singleInput.value.trim()
-        ? singleInput.value.trim()
-        : boxInput && boxInput.value.trim()
-          ? boxInput.value.trim()
-          : '';
+  const data = getDictRowData(tr);
+  const gtin = data.singleGtin || data.boxGtin;
 
-    if (!gtin) {
+  if(!gtin){
     tr.remove();
     ensureDictEmptyRow();
     return;
-    }
+  }
 
-    btn.disabled = true;
-    btn.innerText = '刪除中...';
+  btn.disabled = true;
+  btn.innerText = '刪除中...';
 
-    try {
+  try{
     const res = await deleteBarcode(gtin);
 
-    if (res.ok && res.deleted) {
-    tr.remove();
-    ensureDictEmptyRow();
-    return;
+    if(res.ok && res.deleted){
+      tr.remove();
+      ensureDictEmptyRow();
+      return;
     }
 
     alert('刪除失敗：' + (res.message || '找不到資料'));
-    btn.disabled = false;
-    btn.innerText = '刪除';
-
-    } catch (err) {
+  } catch(err){
     alert('刪除錯誤：' + (err.message || err));
-    btn.disabled = false;
-    btn.innerText = '刪除';
-    }
-    }
+  }
 
-    function ensureDictEmptyRow(){
-    const tbody = document.getElementById('dictTbody');
-    if (tbody && tbody.querySelectorAll('tr').length === 0) {
+  btn.disabled = false;
+  btn.innerText = '刪除';
+}
+
+function ensureDictEmptyRow(){
+  const tbody = document.getElementById('dictTbody');
+  if(tbody && tbody.querySelectorAll('tr').length === 0){
     tbody.innerHTML =
       '<tr id="dictEmptyRow"><td colspan="9" style="text-align:center; color:#64748b; padding:20px;">尚未掃描任何條碼，請點擊上方開啟掃描</td></tr>';
-    }
-    }
+  }
+}
 
-    function startDictScanner() {
-    scannerMode = 'dict';
-    document.getElementById('scannerOverlay').style.display = 'block';
-    startDressingScanner();
-    }
-
-    async function manualDictScanForDebug(barcode) {
-    const code = String(barcode || '').trim();
-    if(!code) return;
-    scannerMode = 'dict';
-    await handleBarcodeScanResult(code);
-    }
-    function getDictRowKey(tr){
-    if(!tr){
-    return '';
-    }
-    const singleInput = tr.querySelector('.dict-single-gtin');
-    const boxInput = tr.querySelector('.dict-box-gtin');
-    return String(
-      (singleInput && singleInput.value) ||
-      (boxInput && boxInput.value) ||
-      tr.dataset.rowKey ||
-      ''
-    ).trim();
-    }
-
-    function setGtinTarget(btn, target) {
-    const tr = btn.closest('tr');
-    const scannedGtin = getScannedGtinFromRow(tr);
-
-    if (!scannedGtin) {
-    alert('這列沒有可指定的掃描GTIN');
+function startDictScanner(){
+  if(!dictLoaded || dressingMasterCache === null){
+    alert('請先等敷料主檔讀取完成，再開啟掃描。');
     return;
-    }
+  }
 
-    if (target === 'single') {
-    guideDictRowAfterScan(tr, 'single');
-    return;
-    }
+  scannerMode = 'dict';
+  document.getElementById('scannerOverlay').style.display = 'block';
+  startDressingScanner();
+}
 
-    if (target === 'box') {
-    guideDictRowAfterScan(tr, 'box');
-    return;
-    }
-    }
+function manualDictScanForDebug(barcode){
+  const code = String(barcode || '').trim();
+  if(!code) return;
+  scannerMode = 'dict';
+  return handleBarcodeScanResult(code);
+}
 
-    function getScannedGtinFromRow(tr){
-    return String(
-      tr.dataset.scannedGtin ||
-      tr.dataset.rowKey ||
-      getDictRowKey(tr) ||
-      ''
-    ).trim();
-    }
+function getDictRowKey(tr){
+  if(!tr) return '';
 
-    function removeBoxMergePanel(tr){
-    const panel = tr.querySelector('.boxMergePanel');
-    if(panel){
-    panel.remove();
-    }
-    delete tr.dataset.mergeExistingKey;
-    delete tr.dataset.boxMergeMode;
-    }
+  const data = getDictRowData(tr);
+  return String(data.singleGtin || data.boxGtin || tr.dataset.rowKey || '').trim();
+}
 
-    function setDictRowInputsDisabled(tr, disabled){
-    tr.querySelectorAll('input, select').forEach(function(input){
-    if(input.classList.contains('readonly')){
-    return;
-    }
-    input.disabled = disabled;
-    });
-    }
+function getScannedGtinFromRow(tr){
+  return String(tr.dataset.scannedGtin || tr.dataset.rowKey || getDictRowKey(tr) || '').trim();
+}
 
-    function unlockDictRowForManualEdit(tr){
-    setDictRowInputsDisabled(tr, false);
-    tr.classList.add('editing');
-    tr.dataset.isNewRow = tr.dataset.isNewRow || '1';
-    bindDictRowDirtyWatch(tr);
-    updateDictRowEditButtons(tr);
-    }
+function setGtinTarget(btn, target){
+  const tr = btn.closest('tr');
+  guideDictRowAfterScan(tr, target);
+}
 
-    function getExistingDressingItems(){
-    const items = dressingMasterCache && dressingMasterCache.length
-      ? dressingMasterCache
-      : Array.from(document.querySelectorAll('#dictTbody tr:not(#dictEmptyRow)')).map(tr => ({
-          hospitalCode: tr.querySelector('.dict-hospital-code')?.value || '',
-          dressingName: tr.querySelector('.dict-name')?.value || '',
-          size: tr.querySelector('.dict-size')?.value || '',
-          singleGtin: tr.querySelector('.dict-single-gtin')?.value || '',
-          gtin: tr.querySelector('.dict-single-gtin')?.value || '',
-          boxGtin: tr.querySelector('.dict-box-gtin')?.value || '',
-          boxQuantity: tr.querySelector('.dict-box-qty')?.value || '',
-          category: tr.querySelector('.dict-category')?.value || '',
-          status: tr.querySelector('.dict-status')?.value || '使用中'
-        }));
+function getExistingDressingItems(){
+  const cache = Array.isArray(dressingMasterCache) ? dressingMasterCache : [];
 
-    return items.filter(item =>
-      String(item.singleGtin || item.gtin || item.boxGtin || item.dressingName || '').trim()
-    );
-    }
+  const domItems = Array.from(document.querySelectorAll('#dictTbody tr:not(#dictEmptyRow)')).map(tr => ({
+    hospitalCode: tr.querySelector('.dict-hospital-code')?.value || '',
+    dressingName: tr.querySelector('.dict-name')?.value || '',
+    size: tr.querySelector('.dict-size')?.value || '',
+    singleGtin: tr.querySelector('.dict-single-gtin')?.value || '',
+    gtin: tr.querySelector('.dict-single-gtin')?.value || '',
+    boxGtin: tr.querySelector('.dict-box-gtin')?.value || '',
+    boxQuantity: tr.querySelector('.dict-box-qty')?.value || '',
+    category: tr.querySelector('.dict-category')?.value || '',
+    status: tr.querySelector('.dict-status')?.value || '使用中'
+  }));
 
-    function getItemKey(item){
-    return String(item.singleGtin || item.gtin || item.boxGtin || '').trim();
-    }
+  return cache.concat(domItems).filter(item =>
+    String(item.singleGtin || item.gtin || item.boxGtin || item.dressingName || '').trim()
+  );
+}
 
-    function buildNumberedPrompt(title, values){
-    if(!values || values.length === 0){
+function buildNumberedPrompt(title, values){
+  if(!values || values.length === 0){
     return title + '\n\n目前沒有既有選項，請直接輸入。';
-    }
+  }
 
-    return title + '\n\n' +
-      values.map(function(value, index){
-        return (index + 1) + '. ' + value;
-      }).join('\n') +
-      '\n\n請輸入編號，或直接輸入新文字。';
-    }
+  return title + '\n\n' +
+    values.map(function(value, index){
+      return (index + 1) + '. ' + value;
+    }).join('\n') +
+    '\n\n請輸入編號，或直接輸入新文字。';
+}
 
-    function pickValueByPrompt(title, values, defaultValue){
-    const answer = prompt(
-      buildNumberedPrompt(title, values),
-      defaultValue || ''
-    );
+function pickValueByPrompt(title, values, defaultValue){
+  const answer = prompt(buildNumberedPrompt(title, values), defaultValue || '');
 
-    if(answer === null){
+  if(answer === null){
     return null;
-    }
+  }
 
-    const trimmed = String(answer).trim();
-    const index = Number(trimmed);
+  const trimmed = String(answer).trim();
+  const index = Number(trimmed);
 
-    if(Number.isInteger(index) && index >= 1 && index <= values.length){
+  if(Number.isInteger(index) && index >= 1 && index <= values.length){
     return values[index - 1];
-    }
+  }
 
-    return trimmed;
-    }
+  return trimmed;
+}
 
-    function findExistingItemByNameAndSize(name, size){
-    const cleanName = String(name || '').trim();
-    const cleanSize = String(size || '').trim();
+function findExistingItemByNameAndSize(name, size){
+  const cleanName = String(name || '').trim();
+  const cleanSize = String(size || '').trim();
 
-    return getExistingDressingItems().find(function(item){
-    return String(item.dressingName || '').trim() === cleanName
-      && String(item.size || '').trim() === cleanSize;
-    });
-    }
+  return getExistingDressingItems().find(function(item){
+    return String(item.dressingName || '').trim() === cleanName &&
+      String(item.size || '').trim() === cleanSize;
+  });
+}
 
-    function applyExistingItemToRow(tr, item, keepScannedAs){
-    const scannedGtin = getScannedGtinFromRow(tr);
+function applyExistingItemToRow(tr, item, keepScannedAs){
+  const scannedGtin = getScannedGtinFromRow(tr);
 
-    tr.querySelector('.dict-hospital-code').value = item.hospitalCode || '';
-    tr.querySelector('.dict-name').value = item.dressingName || '';
-    tr.querySelector('.dict-size').value = item.size || '';
-    tr.querySelector('.dict-category').value = item.category || '';
-    tr.querySelector('.dict-status').value = item.status || '使用中';
+  tr.querySelector('.dict-hospital-code').value = item.hospitalCode || '';
+  tr.querySelector('.dict-name').value = item.dressingName || '';
+  tr.querySelector('.dict-size').value = item.size || '';
+  tr.querySelector('.dict-category').value = item.category || '';
+  tr.querySelector('.dict-status').value = item.status || '使用中';
 
-    if(keepScannedAs === 'single'){
+  if(keepScannedAs === 'single'){
     tr.querySelector('.dict-single-gtin').value = scannedGtin;
     tr.querySelector('.dict-box-gtin').value = item.boxGtin || '';
-    }
+  }
 
-    if(keepScannedAs === 'box'){
+  if(keepScannedAs === 'box'){
     tr.querySelector('.dict-single-gtin').value = item.singleGtin || item.gtin || '';
     tr.querySelector('.dict-box-gtin').value = scannedGtin;
-    }
+  }
 
-    tr.querySelector('.dict-box-qty').value = item.boxQuantity || tr.querySelector('.dict-box-qty').value || '';
-    tr.dataset.rowKey = tr.querySelector('.dict-single-gtin').value || tr.querySelector('.dict-box-gtin').value || scannedGtin;
-    }
+  tr.querySelector('.dict-box-qty').value =
+    item.boxQuantity || tr.querySelector('.dict-box-qty').value || '';
 
-    function guideDictRowAfterScan(tr, forcedTarget){
-    const scannedGtin = getScannedGtinFromRow(tr);
-    if(!scannedGtin){
+  tr.dataset.rowKey =
+    tr.querySelector('.dict-single-gtin').value ||
+    tr.querySelector('.dict-box-gtin').value ||
+    scannedGtin;
+}
+
+function guideDictRowAfterScan(tr, forcedTarget){
+  const scannedGtin = getScannedGtinFromRow(tr);
+  if(!scannedGtin){
     alert('這列沒有可指定的掃描GTIN');
     return;
-    }
+  }
 
-    removeBoxMergePanel(tr);
-    unlockDictRowForManualEdit(tr);
+  tr.classList.add('editing');
+  setDictInputsEnabled(tr, true);
 
-    let target = forcedTarget || '';
-
-    if(!target){
+  let target = forcedTarget || '';
+  if(!target){
     const choice = prompt(
-      '步驟 1：請選擇這次掃到的條碼類型\n\n1 = 單包GTIN\n2 = 盒裝GTIN\n\n之後會再請你選擇或輸入敷料名稱與規格。',
+      '步驟 1：請選擇這次掃到的條碼類型\n\n1 = 單包GTIN\n2 = 盒裝GTIN',
       '1'
     );
 
     if(choice === null){
-    const statusEl = tr.querySelector('.dictStatus');
-    if(statusEl){
-    statusEl.innerText = '尚未選擇單包/盒裝';
-    statusEl.className = 'dictStatus error';
-    }
-    return;
+      return;
     }
 
     target = String(choice).trim() === '2' ? 'box' : 'single';
-    }
+  }
 
-    tr.dataset.gtinTarget = target;
+  tr.dataset.gtinTarget = target;
 
-    if(target === 'single'){
+  if(target === 'single'){
     tr.querySelector('.dict-single-gtin').value = scannedGtin;
-    }
+    tr.querySelector('.dict-box-gtin').value =
+      tr.querySelector('.dict-box-gtin').value || '';
+  }
 
-    if(target === 'box'){
+  if(target === 'box'){
     tr.querySelector('.dict-box-gtin').value = scannedGtin;
-    if(!tr.querySelector('.dict-single-gtin').value){
-    tr.querySelector('.dict-single-gtin').value = '';
-    }
-    }
+    tr.querySelector('.dict-single-gtin').value =
+      tr.querySelector('.dict-single-gtin').value || '';
+  }
 
-    const allItems = getExistingDressingItems();
-    const names = Array.from(new Set(
-      allItems.map(item => String(item.dressingName || '').trim()).filter(Boolean)
-    )).sort();
+  const allItems = getExistingDressingItems();
+  const names = Array.from(new Set(
+    allItems.map(item => String(item.dressingName || '').trim()).filter(Boolean)
+  )).sort();
 
-    const name = pickValueByPrompt(
-      '步驟 2：請選擇或輸入敷料名稱',
-      names,
-      tr.querySelector('.dict-name').value || ''
-    );
+  const name = pickValueByPrompt(
+    '步驟 2：請選擇或輸入敷料名稱',
+    names,
+    tr.querySelector('.dict-name').value || ''
+  );
 
-    if(name === null){
+  if(name === null){
+    updateDictMainButton(tr);
     return;
-    }
+  }
 
-    tr.querySelector('.dict-name').value = name;
+  tr.querySelector('.dict-name').value = name;
 
-    const sizesForName = Array.from(new Set(
-      allItems
-        .filter(item => String(item.dressingName || '').trim() === String(name).trim())
-        .map(item => String(item.size || '').trim())
-        .filter(Boolean)
-    )).sort();
+  const sizesForName = Array.from(new Set(
+    allItems
+      .filter(item => String(item.dressingName || '').trim() === String(name).trim())
+      .map(item => String(item.size || '').trim())
+      .filter(Boolean)
+  )).sort();
 
-    const size = pickValueByPrompt(
-      '步驟 3：請選擇或輸入規格描述',
-      sizesForName,
-      tr.querySelector('.dict-size').value || ''
-    );
+  const size = pickValueByPrompt(
+    '步驟 3：請選擇或輸入規格描述',
+    sizesForName,
+    tr.querySelector('.dict-size').value || ''
+  );
 
-    if(size === null){
+  if(size === null){
+    updateDictMainButton(tr);
     return;
-    }
+  }
 
-    tr.querySelector('.dict-size').value = size;
+  tr.querySelector('.dict-size').value = size;
 
-    const existingItem = findExistingItemByNameAndSize(name, size);
-
-    if(existingItem){
+  const existingItem = findExistingItemByNameAndSize(name, size);
+  if(existingItem){
     applyExistingItemToRow(tr, existingItem, target);
-    }
+  }
 
-    if(target === 'box'){
+  if(target === 'box'){
     const currentQty = tr.querySelector('.dict-box-qty').value || '';
-    const qty = prompt(
-      '步驟 4：請輸入一盒數量\n\n可以先略過，之後再補。',
-      currentQty
-    );
+    const qty = prompt('步驟 4：請輸入一盒數量\n\n可以先略過，之後再補。', currentQty);
 
     if(qty !== null){
-    tr.querySelector('.dict-box-qty').value = String(qty).trim();
+      tr.querySelector('.dict-box-qty').value = String(qty).trim();
     }
-    }
+  }
 
-    unlockDictRowForManualEdit(tr);
-
-    const statusEl = tr.querySelector('.dictStatus');
-    if(statusEl){
+  const statusEl = tr.querySelector('.dictStatus');
+  if(statusEl){
     statusEl.innerText = target === 'box'
       ? '已設定為盒裝，請確認後儲存'
       : '已設定為單包，請確認後儲存';
     statusEl.className = 'dictStatus';
-    }
+  }
 
-    alert(
-      '已完成基本設定。\n\n接下來你可以自由修改任何欄位；確認無誤後，按「儲存」。'
-    );
-    }
+  updateDictMainButton(tr);
 
-    async function addDictRow(barcode, parsed) {
-    const emptyRow = document.getElementById('dictEmptyRow');
-    if (emptyRow) emptyRow.remove();
+  alert('已完成基本設定。\n\n接下來可自由修改任何欄位；確認無誤後，按「儲存」。');
+}
 
-    const scannedGtin = String(barcode || '').trim();
+async function addDictRow(barcode, parsed){
+  const emptyRow = document.getElementById('dictEmptyRow');
+  if(emptyRow) emptyRow.remove();
 
-    const existingInput = Array.from(document.querySelectorAll('.dict-single-gtin, .dict-box-gtin'))
+  const scannedGtin = String(barcode || '').trim();
+
+  const existingInput = Array.from(document.querySelectorAll('.dict-single-gtin, .dict-box-gtin'))
     .find(input => input.value.trim() === scannedGtin);
-    if (existingInput) {
+
+  if(existingInput){
     alert('此 GTIN 已在清單中');
-    existingInput.closest('tr').querySelector('.dict-name').focus();
+    existingInput.closest('tr').scrollIntoView({ behavior:'smooth', block:'center' });
     return;
+  }
+
+  const scanMeta =
+    `<div class="scanMeta">掃描GTIN：${escapeHtml(scannedGtin)}${parsed && parsed.lot ? '<br>批號：' + escapeHtml(parsed.lot) : ''}${parsed && parsed.exp ? '<br>效期：' + escapeHtml(parsed.exp) : ''}</div>`;
+
+  const tr = createDictRow({
+    hospitalCode:'',
+    dressingName:'',
+    size:'',
+    singleGtin:'',
+    gtin:'',
+    boxGtin:'',
+    boxQuantity:'',
+    category:'',
+    status:'使用中',
+    scanMeta:scanMeta
+  }, true);
+
+  tr.dataset.scannedGtin = scannedGtin;
+  tr.dataset.rowKey = scannedGtin;
+
+  document.getElementById('dictTbody').prepend(tr);
+
+  try{
+    const res = await lookupBarcode(scannedGtin);
+
+    if(res.found){
+      applyExistingItemToRow(tr, res.data, res.packageType === 'box' ? 'box' : 'single');
+      tr.querySelector('.dictStatus').innerText =
+        res.matchType === 'boxGtin' ? '已建檔：盒裝GTIN' : '已建檔：單包GTIN';
+      tr.querySelector('.dictStatus').className = 'dictStatus saved';
+      setDictRowSnapshot(tr);
+      leaveDictEditMode(tr);
+      return;
     }
 
-    const tr = document.createElement('tr');
-    tr.classList.add('editing');
-    tr.dataset.isNewRow = '1';
-    tr.dataset.scannedGtin = scannedGtin;
-    tr.dataset.rowKey = scannedGtin;
-    tr.innerHTML = `
-    <td><input class="dict-hospital-code" placeholder="院內碼"></td>
-    <td><input class="dict-name" placeholder="敷料名稱"></td>
-    <td><input class="dict-size" placeholder="規格"></td>
-    <td>
-      <input class="dict-single-gtin" placeholder="單包GTIN">
-      <div class="gtinTargetTools">
-        <button type="button" onclick="setGtinTarget(this, 'single')">設為單包</button>
-      </div>
-    </td>
-    <td>
-      <input class="dict-box-gtin" placeholder="盒裝GTIN">
-      <div class="gtinTargetTools">
-        <button type="button" onclick="setGtinTarget(this, 'box')">設為盒裝</button>
-      </div>
-    </td>
-    <td><input class="dict-box-qty" placeholder="可之後補"></td>
-    <td><input class="dict-category" placeholder="分類"></td>
-    <td><select class="dict-status">
-      <option value="使用中" selected>使用中</option>
-      <option value="試用">試用</option>
-      <option value="停用">停用</option>
-    </select></td>
-    <td style="white-space:nowrap;">
-    <span class="dragHandle">☰</span>
-    <button type="button" class="dictActionBtn edit-btn primary" onclick="editDictRow(this)">儲存</button>
-    <button type="button" class="dictActionBtn danger" onclick="deleteDictRow(this)">刪除</button>
-    <div class="dictStatus" style="font-size:12px; margin-top:4px;">查詢中...</div>
-    <div class="scanMeta">掃描GTIN：${escapeHtml(scannedGtin)}${parsed && parsed.lot ? '<br>批號：' + escapeHtml(parsed.lot) : ''}${parsed && parsed.exp ? '<br>效期：' + escapeHtml(parsed.exp) : ''}</div>
-    </td>
-    `;
-    document.getElementById('dictTbody').prepend(tr);
-    bindDictRowDirtyWatch(tr);
-    updateDictRowEditButtons(tr);
-
-    try {
-    const res = await lookupBarcode(scannedGtin);
-    if (res.found) {
-    tr.querySelector('.dict-hospital-code').value = res.data.hospitalCode || '';
-    tr.querySelector('.dict-name').value = res.data.dressingName || '';
-    tr.querySelector('.dict-size').value = res.data.size || '';
-    tr.querySelector('.dict-single-gtin').value = res.data.singleGtin || res.data.gtin || '';
-    tr.querySelector('.dict-box-gtin').value = res.data.boxGtin || '';
-    tr.querySelector('.dict-box-qty').value = res.data.boxQuantity || '';
-    tr.querySelector('.dict-category').value = res.data.category || '';
-    tr.querySelector('.dict-status').value = res.data.status || '使用中';
-    tr.dataset.rowKey = getDictRowKey(tr);
-
-    const matchText = res.matchType === 'boxGtin' ? '已建檔：盒裝GTIN' : '已建檔：單包GTIN';
-    tr.querySelector('.dictStatus').innerText = matchText;
-    tr.querySelector('.dictStatus').className = 'dictStatus saved';
-
-    setDictRowSnapshot(tr);
-    leaveDictEditMode(tr);
-    } else {
     tr.querySelector('.dictStatus').innerText = '新GTIN，開始引導建檔';
     tr.querySelector('.dictStatus').className = 'dictStatus';
     guideDictRowAfterScan(tr);
-    }
-    } catch (err) {
+  } catch(err){
     tr.querySelector('.dictStatus').innerText = '查詢失敗，仍可手動建檔';
     tr.querySelector('.dictStatus').className = 'dictStatus error';
     console.log(err);
     guideDictRowAfterScan(tr);
+  }
+}
+
+/* 排序 */
+function toggleReorderMode(){
+  if(isReorderMode){
+    cancelReorderMode();
+    return;
+  }
+
+  const rows = document.querySelectorAll('#dictTbody tr:not(#dictEmptyRow)');
+  if(rows.length === 0) return;
+
+  isReorderMode = true;
+  initialOrder = Array.from(rows).map(r => getDictRowKey(r));
+
+  document.getElementById('dictTable').classList.add('reorder-mode');
+  document.getElementById('reorderBtn').innerText = '返回';
+  document.getElementById('saveOrderBtn').style.display = 'none';
+  document.getElementById('batchSaveBtn').style.display = 'none';
+
+  rows.forEach(row => {
+    row.setAttribute('draggable','true');
+    row.addEventListener('dragstart', handleDragStart);
+    row.addEventListener('dragend', handleDragEnd);
+    row.addEventListener('dragover', handleDragOver);
+    row.addEventListener('drop', handleDrop);
+    row.addEventListener('touchstart', handleTouchStart, { passive:false });
+    row.addEventListener('touchmove', handleTouchMove, { passive:false });
+    row.addEventListener('touchend', handleTouchEnd);
+  });
+}
+
+function cancelReorderMode(){
+  isReorderMode = false;
+  document.getElementById('dictTable').classList.remove('reorder-mode');
+  document.getElementById('reorderBtn').innerText = '更改排序';
+  document.getElementById('saveOrderBtn').style.display = 'none';
+  document.getElementById('batchSaveBtn').style.display = 'inline-block';
+
+  const tbody = document.getElementById('dictTbody');
+  const rows = Array.from(tbody.querySelectorAll('tr:not(#dictEmptyRow)'));
+
+  rows.forEach(row => {
+    row.removeAttribute('draggable');
+    row.removeEventListener('dragstart', handleDragStart);
+    row.removeEventListener('dragend', handleDragEnd);
+    row.removeEventListener('dragover', handleDragOver);
+    row.removeEventListener('drop', handleDrop);
+    row.removeEventListener('touchstart', handleTouchStart);
+    row.removeEventListener('touchmove', handleTouchMove);
+    row.removeEventListener('touchend', handleTouchEnd);
+  });
+
+  rows.sort((a,b) => initialOrder.indexOf(getDictRowKey(a)) - initialOrder.indexOf(getDictRowKey(b)));
+  rows.forEach(r => tbody.appendChild(r));
+}
+
+function checkOrderChanged(){
+  const rows = document.querySelectorAll('#dictTbody tr:not(#dictEmptyRow)');
+  const currentOrder = Array.from(rows).map(r => getDictRowKey(r));
+  const changed = JSON.stringify(currentOrder) !== JSON.stringify(initialOrder);
+  document.getElementById('saveOrderBtn').style.display = changed ? 'inline-block' : 'none';
+}
+
+function handleDragStart(e){
+  draggedRow = this;
+  if(e.dataTransfer){
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', getDictRowKey(this));
+  }
+  setTimeout(() => this.classList.add('dragging'), 0);
+}
+
+function handleDragEnd(){
+  this.classList.remove('dragging');
+  draggedRow = null;
+  document.querySelectorAll('#dictTbody tr').forEach(r => r.classList.remove('drag-over','drag-over-bottom'));
+}
+
+function handleDragOver(e){
+  e.preventDefault();
+  if(!draggedRow || this === draggedRow) return false;
+
+  const rect = this.getBoundingClientRect();
+  const midpoint = rect.top + rect.height / 2;
+
+  this.classList.remove('drag-over','drag-over-bottom');
+  if(e.clientY < midpoint){
+    this.classList.add('drag-over');
+  } else {
+    this.classList.add('drag-over-bottom');
+  }
+  return false;
+}
+
+function handleDrop(e){
+  e.preventDefault();
+  if(!draggedRow || this === draggedRow) return false;
+
+  this.classList.remove('drag-over','drag-over-bottom');
+
+  const rect = this.getBoundingClientRect();
+  const midpoint = rect.top + rect.height / 2;
+
+  if(e.clientY < midpoint){
+    this.parentNode.insertBefore(draggedRow, this);
+  } else {
+    this.parentNode.insertBefore(draggedRow, this.nextSibling);
+  }
+
+  checkOrderChanged();
+  return false;
+}
+
+function handleTouchStart(e){
+  if(!e.target.classList.contains('dragHandle')) return;
+  draggedRow = this;
+  this.classList.add('dragging');
+}
+
+function handleTouchMove(e){
+  if(!draggedRow || draggedRow !== this) return;
+  e.preventDefault();
+
+  const touch = e.touches[0];
+  const targetElement = document.elementFromPoint(touch.clientX, touch.clientY);
+  if(!targetElement) return;
+
+  const targetRow = targetElement.closest('tr');
+  if(!targetRow || targetRow === draggedRow || targetRow.id === 'dictEmptyRow' || targetRow.parentNode !== draggedRow.parentNode) return;
+
+  const rect = targetRow.getBoundingClientRect();
+  const midpoint = rect.top + rect.height / 2;
+
+  targetRow.parentNode.insertBefore(draggedRow, touch.clientY < midpoint ? targetRow : targetRow.nextSibling);
+}
+
+function handleTouchEnd(){
+  if(!draggedRow) return;
+  this.classList.remove('dragging');
+  draggedRow = null;
+  checkOrderChanged();
+}
+
+async function saveDictOrder(){
+  const rows = document.querySelectorAll('#dictTbody tr:not(#dictEmptyRow)');
+  const barcodes = Array.from(rows).map(tr => getDictRowKey(tr)).filter(Boolean);
+  if(barcodes.length === 0) return;
+
+  const btn = document.getElementById('saveOrderBtn');
+  btn.innerText = '儲存中...';
+  btn.disabled = true;
+
+  try{
+    const res = await reorderBarcode(barcodes.join(','));
+    if(res.ok){
+      isReorderMode = false;
+      btn.style.display = 'none';
+      document.getElementById('reorderBtn').innerText = '更改排序';
+      document.getElementById('batchSaveBtn').style.display = 'inline-block';
+      document.getElementById('dictTable').classList.remove('reorder-mode');
+      await loadDictList();
+    } else {
+      alert('排序儲存失敗');
     }
-    }
+  } catch(err){
+    alert('儲存錯誤：' + err.message);
+  }
 
+  btn.innerText = '儲存排序';
+  btn.disabled = false;
+}
 
-    function startUse(){
+/* 領用區 */
+function startUse(){
+  document.getElementById('formArea').style.display = 'block';
+  document.getElementById('dictArea').style.display = 'none';
 
-    document.getElementById('formArea').style.display = 'block';
-    document.getElementById('dictArea').style.display = 'none';
-
-    document.getElementById('useDateTime').value =
+  document.getElementById('useDateTime').value =
     new Date().toLocaleString('zh-TW');
 
-    if(patientCount === 0){
+  if(patientCount === 0){
     addPatientBlock();
-    }
+  }
+}
 
-    }
+function addPatientBlock(){
+  patientCount++;
 
-    function addPatientBlock(){
+  const block = document.createElement('div');
+  block.className = 'patientBlock';
 
-    patientCount++;
-
-    const block = document.createElement('div');
-    block.className = 'patientBlock';
-
-    block.innerHTML = `
+  block.innerHTML = `
     <div class="patientTitle">病人 ${patientCount}</div>
 
     <div class="infoRow">
-    <label>病歷號：</label>
-    <input class="patientId">
+      <label>病歷號：</label>
+      <input class="patientId">
     </div>
 
-<div class="formTableWrap">
-    <table>
-    <thead>
-    <tr>
-    <th>操作</th>
-    <th>計價狀態</th>
-    <th>敷料名稱</th>
-    <th>數量</th>
-    <th>支付類別</th>
-    <th>主治醫師</th>
-    </tr>
-    </thead>
-
-    <tbody class="dressingRows">
-    ${createRow()}
-    </tbody>
-    </table>
-</div>
+    <div class="useTableWrap">
+      <table class="useTable">
+        <thead>
+          <tr>
+            <th class="col-action">操作</th>
+            <th class="col-charge">計價狀態</th>
+            <th class="col-dressing">敷料名稱</th>
+            <th class="col-qty">數量</th>
+            <th class="col-pay">支付類別</th>
+            <th class="col-doctor">主治醫師</th>
+          </tr>
+        </thead>
+        <tbody class="dressingRows">
+          ${createRow()}
+        </tbody>
+      </table>
+    </div>
 
     <div class="actions">
-    <button type="button" onclick="addRow(this)">新增一列</button>
-    <button type="button" class="danger deletePatient">刪除病人</button>
+      <button type="button" onclick="addRow(this)">新增一列</button>
+      <button type="button" class="danger deletePatient">刪除病人</button>
     </div>
-    `;
+  `;
 
-    document.getElementById('patientArea').appendChild(block);
+  document.getElementById('patientArea').appendChild(block);
+  refreshPatientTitle();
+}
 
-    refreshPatientTitle();
+function createRow(){
+  const id = Date.now() + '_' + Math.random();
 
-    }
-
-    function createRow(){
-
-    const id = Date.now() + '_' + Math.random();
-
-    return `
+  return `
     <tr>
+      <td><button type="button" class="danger deleteRow">刪除</button></td>
 
-    <td>
-    <button type="button" class="danger deleteRow">刪除</button>
-    </td>
+      <td>
+        <div class="radioGroup">
+          <label><input type="radio" name="charge_${id}" value="已計價">已計價</label>
+          <label><input type="radio" name="charge_${id}" checked value="未計價">未計價</label>
+        </div>
+      </td>
 
-    <td>
-    <div class="radioGroup">
-    <label>
-    <input type="radio" name="charge_${id}" value="已計價">
-    已計價
-    </label>
-    <label>
-    <input type="radio" name="charge_${id}" checked value="未計價">
-    未計價
-    </label>
-    </div>
-    </td>
+      <td>
+        <div class="dressingInputGroup">
+          <input class="dressingName">
+          <button type="button" class="cameraBtn" onclick="openDressingScanner(this)">📷</button>
+        </div>
+      </td>
 
-    <td>
-    <div class="dressingInputGroup">
-    <input class="dressingName">
-    <button type="button" class="cameraBtn" onclick="openDressingScanner(this)">📷</button>
-    </div>
-    </td>
+      <td><input class="quantity" type="number" value="1" min="1"></td>
 
-    <td>
-    <input class="quantity" type="number" value="1" min="1">
-    </td>
+      <td>
+        <div class="radioGroup">
+          <label><input type="radio" name="pay_${id}" value="健保">健保</label>
+          <label><input type="radio" name="pay_${id}" checked value="自費">自費</label>
+        </div>
+      </td>
 
-    <td>
-    <div class="radioGroup">
-    <label>
-    <input type="radio" name="pay_${id}" value="健保">
-    健保
-    </label>
-    <label>
-    <input type="radio" name="pay_${id}" checked value="自費">
-    自費
-    </label>
-    </div>
-    </td>
-
-    <td>
-    <input class="doctorName">
-    </td>
-
+      <td><input class="doctorName"></td>
     </tr>
-    `;
+  `;
+}
 
-    }
-
-    function addRow(button){
-
-    button
+function addRow(button){
+  button
     .closest('.patientBlock')
     .querySelector('.dressingRows')
     .insertAdjacentHTML('beforeend', createRow());
+}
 
-    }
+function openDressingScanner(button){
+  scannerMode = 'row';
+  activeDressingInput = button.closest('td').querySelector('.dressingName');
+  document.getElementById('scannerOverlay').style.display = 'block';
+  startDressingScanner();
+}
 
-    function openDressingScanner(button){
-
-    scannerMode = 'row';
-
-    activeDressingInput =
-    button.closest('td').querySelector('.dressingName');
-
-    document.getElementById('scannerOverlay').style.display = 'block';
-
-    startDressingScanner();
-
-    }
-
-    function startDressingScanner(){
-
-    if(dressingScanner){
+function startDressingScanner(){
+  if(dressingScanner){
     return;
-    }
+  }
 
-    dressingScanner =
-    new Html5Qrcode('scannerReader');
+  dressingScanner = new Html5Qrcode('scannerReader');
 
-    const config = {
-    fps: 10,
-    qrbox: {
-    width: 260,
-    height: 180
-    },
-    formatsToSupport: [
-    Html5QrcodeSupportedFormats.QR_CODE,
-    Html5QrcodeSupportedFormats.CODE_128,
-    Html5QrcodeSupportedFormats.CODE_39,
-    Html5QrcodeSupportedFormats.EAN_13,
-    Html5QrcodeSupportedFormats.EAN_8,
-    Html5QrcodeSupportedFormats.UPC_A,
-    Html5QrcodeSupportedFormats.UPC_E
+  const config = {
+    fps:10,
+    qrbox:{ width:260, height:180 },
+    formatsToSupport:[
+      Html5QrcodeSupportedFormats.QR_CODE,
+      Html5QrcodeSupportedFormats.CODE_128,
+      Html5QrcodeSupportedFormats.CODE_39,
+      Html5QrcodeSupportedFormats.EAN_13,
+      Html5QrcodeSupportedFormats.EAN_8,
+      Html5QrcodeSupportedFormats.UPC_A,
+      Html5QrcodeSupportedFormats.UPC_E
     ]
-    };
+  };
 
-    dressingScanner
+  dressingScanner
     .start(
-    {
-    facingMode: {
-    exact: 'environment'
-    }
-    },
-    config,
-    function(decodedText){
-
-    handleBarcodeScanResult(decodedText);
-    closeDressingScanner();
-
-    },
-    function(errorMessage){}
+      { facingMode:{ exact:'environment' } },
+      config,
+      function(decodedText){
+        handleBarcodeScanResult(decodedText);
+        closeDressingScanner();
+      },
+      function(errorMessage){}
     )
     .catch(function(err){
-
-    console.log(err);
-
-    alert(
-    '無法開啟相機，請確認手機瀏覽器已允許相機權限'
-    );
-
+      console.log(err);
+      alert('無法開啟相機，請確認手機瀏覽器已允許相機權限');
     });
+}
 
-    }
+function closeDressingScanner(){
+  document.getElementById('scannerOverlay').style.display = 'none';
 
-    function closeDressingScanner(){
-
-    document.getElementById('scannerOverlay').style.display = 'none';
-
-    if(dressingScanner){
-
+  if(dressingScanner){
     dressingScanner
-    .stop()
-    .then(function(){
+      .stop()
+      .then(function(){
+        dressingScanner.clear();
+        dressingScanner = null;
+      })
+      .catch(function(err){
+        console.log(err);
+        dressingScanner = null;
+      });
+  }
+}
 
-    dressingScanner.clear();
-    dressingScanner = null;
+async function handleBarcodeScanResult(barcode){
+  const parsed = parseUDI(barcode);
+  const gtin = parsed.gtin || barcode;
 
-    })
-    .catch(function(err){
+  if(scannerMode === 'row'){
+    if(activeDressingInput){
+      activeDressingInput.value = gtin;
+      activeDressingInput.dataset.gtin = gtin;
+      activeDressingInput.dataset.lot = parsed.lot || '';
+      activeDressingInput.dataset.exp = parsed.exp || '';
+      activeDressingInput.dataset.raw = parsed.raw || barcode;
+      activeDressingInput.dataset.packageType = '';
+      activeDressingInput.dataset.unitQuantity = '1';
 
-    console.log(err);
-    dressingScanner = null;
+      try{
+        const res = await lookupBarcode(gtin);
+        if(res.found && res.data.dressingName){
+          const sizeText = res.data.size ? ` ${res.data.size}` : '';
+          const packageText = res.packageType === 'box' ? '（盒裝）' : '';
+          activeDressingInput.value = `${res.data.dressingName}${sizeText}${packageText}`;
+          activeDressingInput.dataset.packageType = res.packageType || '';
+          activeDressingInput.dataset.unitQuantity = String(res.unitQuantity || 1);
+          activeDressingInput.title =
+            `GTIN: ${gtin}\n包裝: ${res.packageType || ''}\n數量: ${res.unitQuantity || 1}\nLOT: ${parsed.lot || ''}\nEXP: ${parsed.exp || ''}`;
 
-    });
-
-    }
-
-    }
-    async function handleBarcodeScanResult(barcode){
-
-      const parsed = parseUDI(barcode);
-      const gtin = parsed.gtin || barcode;
-
-      if(scannerMode === 'row'){
-        if(activeDressingInput){
-          activeDressingInput.value = gtin; 
-          activeDressingInput.dataset.gtin = gtin;
-          activeDressingInput.dataset.lot = parsed.lot || '';
-          activeDressingInput.dataset.exp = parsed.exp || '';
-          activeDressingInput.dataset.raw = parsed.raw || barcode;
-          activeDressingInput.dataset.packageType = '';
-          activeDressingInput.dataset.unitQuantity = '1';
-
-          try {
-            const res = await lookupBarcode(gtin);
-            if (res.found && res.data.dressingName) {
-              const sizeText = res.data.size ? ` ${res.data.size}` : '';
-              const packageText = res.packageType === 'box' ? '（盒裝）' : '';
-              activeDressingInput.value = `${res.data.dressingName}${sizeText}${packageText}`;
-              activeDressingInput.dataset.packageType = res.packageType || '';
-              activeDressingInput.dataset.unitQuantity = String(res.unitQuantity || 1);
-              activeDressingInput.title =
-                `GTIN: ${gtin}\n包裝: ${res.packageType || ''}\n數量: ${res.unitQuantity || 1}\nLOT: ${parsed.lot || ''}\nEXP: ${parsed.exp || ''}`;
-
-              const row = activeDressingInput.closest('tr');
-              const qtyInput = row ? row.querySelector('.quantity') : null;
-              if (qtyInput && res.packageType === 'box') {
-                qtyInput.value = res.unitQuantity || res.data.boxQuantity || 1;
-              }
-            }
-          } catch(e) {
-            console.log('查詢失敗', e);
+          const row = activeDressingInput.closest('tr');
+          const qtyInput = row ? row.querySelector('.quantity') : null;
+          if(qtyInput && res.packageType === 'box'){
+            qtyInput.value = res.unitQuantity || res.data.boxQuantity || 1;
           }
         }
-        return;
+      } catch(e){
+        console.log('查詢失敗', e);
+      }
+    }
+    return;
+  }
+
+  if(scannerMode === 'dict'){
+    await addDictRow(gtin, parsed);
+  }
+}
+
+function parseUDI(barcode){
+  const raw = String(barcode || '');
+  const GS = String.fromCharCode(29);
+
+  let text = raw.replace(/[()]/g, '').trim();
+  let gtin = '';
+  let lot = '';
+  let exp = '';
+
+  function formatExp(yymmdd){
+    if(!yymmdd || yymmdd.length !== 6) return '';
+    return `20${yymmdd.substring(0,2)}-${yymmdd.substring(2,4)}-${yymmdd.substring(4,6)}`;
+  }
+
+  let i = 0;
+
+  while(i < text.length){
+    const ai2 = text.substring(i, i + 2);
+
+    if(ai2 === '01' && i + 16 <= text.length){
+      gtin = text.substring(i + 2, i + 16);
+      i += 16;
+      continue;
+    }
+
+    if(ai2 === '17' && i + 8 <= text.length){
+      exp = formatExp(text.substring(i + 2, i + 8));
+      i += 8;
+      continue;
+    }
+
+    if(ai2 === '10' && i + 2 <= text.length){
+      const start = i + 2;
+      let end = text.indexOf(GS, start);
+
+      if(end === -1){
+        const nextAiMatch = text.substring(start).match(/(17\d{6}|21[A-Za-z0-9]{1,20}|30\d{1,8})/);
+        end = nextAiMatch && nextAiMatch.index > 0
+          ? start + nextAiMatch.index
+          : text.length;
       }
 
-      if(scannerMode === 'dict'){
-        await addDictRow(gtin, parsed);
-        return;
-      }
-
+      lot = text.substring(start, end);
+      i = end;
+      continue;
     }
 
+    i++;
+  }
 
-    // UDI 解析器：支援 GS1 標準，將長條碼拆解為 GTIN, LOT, EXP
-    function parseUDI(barcode) {
-      const raw = String(barcode || '');
-      const GS = String.fromCharCode(29);
+  if(!gtin){
+    gtin = raw.replace(/[\x00-\x1F\x7F]/g, '').trim();
+  }
 
-      let text = raw
-        .replace(/[()]/g, '')
-        .trim();
+  return { raw:raw, gtin:gtin, lot:lot, exp:exp };
+}
 
-      let gtin = '';
-      let lot = '';
-      let exp = '';
-
-      function formatExp(yymmdd) {
-        if (!yymmdd || yymmdd.length !== 6) return '';
-        const yy = yymmdd.substring(0, 2);
-        const mm = yymmdd.substring(2, 4);
-        const dd = yymmdd.substring(4, 6);
-        return `20${yy}-${mm}-${dd}`;
-      }
-
-      let i = 0;
-
-      while (i < text.length) {
-        const ai2 = text.substring(i, i + 2);
-
-        if (ai2 === '01' && i + 16 <= text.length) {
-          gtin = text.substring(i + 2, i + 16);
-          i += 16;
-          continue;
-        }
-
-        if (ai2 === '17' && i + 8 <= text.length) {
-          exp = formatExp(text.substring(i + 2, i + 8));
-          i += 8;
-          continue;
-        }
-
-        if (ai2 === '10' && i + 2 <= text.length) {
-          const start = i + 2;
-          let end = text.indexOf(GS, start);
-
-          if (end === -1) {
-            const nextAiMatch = text.substring(start).match(/(17\d{6}|21[A-Za-z0-9]{1,20}|30\d{1,8})/);
-            end = nextAiMatch && nextAiMatch.index > 0
-              ? start + nextAiMatch.index
-              : text.length;
-          }
-
-          lot = text.substring(start, end);
-          i = end;
-          continue;
-        }
-
-        i++;
-      }
-
-      if (!gtin) {
-        gtin = raw.replace(/[\x00-\x1F\x7F]/g, '').trim();
-      }
-
-      return {
-        raw: raw,
-        gtin: gtin,
-        lot: lot,
-        exp: exp
-      };
-    }
-
-
-    function lookupBarcode(gtin){
-
-    if(isAppsScriptMode()){
-
+/* API */
+function lookupBarcode(gtin){
+  if(isAppsScriptMode()){
     return new Promise(function(resolve, reject){
-
-    google.script.run
-    .withSuccessHandler(resolve)
-    .withFailureHandler(reject)
-    .lookupDressingBarcode(gtin);
-
+      google.script.run
+        .withSuccessHandler(resolve)
+        .withFailureHandler(reject)
+        .lookupDressingBarcode(gtin);
     });
+  }
 
-    }
+  return callDressingBarcodeApi({ action:'lookupDressingBarcode', gtin:gtin });
+}
 
-    return callDressingBarcodeApi({
-    action: 'lookupDressingBarcode',
-    gtin: gtin
-    });
-
-    }
-
-    function listBarcode(){
-
-    if(isAppsScriptMode()){
-
+function listBarcode(){
+  if(isAppsScriptMode()){
     return new Promise(function(resolve, reject){
-
-    google.script.run
-    .withSuccessHandler(resolve)
-    .withFailureHandler(reject)
-    .listDressingBarcode();
-
+      google.script.run
+        .withSuccessHandler(resolve)
+        .withFailureHandler(reject)
+        .listDressingBarcode();
     });
+  }
 
-    }
+  return callDressingBarcodeApi({ action:'listDressingBarcode' });
+}
 
-    return callDressingBarcodeApi({
-    action: 'listDressingBarcode'
-    });
-
-    }
-
-    function reorderBarcode(gtins){
-
-    if(isAppsScriptMode()){
-
+function reorderBarcode(gtins){
+  if(isAppsScriptMode()){
     return new Promise(function(resolve, reject){
-
-    google.script.run
-    .withSuccessHandler(resolve)
-    .withFailureHandler(reject)
-    .reorderDressingBarcode({ barcodes: gtins });
-
+      google.script.run
+        .withSuccessHandler(resolve)
+        .withFailureHandler(reject)
+        .reorderDressingBarcode({ barcodes:gtins });
     });
+  }
 
-    }
+  return callDressingBarcodeApi({ action:'reorderDressingBarcode', barcodes:gtins });
+}
 
-    return callDressingBarcodeApi({
-    action: 'reorderDressingBarcode',
-    barcodes: gtins
-    });
-
-    }
-
-    function deleteBarcode(gtin){
-
-    if(isAppsScriptMode()){
-
+function deleteBarcode(gtin){
+  if(isAppsScriptMode()){
     return new Promise(function(resolve, reject){
-
-    google.script.run
-    .withSuccessHandler(resolve)
-    .withFailureHandler(reject)
-    .deleteDressingBarcode({ gtin: gtin });
-
+      google.script.run
+        .withSuccessHandler(resolve)
+        .withFailureHandler(reject)
+        .deleteDressingBarcode({ gtin:gtin });
     });
+  }
 
-    }
+  return callDressingBarcodeApi({ action:'deleteDressingBarcode', gtin:gtin });
+}
 
-    return callDressingBarcodeApi({
-    action: 'deleteDressingBarcode',
-    gtin: gtin
-    });
-
-    }
-
-    function saveBarcode(data){
-
-    if(isAppsScriptMode()){
-
+function saveBarcode(data){
+  if(isAppsScriptMode()){
     return new Promise(function(resolve, reject){
-
-    google.script.run
-    .withSuccessHandler(resolve)
-    .withFailureHandler(reject)
-    .saveDressingBarcode(data);
-
+      google.script.run
+        .withSuccessHandler(resolve)
+        .withFailureHandler(reject)
+        .saveDressingBarcode(data);
     });
+  }
 
-    }
+  return callDressingBarcodeApi({
+    action:'saveDressingBarcode',
+    hospitalCode:data.hospitalCode,
+    singleGtin:data.singleGtin || data.gtin,
+    gtin:data.singleGtin || data.gtin,
+    dressingName:data.dressingName,
+    size:data.size,
+    category:data.category,
+    boxGtin:data.boxGtin,
+    boxQuantity:data.boxQuantity,
+    status:data.status
+  });
+}
 
-    return callDressingBarcodeApi({
-    action: 'saveDressingBarcode',
-    hospitalCode: data.hospitalCode,
-    singleGtin: data.singleGtin || data.gtin,
-    gtin: data.singleGtin || data.gtin,
-    dressingName: data.dressingName,
-    size: data.size,
-    category: data.category,
-    boxGtin: data.boxGtin,
-    boxQuantity: data.boxQuantity,
-    status: data.status
-    });
+function callDressingBarcodeApi(params){
+  return jsonpDressingBarcode(params);
+}
 
-    }
-
-    function callDressingBarcodeApi(params){
-
-    return jsonpDressingBarcode(params);
-
-    }
-
-    function jsonpDressingBarcode(params){
-
-    return new Promise(function(resolve, reject){
-
+function jsonpDressingBarcode(params){
+  return new Promise(function(resolve, reject){
     const callbackName =
-    '__dressingBarcodeCallback_' +
-    Date.now() +
-    '_' +
-    Math.random().toString(36).slice(2);
+      '__dressingBarcodeCallback_' +
+      Date.now() +
+      '_' +
+      Math.random().toString(36).slice(2);
 
-    const query =
-    new URLSearchParams();
+    const query = new URLSearchParams();
 
     Object.keys(params).forEach(function(key){
-
-    if(params[key] !== undefined && params[key] !== null){
-    query.set(key, params[key]);
-    }
-
+      if(params[key] !== undefined && params[key] !== null){
+        query.set(key, params[key]);
+      }
     });
 
     query.set('callback', callbackName);
 
-    const script =
-    document.createElement('script');
+    const script = document.createElement('script');
 
-    const timer =
-    setTimeout(function(){
-
-    cleanup();
-    reject(
-    new Error('API 逾時，請檢查部署網址或 Sheet 權限')
-    );
-
+    const timer = setTimeout(function(){
+      cleanup();
+      reject(new Error('API 逾時，請檢查部署網址或 Sheet 權限'));
     }, 15000);
 
     window[callbackName] = function(result){
+      debugDressingBarcode('response', result);
+      cleanup();
 
-    debugDressingBarcode(
-    'response',
-    result
-    );
+      if(!result || typeof result !== 'object'){
+        reject(new Error('API 回傳格式錯誤'));
+        return;
+      }
 
-    cleanup();
-
-    if(!result || typeof result !== 'object') {
-    reject(new Error('API 回傳格式錯誤'));
-    return;
-    }
-
-    resolve(result);
-
+      resolve(result);
     };
 
     script.onerror = function(){
-
-    debugDressingBarcode(
-    'script-error',
-    {
-    url: script.src,
-    callback: callbackName
-    }
-    );
-
-    cleanup();
-    reject(
-    new Error('API 載入失敗，請檢查部署網址或 Apps Script 權限')
-    );
-
+      debugDressingBarcode('script-error', { url:script.src, callback:callbackName });
+      cleanup();
+      reject(new Error('API 載入失敗，請檢查部署網址或 Apps Script 權限'));
     };
 
-    script.src =
-    APP_ENTRY_URL +
-    '?' +
-    query.toString();
-
-    debugDressingBarcode(
-    'request',
-    {
-    url: script.src,
-    params: params,
-    callback: callbackName
-    }
-    );
-
+    script.src = APP_ENTRY_URL + '?' + query.toString();
+    debugDressingBarcode('request', { url:script.src, params:params, callback:callbackName });
     document.head.appendChild(script);
 
     function cleanup(){
+      clearTimeout(timer);
+      if(script.parentNode){
+        script.parentNode.removeChild(script);
+      }
 
-    clearTimeout(timer);
-
-    if(script.parentNode){
-    script.parentNode.removeChild(script);
+      try{
+        delete window[callbackName];
+      } catch(error){
+        window[callbackName] = undefined;
+      }
     }
+  });
+}
 
-    try{
-    delete window[callbackName];
-    }
-    catch(error){
-    window[callbackName] = undefined;
-    }
+function isDressingBarcodeDebugMode(){
+  return /(?:\?|&)debug=1(?:&|$)/.test(window.location.search || '');
+}
 
-    }
+function debugDressingBarcode(label, data){
+  if(!isDressingBarcodeDebugMode()) return;
+  console.log('[DressingBarcode]', label, data);
+  debugger;
+}
 
-    });
-
-    }
-
-    function isDressingBarcodeDebugMode(){
-
-    return /(?:\?|&)debug=1(?:&|$)/.test(
-    window.location.search || ''
-    );
-
-    }
-
-    function debugDressingBarcode(label, data){
-
-    if(!isDressingBarcodeDebugMode()){
-    return;
-    }
-
-    console.log('[DressingBarcode]', label, data);
-    debugger;
-
-    }
-
-    document.addEventListener('click', function(e){
-
-    if(e.target.classList.contains('deleteRow')){
-
-    const tbody =
-    e.target.closest('tbody');
+document.addEventListener('click', function(e){
+  if(e.target.classList.contains('deleteRow')){
+    const tbody = e.target.closest('tbody');
 
     if(tbody.rows.length <= 1){
-    alert('至少保留一列');
-    return;
+      alert('至少保留一列');
+      return;
     }
 
     e.target.closest('tr').remove();
+  }
 
-    }
-
-    if(e.target.classList.contains('deletePatient')){
-
+  if(e.target.classList.contains('deletePatient')){
     if(document.querySelectorAll('.patientBlock').length <= 1){
-    alert('至少保留一位病人');
-    return;
+      alert('至少保留一位病人');
+      return;
     }
 
     e.target.closest('.patientBlock').remove();
-
     refreshPatientTitle();
+  }
+});
 
-    }
+function refreshPatientTitle(){
+  document.querySelectorAll('.patientTitle').forEach(function(el, i){
+    el.innerText = '病人 ' + (i + 1);
+  });
+}
 
-    });
-
-    function refreshPatientTitle(){
-
-    document
-    .querySelectorAll('.patientTitle')
-    .forEach(function(el, i){
-
-    el.innerText =
-    '病人 ' + (i + 1);
-
-    });
-
-    }
-
-    function submitUse(){
-
-    alert('下一步接 Sheet');
-
-    }
+function submitUse(){
+  alert('下一步接 Sheet');
+}
 </script>
 </main>
 
 <?!= getVersionBadgeHtml() ?>
 
 <script>
-// 如果是 GitHub Pages，因為 GAS 的標籤無法執行，我們手動加上專屬的 Footer 與 Header 標籤
 if (window.location.hostname.includes('github.io')) {
-  // 注入 Header
   const ghHeader = document.createElement('header');
   ghHeader.className = 'appHeader';
   ghHeader.style.cssText = 'position:fixed; top:0; left:0; right:0; z-index:20; display:flex; justify-content:space-between; align-items:center; gap:18px; height:76px; margin:0; padding:0 max(24px,calc((100vw - 1400px) / 2 + 24px)); box-sizing:border-box; border-bottom:1px solid #dbe4ef; background:rgba(248,251,255,.92); backdrop-filter:blur(10px); box-shadow:0 8px 24px rgba(15,23,42,.06);';
@@ -2352,14 +2006,12 @@ if (window.location.hostname.includes('github.io')) {
   `;
   document.body.prepend(ghHeader);
 
-  // 注入 Footer
   const ghFooter = document.createElement('div');
   ghFooter.style.cssText = 'position:fixed; left:0; right:0; bottom:0; z-index:10000; height:42px; display:flex; align-items:center; justify-content:center; padding:0 16px; box-sizing:border-box; background:rgba(248,251,255,.94); border-top:1px solid rgba(148,163,184,.38); box-shadow:0 -8px 24px rgba(15,23,42,.08); backdrop-filter:blur(10px);';
-  
   ghFooter.innerHTML = `
     <div style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">
       <span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>
-      <span>v.2.14.2-202605290142</span>
+      <span>v.2.14.2-202605290150</span>
     </div>
   `;
   document.body.appendChild(ghFooter);
@@ -2367,15 +2019,5 @@ if (window.location.hostname.includes('github.io')) {
 </script>
 
 </body>
-
 </html>
-
-
-
-
-
-
-
-
-
 
