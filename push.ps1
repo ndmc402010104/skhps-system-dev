@@ -239,6 +239,9 @@ function Push-GitHubIfRequested {
       throw "git add 失敗。"
     }
 
+    # 加入延遲讓 OneDrive 有時間解除暫存檔鎖定
+    Start-Sleep -Seconds 1
+
     $stagedFiles = git diff --cached --name-only
 
     if ($LASTEXITCODE -ne 0) {
@@ -256,6 +259,9 @@ function Push-GitHubIfRequested {
     if ($LASTEXITCODE -ne 0) {
       throw "git commit 失敗。"
     }
+
+    # 加入延遲讓 OneDrive 有時間解除暫存檔鎖定
+    Start-Sleep -Seconds 2
 
     git push
 
