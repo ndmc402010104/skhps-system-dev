@@ -258,71 +258,114 @@ input:not([type="radio"]){ width:100%; }
 
 
 /* 畫面提示與自訂對話框：取代 alert / confirm / prompt */
-.noticeStack{
-  flex:0 0 100%;
-  display:flex;
-  justify-content:flex-end;
-  gap:8px;
-  min-height:0;
-  margin-top:8px;
+.headerNoticeWrap{
+  position:fixed;
+  top:18px;
+  right:110px;
+  z-index:1400;
   pointer-events:none;
+}
+
+.noticeStack{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
 }
 
 .noticeCard{
   position:relative;
-  width:min(360px,100%);
-  padding:8px 12px;
-  border:1px solid var(--line);
-  border-left:4px solid var(--primary);
-  border-radius:12px 0 12px 12px;
-  background:rgba(255,255,255,.94);
-  backdrop-filter:blur(10px);
-  box-shadow:0 6px 16px rgba(15,23,42,.10);
-  color:var(--text);
-  line-height:1.4;
-  white-space:pre-line;
-  font-size:13px;
+  min-width:320px;
+  max-width:420px;
+  padding:14px 46px 14px 18px;
+  border-radius:18px;
+  background:rgba(255,255,255,.96);
+  border:1px solid #dbe4ef;
+  border-left:5px solid #22c55e;
+  box-shadow:
+    0 10px 30px rgba(15,23,42,.10),
+    0 2px 8px rgba(15,23,42,.06);
+  backdrop-filter:blur(14px);
+  animation:noticeIn .18s ease;
   pointer-events:auto;
-  animation:noticeGrow .16s ease;
 }
 
 .noticeCard::before{
   content:'';
   position:absolute;
-  top:-7px;
-  right:18px;
+  top:50%;
+  right:-7px;
   width:14px;
   height:14px;
-  background:rgba(255,255,255,.94);
-  border-top:1px solid var(--line);
-  border-left:1px solid var(--line);
-  transform:rotate(45deg);
+  background:rgba(255,255,255,.96);
+  border-top:1px solid #dbe4ef;
+  border-right:1px solid #dbe4ef;
+  transform:translateY(-50%) rotate(45deg);
 }
 
-@keyframes noticeGrow{
+.noticeCard.success{ border-left-color:#22c55e; }
+.noticeCard.error{ border-left-color:#dc2626; }
+.noticeCard.warning{ border-left-color:#f59e0b; }
+
+.noticeTitle{
+  margin:0 0 4px;
+  font-size:18px;
+  font-weight:800;
+}
+
+.noticeMessage{
+  margin:0;
+  color:#475569;
+  font-size:15px;
+  line-height:1.5;
+}
+
+.noticeClose{
+  position:absolute;
+  top:10px;
+  right:12px;
+  border:0;
+  background:transparent;
+  color:#64748b;
+  font-size:22px;
+  line-height:1;
+  padding:0;
+  cursor:pointer;
+}
+
+@keyframes noticeIn{
   from{
     opacity:0;
-    transform:translateY(-4px) scale(.98);
+    transform:translateY(-8px) scale(.96);
   }
+
   to{
     opacity:1;
     transform:translateY(0) scale(1);
   }
 }
 
-.noticeCard.success{ border-left-color:#16a34a; }
-.noticeCard.error{ border-left-color:#dc2626; }
-.noticeCard.warning{ border-left-color:#f59e0b; }
+@media(max-width:960px){
+  .headerNoticeWrap{
+    top:14px;
+    right:72px;
+    left:112px;
+  }
 
-.noticeTitle{
-  margin:0 0 2px;
-  font-weight:800;
-}
+  .noticeCard{
+    min-width:0;
+    max-width:none;
+    width:100%;
+    padding:10px 40px 10px 12px;
+    border-radius:14px;
+  }
 
-.noticeMessage{
-  margin:0;
-  color:#334155;
-  font-size:14px;
+  .noticeTitle{
+    font-size:15px;
+  }
+
+  .noticeMessage{
+    font-size:13px;
+  }
 }
 
 .appDialogOverlay{
@@ -617,12 +660,30 @@ tr.editing select:not(.readonly):focus{
     flex-direction:column;
   }
 
+
   .dictToolbar{
     width:100%;
+    display:flex;
+    flex-wrap:nowrap;
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+    gap:8px;
+    padding-bottom:2px;
   }
 
   .dictToolbar button{
-    flex:1 1 auto;
+    flex:0 0 auto;
+    font-size:13px;
+    padding:7px 10px;
+  }
+
+  #dictScanBtn{
+    min-width:128px;
+  }
+
+  #testHydrocleanSingleBtn,
+  #testHydrocleanBoxBtn{
+    min-width:96px;
   }
 
   .useTable th,
@@ -663,6 +724,10 @@ function goHome(){
 <main class="shell">
 
 <?!= include('共用設定檔/AppHeader', { subtitle: '敷料領用登錄', onClick: 'goHome()', maxWidth: '1400px' }) ?>
+
+<div class="headerNoticeWrap">
+  <div id="noticeStack" class="noticeStack" aria-live="polite"></div>
+</div>
 
 <nav class="pageMap" aria-label="頁面地圖">
   <button class="pageMapLink" onclick="goHome()">首頁</button>
@@ -715,11 +780,11 @@ function goHome(){
       <button type="button" id="batchSaveBtn" onclick="batchSaveDict()">批次儲存</button>
       <button type="button" id="reorderBtn" onclick="toggleReorderMode()">更改排序</button>
       <button type="button" id="saveOrderBtn" class="primary" style="display:none;" onclick="saveDictOrder()">儲存排序</button>
+      <button type="button" id="dictScanBtn" class="primary" onclick="startDictScanner()" disabled>開啟相機掃描 📷</button>
       <button type="button" id="testHydrocleanSingleBtn" class="primary" onclick="triggerHydrocleanCavityTest('single')" disabled>測試單包碼</button>
       <button type="button" id="testHydrocleanBoxBtn" class="primary" onclick="triggerHydrocleanCavityTest('box')" disabled>測試盒裝碼</button>
     </div>
-    <div id="noticeStack" class="noticeStack" aria-live="polite"></div>
-  </div>
+</div>
 
   <div class="dictTableWrap">
     <table class="dictTable" id="dictTable">
@@ -810,18 +875,28 @@ function showNotice(message, type, title){
     return;
   }
 
+  stack.innerHTML = '';
+
   const card = document.createElement('div');
   card.className = 'noticeCard ' + (type || 'info');
   card.innerHTML = `
+    <button type="button" class="noticeClose" aria-label="關閉通知">×</button>
     ${title ? `<div class="noticeTitle">${escapeHtml(title)}</div>` : ''}
     <div class="noticeMessage">${escapeHtml(message)}</div>
   `;
 
   stack.appendChild(card);
 
+  const closeBtn = card.querySelector('.noticeClose');
+  if(closeBtn){
+    closeBtn.onclick = function(){
+      card.remove();
+    };
+  }
+
   setTimeout(function(){
     card.style.opacity = '0';
-    card.style.transform = 'scale(.98)';
+    card.style.transform = 'translateY(-4px) scale(.98)';
     card.style.transition = 'all .2s ease';
     setTimeout(function(){ card.remove(); }, 220);
   }, 3600);
@@ -953,12 +1028,12 @@ async function loadDictList(){
         tbody.appendChild(createDictRow(item, false));
       });
 
-      setDictLoadState('ready', `已讀取 ${dressingMasterCache.length} 筆敷料資料，可以開啟掃描`);
+      setDictLoadState('ready', `已讀取 ${dressingMasterCache.length} 筆敷料資料，可以掃描或測試`);
     } else {
       tbody.innerHTML =
         '<tr id="dictEmptyRow"><td colspan="9" style="text-align:center; color:#64748b; padding:20px;">目前主檔無資料；可開啟掃描新增第一筆</td></tr>';
 
-      setDictLoadState('ready', '主檔目前無資料；可開啟掃描新增第一筆');
+      setDictLoadState('ready', '主檔目前無資料；可掃描或測試新增第一筆');
     }
   } catch(err){
     dressingMasterCache = [];
@@ -1168,9 +1243,59 @@ async function handleDictMainButton(btn){
   }
 }
 
+
+async function checkBarcodeConflictBeforeSave(data, originalData){
+  const originalSingle = originalData?.singleGtin || originalData?.gtin || '';
+  const originalBox = originalData?.boxGtin || '';
+
+  const targets = [
+    { type:'single', gtin:data.singleGtin || '' },
+    { type:'box', gtin:data.boxGtin || '' }
+  ].filter(item => item.gtin);
+
+  for(const target of targets){
+    const isOriginal =
+      sameGtin(target.gtin, originalSingle) ||
+      sameGtin(target.gtin, originalBox);
+
+    if(isOriginal){
+      continue;
+    }
+
+    try{
+      const res = await lookupBarcode(target.gtin);
+
+      if(res && res.found && res.data){
+        return {
+          conflict:true,
+          type:target.type,
+          gtin:target.gtin,
+          packageType:res.packageType || target.type,
+          data:res.data,
+          message:`此 GTIN 已由其他資料使用：${describeDressingItem(res.data)}`
+        };
+      }
+    } catch(error){
+      console.log('儲存前查重失敗，交由後端 save 再判斷', error);
+    }
+  }
+
+  return { conflict:false };
+}
+
+function getOriginalDictRowData(tr){
+  try{
+    return JSON.parse(tr.dataset.originalData || '{}');
+  } catch(error){
+    return {};
+  }
+}
+
+
 async function saveDictRow(btn){
   const tr = btn.closest('tr');
   const data = getDictRowData(tr);
+  const originalData = getOriginalDictRowData(tr);
   const statusEl = tr.querySelector('.dictStatus');
 
   if(!data.singleGtin && !data.boxGtin){
@@ -1186,10 +1311,32 @@ async function saveDictRow(btn){
     return;
   }
 
-  statusEl.innerText = '儲存中...';
+  statusEl.innerText = '儲存前查重中...';
   statusEl.className = 'dictStatus';
   btn.disabled = true;
   btn.innerText = '...';
+
+  const conflict = await checkBarcodeConflictBeforeSave(data, originalData);
+
+  if(conflict.conflict){
+    statusEl.innerText = '已存在，未儲存';
+    statusEl.className = 'dictStatus error';
+
+    showNotice(
+      `${conflict.message}
+
+請重新載入主檔，或改用既有資料。`,
+      'warning',
+      '儲存前發現重複'
+    );
+
+    btn.disabled = false;
+    updateDictMainButton(tr);
+    return;
+  }
+
+  statusEl.innerText = '儲存中...';
+  statusEl.className = 'dictStatus';
 
   try{
     const res = await saveBarcode({
@@ -1204,21 +1351,50 @@ async function saveDictRow(btn){
       status: data.status || '使用中'
     });
 
-    if(res.ok){
+    if(res && res.ok){
       tr.dataset.rowKey = data.singleGtin || data.boxGtin;
       statusEl.innerText = res.mergeReason ? '已合併/儲存' : '已儲存';
       statusEl.className = 'dictStatus saved';
+
+      showNotice(
+        res.mergeReason ? '資料已由後端合併並儲存。' : '資料已儲存，主檔已重新載入。',
+        'success',
+        '儲存完成'
+      );
+
       setDictRowSnapshot(tr);
       leaveDictEditMode(tr);
       await loadDictList();
       return;
     }
 
-    statusEl.innerText = res.message || '儲存失敗';
+    if(res && (res.conflict || res.duplicate || res.exists || res.found)){
+      const existing = res.data || res.existingItem || res.existing || {};
+      statusEl.innerText = '已存在，未儲存';
+      statusEl.className = 'dictStatus error';
+
+      showNotice(
+        (res.message || '此 GTIN 已由其他使用者建檔') +
+          (existing && (existing.dressingName || existing.size)
+            ? `
+
+既有資料：${describeDressingItem(existing)}`
+            : ''),
+        'warning',
+        '後端發現重複'
+      );
+
+      await loadDictList();
+      return;
+    }
+
+    statusEl.innerText = (res && res.message) || '儲存失敗';
     statusEl.className = 'dictStatus error';
+    showNotice((res && res.message) || '儲存失敗', 'error', '儲存失敗');
   } catch(err){
     statusEl.innerText = '儲存錯誤';
     statusEl.className = 'dictStatus error';
+    showNotice('儲存錯誤：' + (err.message || err), 'error', '儲存錯誤');
     console.log(err);
   }
 
@@ -1612,62 +1788,12 @@ async function addDictRow(barcode, parsed){
 
   document.getElementById('dictTbody').prepend(tr);
 
-  try{
-    let res = await lookupBarcode(scannedGtin);
+  tr.querySelector('.dictStatus').innerText = '本機主檔未找到，開始引導建檔';
+  tr.querySelector('.dictStatus').className = 'dictStatus';
 
-    if((!res || !res.found) && normalizeGtinForCompare(scannedGtin) !== scannedGtin){
-      res = await lookupBarcode(normalizeGtinForCompare(scannedGtin));
-    }
+  showNotice('本機已下載主檔未找到此 GTIN，直接進入新建檔流程。', 'warning', '未建檔');
 
-  if(res.found){
-
-    applyExistingItemToRow(
-      tr,
-      res.data,
-      res.packageType === 'box'
-        ? 'box'
-        : 'single'
-    );
-
-    const itemName =
-      res.data.dressingName || '未命名敷料';
-
-    const itemSize =
-      res.data.size || '';
-
-    const packageLabel =
-      res.packageType === 'box'
-        ? '盒裝'
-        : '單包';
-
-    showNotice(
-      `已建檔 (${packageLabel})\n${itemName}\n${itemSize}`,
-      'success',
-      '查詢完成'
-    );
-
-    tr.querySelector('.dictStatus').innerText =
-      `已建檔：${itemName} ${itemSize}`;
-
-    tr.querySelector('.dictStatus').className =
-      'dictStatus saved';
-
-    setDictRowSnapshot(tr);
-
-    leaveDictEditMode(tr);
-
-    return;
-  }
-
-    tr.querySelector('.dictStatus').innerText = '新GTIN，開始引導建檔';
-    tr.querySelector('.dictStatus').className = 'dictStatus';
-    await guideDictRowAfterScan(tr);
-  } catch(err){
-    tr.querySelector('.dictStatus').innerText = '查詢失敗，仍可手動建檔';
-    tr.querySelector('.dictStatus').className = 'dictStatus error';
-    console.log(err);
-    await guideDictRowAfterScan(tr);
-  }
+  await guideDictRowAfterScan(tr);
 }
 
 /* 排序 */
@@ -2100,6 +2226,7 @@ function parseUDI(barcode){
 }
 
 /* API */
+
 function lookupBarcode(gtin){
   if(isAppsScriptMode()){
     return new Promise(function(resolve, reject){
@@ -2312,7 +2439,7 @@ if (window.location.hostname.includes('github.io')) {
   ghFooter.innerHTML = `
     <div style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">
       <span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>
-      <span>v.2.15.3-202605290842</span>
+      <span>v.2.15.3-202605290942</span>
     </div>
   `;
   document.body.appendChild(ghFooter);
