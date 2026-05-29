@@ -1842,7 +1842,12 @@ async function saveDictRow(btn){
         removeDuplicateDictRowsForItem(mergedItem, existingTargetRow);
         moveDictRowToTop(existingTargetRow);
         flashDictRow(existingTargetRow);
-        showNotice('已儲存並合併重複列', 'success', '儲存完成');
+
+        await reloadDictListAfterDataChange(
+          '已儲存並重新讀取主檔，掃描記憶已清空',
+          '儲存完成',
+          'success'
+        );
         return;
       }
 
@@ -1855,7 +1860,12 @@ async function saveDictRow(btn){
 
       setDictRowSnapshot(tr);
       leaveDictEditMode(tr);
-      showNotice('資料已儲存', 'success', '儲存完成');
+
+      await reloadDictListAfterDataChange(
+        '資料已儲存並重新讀取主檔，掃描記憶已清空',
+        '儲存完成',
+        'success'
+      );
       return;
     }
 
@@ -2107,14 +2117,11 @@ async function batchSaveDict(){
   );
 
   if(successCount > 0 && failCount === 0){
-    await syncDictListIfChanged({
-      sameMessage: '批次儲存完成；畫面與後端一致，已略過刷新。',
-      sameTitle: '批次儲存完成',
-      changedMessage: '批次儲存完成，偵測到畫面差異，已同步。',
-      changedTitle: '批次儲存完成',
-      fallbackMessage: '批次儲存成功，但比對主檔失敗，已重新載入。',
-      fallbackTitle: '批次儲存完成'
-    });
+    await reloadDictListAfterDataChange(
+      '批次儲存完成，已重新讀取主檔並清空掃描記憶。',
+      '批次儲存完成',
+      'success'
+    );
   }
 }
 
@@ -2198,17 +2205,21 @@ async function deleteDictRow(btn){
   const data = getDictRowData(tr);
   const key = data.singleGtin || data.boxGtin || data.hospitalCode;
 
-  function removeFrontEndRow(message, title){
-    rememberDictRowBeforeRemove(tr);
+  async function removeFrontEndRow(message, title){
     removeDressingItemFromCache(data);
     tr.remove();
     ensureDictEmptyRow();
-    showNotice(message || '已移除前端列', 'success', title || '移除完成');
+
+    await reloadDictListAfterDataChange(
+      message || '已移除前端列，並重新讀取主檔',
+      title || '移除完成',
+      'success'
+    );
   }
 
   // 沒有任何可用 key：一定還沒進後端，直接刪前端列。
   if(!key){
-    removeFrontEndRow('此列沒有院內碼/GTIN，已直接移除前端列', '前端移除');
+    await removeFrontEndRow('此列沒有院內碼/GTIN，已直接移除前端列，掃描記憶已清空', '前端移除');
     return;
   }
 
@@ -2225,12 +2236,12 @@ async function deleteDictRow(btn){
     const res = await deleteBarcode(key, data.hospitalCode);
 
     if(res && res.ok && res.deleted){
-      removeFrontEndRow('後端主檔已刪除，前端列也已移除', '刪除完成');
+      await removeFrontEndRow('後端主檔已刪除，已重新讀取主檔並清空掃描記憶', '刪除完成');
       return;
     }
 
     if(res && res.ok && !res.deleted){
-      removeFrontEndRow('後端沒有這筆資料，已直接移除前端列', '前端移除');
+      await removeFrontEndRow('後端沒有這筆資料，已直接移除前端列並清空掃描記憶', '前端移除');
       return;
     }
 
@@ -2494,6 +2505,26 @@ function rememberDictRowBeforeRemove(tr){
     }
   });
 }
+
+function clearDictScanMemory(){
+  dictScanMemory = {};
+
+  document.querySelectorAll('#dictTbody tr:not(#dictEmptyRow)').forEach(function(tr){
+    delete tr.dataset.scannedGtin;
+    delete tr.dataset.gtinTarget;
+    delete tr.dataset.scannedGtinMap;
+  });
+}
+
+async function reloadDictListAfterDataChange(message, title, type){
+  clearDictScanMemory();
+  await loadDictList();
+
+  if(message){
+    showNotice(message, type || 'success', title || '完成');
+  }
+}
+
 
 function getRememberedDictScan(gtin){
   const key = normalizeGtinForCompare(gtin);
@@ -3882,7 +3913,7 @@ if (window.location.hostname.includes('github.io')) {
   ghFooter.innerHTML = `
     <div style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">
       <span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>
-      <span>v.2.15.15-202605292135</span>
+      <span>v.2.15.15-202605292143</span>
     </div>
   `;
   document.body.appendChild(ghFooter);

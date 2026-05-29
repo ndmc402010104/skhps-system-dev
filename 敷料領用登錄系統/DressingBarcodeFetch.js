@@ -764,6 +764,8 @@ function deleteDressingBarcode_(data){
       (!code && hospitalCode && rowHospitalCode === hospitalCode)
     ){
       table.sheet.deleteRow(i + 1);
+      sortDressingMasterSheet_();
+
       return {
         ok:true,
         deleted:true,
