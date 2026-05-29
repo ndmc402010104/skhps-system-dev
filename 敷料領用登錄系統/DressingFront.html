@@ -1937,6 +1937,29 @@ function hasUnsavedFrontOnlyRows(excludeTr){
   });
 }
 
+function hasPendingLocalRows(excludeTr){
+  /*
+    只要畫面上還有其他尚未完成的本地狀態，就不能整張 reload。
+    包含：
+    1. frontOnly/isNewRow：掃描新增但尚未儲存的列。
+    2. editing：正在編輯但尚未完成的既有列。
+
+    原因：reload 只會帶回後端資料，會洗掉前端暫存列，
+    也會殺掉正在編輯中的欄位值。
+  */
+  return Array.from(document.querySelectorAll('#dictTbody tr:not(#dictEmptyRow)')).some(function(row){
+    if(excludeTr && row === excludeTr){
+      return false;
+    }
+
+    return (
+      row.dataset.frontOnly === '1' ||
+      row.dataset.isNewRow === '1' ||
+      row.classList.contains('editing')
+    );
+  });
+}
+
 function finishDictLocalChange(message, title, type){
   ensureDictEmptyRow();
 
@@ -1961,7 +1984,7 @@ async function saveDictRow(btn){
     return;
   }
 
-  const shouldReloadAfterSave = !hasUnsavedFrontOnlyRows(tr);
+  const shouldReloadAfterSave = !hasPendingLocalRows(tr);
 
   setDictTableMode('saving', '儲存中...');
   const data = getDictRowData(tr);
@@ -2505,10 +2528,10 @@ async function deleteDictRow(btn){
     const res = await deleteBarcode(key, data.hospitalCode);
 
     if(res && res.ok && res.deleted){
-      if(hasUnsavedFrontOnlyRows(tr)){
+      if(hasPendingLocalRows(tr)){
         removeDressingItemFromCache(data);
         tr.remove();
-        finishDictLocalChange('後端主檔已刪除；因仍有未儲存新增列，暫不重新讀取主檔', '刪除完成', 'success');
+        finishDictLocalChange('後端主檔已刪除；因仍有未完成編輯或新增列，暫不重新讀取主檔', '刪除完成', 'success');
       } else {
         await removeFrontEndRowAndReload('後端主檔已刪除，已重新讀取主檔並清空掃描記憶', '刪除完成');
       }
@@ -2516,9 +2539,9 @@ async function deleteDictRow(btn){
     }
 
     if(res && res.ok && !res.deleted){
-      if(hasUnsavedFrontOnlyRows(tr)){
+      if(hasPendingLocalRows(tr)){
         tr.remove();
-        finishDictLocalChange('後端沒有這筆資料，已直接移除前端列；其他新增列已保留', '前端移除', 'success');
+        finishDictLocalChange('後端沒有這筆資料，已直接移除前端列；其他未完成編輯或新增列已保留', '前端移除', 'success');
       } else {
         await removeFrontEndRowAndReload('後端沒有這筆資料，已直接移除前端列並清空掃描記憶', '前端移除');
       }
@@ -4376,7 +4399,7 @@ if (window.location.hostname.includes('github.io')) {
   ghFooter.innerHTML = `
     <div style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">
       <span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>
-      <span>v.2.16.7-202605292258</span>
+      <span>v.2.16.8-202605292308</span>
     </div>
   `;
   document.body.appendChild(ghFooter);
