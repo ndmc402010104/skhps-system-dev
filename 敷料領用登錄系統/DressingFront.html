@@ -915,6 +915,113 @@ let dictLoaded = false;
 let draggedRow = null;
 let dictScanMemory = {};
 
+const DICT_TABLE_STATE = {
+  mode:'closed', // closed | loading | clean | editing | adding | saving | deleting | refreshing | reordering | error
+  cacheUpdatedAt:0,
+  lastMessage:''
+};
+
+function isDictTableBusy(){
+  return ['loading','saving','deleting','refreshing'].indexOf(DICT_TABLE_STATE.mode) >= 0;
+}
+
+function setDictTableMode(mode, message){
+  DICT_TABLE_STATE.mode = mode || 'clean';
+  DICT_TABLE_STATE.lastMessage = message || '';
+  renderDictTableControls();
+}
+
+function invalidateDressingMasterCache(reason){
+  dressingMasterCache = [];
+  DICT_TABLE_STATE.cacheUpdatedAt = 0;
+  clearDictScanMemory();
+  if(reason){
+    console.log('invalidate dressing cache:', reason);
+  }
+}
+
+function getDictDirtyCount(){
+  try{
+    return getDirtyDictRows().length;
+  } catch(error){
+    return 0;
+  }
+}
+
+function getDictNextIdleMode(){
+  if(isReorderMode){
+    return 'reordering';
+  }
+
+  const rows = Array.from(document.querySelectorAll('#dictTbody tr:not(#dictEmptyRow)'));
+  const hasNewRow = rows.some(function(tr){ return tr.dataset.isNewRow === '1'; });
+  if(hasNewRow){
+    return 'adding';
+  }
+
+  return getDictDirtyCount() > 0 ? 'editing' : 'clean';
+}
+
+function syncDictTableModeFromRows(){
+  if(isDictTableBusy() || DICT_TABLE_STATE.mode === 'error'){
+    renderDictTableControls();
+    return;
+  }
+
+  setDictTableMode(getDictNextIdleMode());
+}
+
+function renderDictTableControls(){
+  const busy = isDictTableBusy();
+  const dirtyCount = getDictDirtyCount();
+  const hasDirtyRows = dirtyCount > 0;
+  const ready = dictLoaded && DICT_TABLE_STATE.mode !== 'error';
+  const blockNormalActions = busy || isReorderMode;
+
+  const status = document.getElementById('dictLoadStatus');
+  if(status && DICT_TABLE_STATE.lastMessage){
+    status.innerText = DICT_TABLE_STATE.lastMessage;
+  }
+
+  const scanBtn = document.getElementById('dictScanBtn');
+  const testSingleBtn = document.getElementById('testHydrocleanSingleBtn');
+  const testBoxBtn = document.getElementById('testHydrocleanBoxBtn');
+  const reorderBtn = document.getElementById('reorderBtn');
+  const saveOrderBtn = document.getElementById('saveOrderBtn');
+  const batchSaveBtn = document.getElementById('batchSaveBtn');
+
+  if(scanBtn) scanBtn.disabled = !ready || blockNormalActions || hasDirtyRows;
+  if(testSingleBtn) testSingleBtn.disabled = !ready || blockNormalActions || hasDirtyRows;
+  if(testBoxBtn) testBoxBtn.disabled = !ready || blockNormalActions || hasDirtyRows;
+
+  if(reorderBtn){
+    reorderBtn.disabled = !ready || busy || hasDirtyRows;
+    if(!isReorderMode){
+      reorderBtn.title = hasDirtyRows ? '有未儲存變更時不能排序' : '';
+    }
+  }
+
+  if(saveOrderBtn){
+    saveOrderBtn.disabled = !ready || busy;
+  }
+
+  if(batchSaveBtn){
+    batchSaveBtn.style.display = (!isReorderMode && dirtyCount >= 2) ? 'inline-block' : 'none';
+    batchSaveBtn.disabled = !ready || busy;
+  }
+
+  document.querySelectorAll('#dictTbody tr:not(#dictEmptyRow)').forEach(function(tr){
+    const rowEditing = tr.classList.contains('editing');
+    tr.querySelectorAll('input, select').forEach(function(input){
+      input.disabled = busy || !rowEditing;
+    });
+
+    tr.querySelectorAll('.dictActionBtn, .dictGtinScanBtn').forEach(function(btn){
+      btn.disabled = busy || isReorderMode;
+    });
+  });
+}
+
 // HydroClean cavity 測試用完整碼：等你拿到完整碼後，只要改這兩行即可。
 const TEST_HYDROCLEAN_CAVITY_SINGLE_CODE = '(01)04052199255484(11)250324(17)280301(10)500113156';
 const TEST_HYDROCLEAN_CAVITY_BOX_CODE = '(01)04052199255491(11)250324(17)280301(10)500113156';
@@ -1069,12 +1176,6 @@ function isAppsScriptMode(){
 }
 
 function setDictLoadState(state, message){
-  const scanBtn = document.getElementById('dictScanBtn');
-  const testSingleBtn = document.getElementById('testHydrocleanSingleBtn');
-  const testBoxBtn = document.getElementById('testHydrocleanBoxBtn');
-  const reorderBtn = document.getElementById('reorderBtn');
-  const saveOrderBtn = document.getElementById('saveOrderBtn');
-  const batchSaveBtn = document.getElementById('batchSaveBtn');
   const status = document.getElementById('dictLoadStatus');
   const ready = state === 'ready';
 
@@ -1082,31 +1183,25 @@ function setDictLoadState(state, message){
     status.innerText = message || '';
   }
 
-  if(scanBtn){
-    scanBtn.disabled = !ready;
-  }
-
-  if(testSingleBtn){
-    testSingleBtn.disabled = !ready;
-  }
-
-  if(testBoxBtn){
-    testBoxBtn.disabled = !ready;
-  }
-
-  if(reorderBtn){
-    reorderBtn.disabled = !ready;
-  }
-
-  if(saveOrderBtn){
-    saveOrderBtn.disabled = !ready;
-  }
-
-  if(batchSaveBtn){
-    batchSaveBtn.disabled = !ready;
-  }
-
   dictLoaded = ready;
+
+  if(state === 'loading'){
+    setDictTableMode('loading', message || '正在讀取敷料主檔');
+    return;
+  }
+
+  if(state === 'error'){
+    setDictTableMode('error', message || '敷料主檔讀取失敗');
+    return;
+  }
+
+  if(ready){
+    DICT_TABLE_STATE.cacheUpdatedAt = Date.now();
+    setDictTableMode(getDictNextIdleMode(), message || '已讀取敷料主檔');
+    return;
+  }
+
+  setDictTableMode('closed', message || '尚未讀取敷料主檔');
 }
 
 function openDressingDict(){
@@ -1213,6 +1308,7 @@ function createDictRow(item, isNew){
     tr.dataset.originalData = JSON.stringify({});
     tr.dataset.dirty = '1';
     updateDictMainButton(tr);
+    setDictTableMode('adding');
   } else {
     setDictRowSnapshot(tr);
     leaveDictEditMode(tr);
@@ -1263,18 +1359,7 @@ function getDirtyDictRows(){
 }
 
 function updateBatchSaveButtonVisibility(){
-  const btn = document.getElementById('batchSaveBtn');
-  if(!btn){
-    return;
-  }
-
-  if(isReorderMode){
-    btn.style.display = 'none';
-    return;
-  }
-
-  const dirtyCount = getDirtyDictRows().length;
-  btn.style.display = dirtyCount >= 2 ? 'inline-block' : 'none';
+  renderDictTableControls();
 }
 
 function bindDictRowDirtyWatch(tr){
@@ -1288,12 +1373,14 @@ function bindDictRowDirtyWatch(tr){
     input.addEventListener('input', function(){
       if(tr.classList.contains('editing')){
         updateDictMainButton(tr);
+        syncDictTableModeFromRows();
       }
     });
 
     input.addEventListener('change', function(){
       if(tr.classList.contains('editing')){
         updateDictMainButton(tr);
+        syncDictTableModeFromRows();
       }
     });
   });
@@ -1582,11 +1669,18 @@ function restoreDictRowSnapshot(tr){
 }
 
 function enterDictEditMode(tr){
+  if(isDictTableBusy() || isReorderMode){
+    showNotice('表格處理中，暫時不能編輯', 'warning', '請稍候');
+    return;
+  }
+
   tr.classList.add('editing');
   setDictInputsEnabled(tr, true);
   setDictRowSnapshot(tr);
   bindDictRowDirtyWatch(tr);
   updateDictMainButton(tr);
+
+  setDictTableMode(getDictNextIdleMode());
 
   const nameInput = tr.querySelector('.dict-name');
   if(nameInput){
@@ -1600,6 +1694,7 @@ function leaveDictEditMode(tr){
 
   setDictInputsEnabled(tr, false);
   updateDictMainButton(tr);
+  syncDictTableModeFromRows();
 }
 
 async function handleDictMainButton(btn){
@@ -1802,6 +1897,10 @@ async function syncDictListIfChanged(options){
 
 async function saveDictRow(btn){
   const tr = btn.closest('tr');
+  if(isDictTableBusy()){
+    return;
+  }
+  setDictTableMode('saving', '儲存中...');
   const data = getDictRowData(tr);
   const originalData = getOriginalDictRowData(tr) || {};
   const statusEl = tr.querySelector('.dictStatus');
@@ -1814,6 +1913,7 @@ async function saveDictRow(btn){
   if(!hasKeyField){
     statusEl.innerText = '院內碼、單包GTIN、包裝GTIN至少填一項';
     statusEl.className = 'dictStatus error';
+    setDictTableMode(getDictNextIdleMode());
     return;
   }
 
@@ -1842,6 +1942,7 @@ async function saveDictRow(btn){
 
     btn.disabled = false;
     updateDictMainButton(tr);
+    setDictTableMode(getDictNextIdleMode());
     return;
   }
 
@@ -1924,6 +2025,7 @@ async function saveDictRow(btn){
 
   btn.disabled = false;
   updateDictMainButton(tr);
+  setDictTableMode(getDictNextIdleMode());
 }
 
 function buildDictSavePayloadFromRow(tr){
@@ -2069,6 +2171,10 @@ async function saveDictRowWithoutReload(tr){
 }
 
 async function batchSaveDict(){
+  if(isDictTableBusy()){
+    return;
+  }
+
   const editingRows = Array.from(document.querySelectorAll('#dictTbody tr.editing'));
 
   if(editingRows.length === 0){
@@ -2101,6 +2207,8 @@ async function batchSaveDict(){
 
   const btn = document.getElementById('batchSaveBtn');
   const originalText = btn ? btn.innerText : '';
+
+  setDictTableMode('saving', '批次儲存中...');
 
   if(btn){
     btn.innerText = '批次儲存中...';
@@ -2146,6 +2254,8 @@ async function batchSaveDict(){
     btn.innerText = originalText;
     btn.disabled = false;
   }
+
+  setDictTableMode(getDictNextIdleMode());
 
   const messages = [];
   if(successCount > 0) messages.push('儲存：' + successCount + ' 筆');
@@ -2216,6 +2326,10 @@ function removeDressingItemFromCache(data){
 }
 
 async function deleteDictRow(btn){
+  if(isDictTableBusy()){
+    return;
+  }
+
   const tr = btn.closest('tr');
 
   // 編輯狀態下，右邊按鈕不是刪除，而是「取消編輯」。
@@ -2265,6 +2379,7 @@ async function deleteDictRow(btn){
     return;
   }
 
+  setDictTableMode('deleting', '刪除中...');
   btn.disabled = true;
   btn.innerText = '刪除中...';
 
@@ -2295,6 +2410,7 @@ async function deleteDictRow(btn){
 
   btn.disabled = false;
   updateDictSecondaryButton(tr);
+  setDictTableMode(getDictNextIdleMode());
 }
 
 function ensureDictEmptyRow(){
@@ -2308,6 +2424,11 @@ function ensureDictEmptyRow(){
 }
 
 function openDictGtinScanner(button){
+  if(isDictTableBusy() || isReorderMode){
+    showNotice('表格處理中，暫時不能掃描', 'warning', '請稍候');
+    return;
+  }
+
   const tr = button ? button.closest('tr') : null;
   const input = button ? button.parentNode.querySelector('input') : null;
 
@@ -2329,6 +2450,11 @@ function openDictGtinScanner(button){
 }
 
 function startDictScanner(){
+  if(isDictTableBusy() || isReorderMode || getDictDirtyCount() > 0){
+    showNotice('請先儲存或取消目前變更，再開啟掃描', 'warning', '尚有未完成變更');
+    return;
+  }
+
   if(!dictLoaded || dressingMasterCache === null){
     showNotice('請先等敷料主檔讀取完成，再開啟掃描。', 'warning');
     return;
@@ -2561,7 +2687,8 @@ function clearDictScanMemory(){
 }
 
 async function reloadDictListAfterDataChange(message, title, type){
-  clearDictScanMemory();
+  invalidateDressingMasterCache('data changed');
+  setDictTableMode('refreshing', '資料已變更，重新讀取主檔中...');
   await loadDictList();
 
   if(message){
@@ -3237,6 +3364,15 @@ async function addDictRow(barcode, parsed){
 
 /* 排序 */
 function toggleReorderMode(){
+  if(isDictTableBusy()){
+    return;
+  }
+
+  if(getDictDirtyCount() > 0){
+    showNotice('請先儲存或取消編輯，再更改排序', 'warning', '尚有未儲存變更');
+    return;
+  }
+
   if(isReorderMode){
     cancelReorderMode();
     return;
@@ -3246,12 +3382,15 @@ function toggleReorderMode(){
   if(rows.length === 0) return;
 
   isReorderMode = true;
+  setDictTableMode('reordering', '排序模式中；拖曳完成後按儲存排序');
   initialOrder = Array.from(rows).map(r => getDictRowKey(r));
 
   document.getElementById('dictTable').classList.add('reorder-mode');
   document.getElementById('reorderBtn').innerText = '返回';
   document.getElementById('saveOrderBtn').style.display = 'none';
   document.getElementById('batchSaveBtn').style.display = 'none';
+
+  renderDictTableControls();
 
   rows.forEach(row => {
     row.setAttribute('draggable','true');
@@ -3288,6 +3427,7 @@ function cancelReorderMode(){
 
   rows.sort((a,b) => initialOrder.indexOf(getDictRowKey(a)) - initialOrder.indexOf(getDictRowKey(b)));
   rows.forEach(r => tbody.appendChild(r));
+  syncDictTableModeFromRows();
 }
 
 function checkOrderChanged(){
@@ -3295,6 +3435,7 @@ function checkOrderChanged(){
   const currentOrder = Array.from(rows).map(r => getDictRowKey(r));
   const changed = JSON.stringify(currentOrder) !== JSON.stringify(initialOrder);
   document.getElementById('saveOrderBtn').style.display = changed ? 'inline-block' : 'none';
+  renderDictTableControls();
 }
 
 function handleDragStart(e){
@@ -3378,11 +3519,16 @@ function handleTouchEnd(){
 }
 
 async function saveDictOrder(){
+  if(isDictTableBusy()){
+    return;
+  }
+
   const rows = document.querySelectorAll('#dictTbody tr:not(#dictEmptyRow)');
   const barcodes = Array.from(rows).map(tr => getDictRowKey(tr)).filter(Boolean);
   if(barcodes.length === 0) return;
 
   const btn = document.getElementById('saveOrderBtn');
+  setDictTableMode('saving', '排序儲存中...');
   btn.innerText = '儲存中...';
   btn.disabled = true;
 
@@ -3394,6 +3540,7 @@ async function saveDictOrder(){
       document.getElementById('reorderBtn').innerText = '更改排序';
       updateBatchSaveButtonVisibility();
       document.getElementById('dictTable').classList.remove('reorder-mode');
+      invalidateDressingMasterCache('order saved');
       await loadDictList();
     } else {
       showNotice('排序儲存失敗', 'error');
@@ -3404,6 +3551,7 @@ async function saveDictOrder(){
 
   btn.innerText = '儲存排序';
   btn.disabled = false;
+  setDictTableMode(getDictNextIdleMode());
 }
 
 /* 領用區 */
@@ -3957,7 +4105,7 @@ if (window.location.hostname.includes('github.io')) {
   ghFooter.innerHTML = `
     <div style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">
       <span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>
-      <span>v.2.15.16-202605292153</span>
+      <span>v.2.16.0-202605292201</span>
     </div>
   `;
   document.body.appendChild(ghFooter);
