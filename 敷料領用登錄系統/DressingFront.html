@@ -1177,7 +1177,7 @@ function createDictRow(item, isNew){
       </div>
     </td>
     <td><input class="dict-box-qty" value="${escapeHtml(item.boxQuantity || '')}" placeholder="可之後補"></td>
-    <td><input class="dict-category" value="${escapeHtml(item.category || '')}" placeholder="分類"></td>
+    <td><input class="dict-category" value="${escapeHtml(item.category || '自費')}" placeholder="分類"></td>
     <td>${makeStatusSelect(item.status || '使用中')}</td>
     <td style="white-space:nowrap;">
       <span class="dragHandle">☰</span>
@@ -2422,7 +2422,7 @@ async function addDictRow(barcode, parsed){
     gtin:'',
     boxGtin:'',
     boxQuantity:'',
-    category:'',
+    category:'自費',
     status:'使用中',
     scanMeta:scanMeta
   }, true);
@@ -3007,7 +3007,7 @@ function saveBarcode(data){
     gtin:data.singleGtin || data.gtin || '',
     dressingName:data.dressingName || '',
     size:data.size || '',
-    category:data.category || '',
+    category:data.category || '自費',
     boxGtin:data.boxGtin || '',
     boxQuantity:data.boxQuantity || '',
     status:data.status || '使用中'
@@ -3161,7 +3161,7 @@ if (window.location.hostname.includes('github.io')) {
   ghFooter.innerHTML = `
     <div style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">
       <span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>
-      <span>v.2.15.10-202605291837</span>
+      <span>v.2.15.11-202605291854</span>
     </div>
   `;
   document.body.appendChild(ghFooter);
@@ -3178,6 +3178,7 @@ function normalizeTextForCompare(value){
 
 </body>
 </html>
+
 
 
 

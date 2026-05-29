@@ -240,7 +240,7 @@ function lookupDressingBarcode_(gtin){
     hospitalCode: '',
     dressingName: '',
     size: '',
-    category: '',
+    category: '自費',
     boxGtin: '',
     boxQuantity: '',
     status: '使用中'
@@ -539,9 +539,11 @@ function saveDressingBarcode_(data){
       data.boxQuantity,
       existingObj ? existingObj.boxQuantity : ''
     ),
-    category: keepSubmittedValue_(
-      data.category,
-      existingObj ? existingObj.category : ''
+    category: (
+      keepSubmittedValue_(
+        data.category,
+        existingObj ? existingObj.category : ''
+      ) || '自費'
     ),
     status: keepSubmittedValue_(
       data.status,
