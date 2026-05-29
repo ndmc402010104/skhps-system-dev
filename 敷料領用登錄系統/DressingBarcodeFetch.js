@@ -165,6 +165,18 @@ function normalizeDressingCode_(value){
 
 }
 
+
+function normalizeDressingOrderKey_(value){
+  const raw = String(value || '').trim();
+  const code = normalizeDressingCode_(raw);
+
+  if(/^\d+$/.test(raw.replace(/\s+/g, ''))){
+    return code;
+  }
+
+  return raw;
+}
+
 function normalizeDressingText_(value){
   return String(value || '')
     .trim()
@@ -368,10 +380,15 @@ function saveDressingBarcode_(data){
   const hospitalCode = String(data.hospitalCode || '').trim();
   const hospitalCodeCol = table.headers.indexOf(DRESSING_KEY_TO_DISPLAY_MAP.hospitalCode);
 
-  if(!gtin && !boxGtin){
+  const hasKeyField =
+    hospitalCode ||
+    gtin ||
+    boxGtin;
+
+  if(!hasKeyField){
     return {
       ok:false,
-      message:'empty gtin'
+      message:'院內碼、單包GTIN、包裝GTIN至少填一項'
     };
   }
 
@@ -566,6 +583,9 @@ function listDressingBarcode_(){
     throw new Error('missing gtin header');
   }
 
+  const hospitalCodeCol =
+    table.headers.indexOf(DRESSING_KEY_TO_DISPLAY_MAP.hospitalCode);
+
   const data = [];
 
   for(let i = 1; i < table.values.length; i++){
@@ -579,7 +599,12 @@ function listDressingBarcode_(){
         ? normalizeDressingCode_(row[table.boxGtinCol])
         : '';
 
-    if(!gtin && !boxGtin){
+    const hospitalCode =
+      hospitalCodeCol >= 0
+        ? String(row[hospitalCodeCol] || '').trim()
+        : '';
+
+    if(!hospitalCode && !gtin && !boxGtin){
       continue;
     }
 
@@ -604,14 +629,19 @@ function deleteDressingBarcode_(data){
       data.boxGtin
     );
 
-  if(!code){
+  const hospitalCode =
+    String(data.hospitalCode || '').trim();
+
+  if(!code && !hospitalCode){
     return {
       ok:false,
-      message:'empty gtin'
+      message:'empty key'
     };
   }
 
   const table = getDressingTable_();
+  const hospitalCodeCol =
+    table.headers.indexOf(DRESSING_KEY_TO_DISPLAY_MAP.hospitalCode);
 
   if(table.values.length <= 1){
     return {
@@ -632,12 +662,21 @@ function deleteDressingBarcode_(data){
         ? normalizeDressingCode_(table.values[i][table.boxGtinCol])
         : '';
 
-    if(rowSingle === code || rowBox === code){
+    const rowHospitalCode =
+      hospitalCodeCol >= 0
+        ? String(table.values[i][hospitalCodeCol] || '').trim()
+        : '';
+
+    if(
+      (code && (rowSingle === code || rowBox === code)) ||
+      (!code && hospitalCode && rowHospitalCode === hospitalCode)
+    ){
       table.sheet.deleteRow(i + 1);
       return {
         ok:true,
         deleted:true,
-        gtin:code
+        gtin:code,
+        hospitalCode:hospitalCode
       };
     }
   }
@@ -654,7 +693,7 @@ function reorderDressingBarcode_(data){
     String(data.barcodes || '')
       .split(',')
       .map(function(item){
-        return normalizeDressingCode_(item);
+        return normalizeDressingOrderKey_(item);
       })
       .filter(function(item){
         return item.length > 0;
@@ -687,6 +726,8 @@ function reorderDressingBarcode_(data){
     table.values.slice(1);
 
   const rowMap = {};
+  const hospitalCodeCol =
+    table.headers.indexOf(DRESSING_KEY_TO_DISPLAY_MAP.hospitalCode);
 
   dataRows.forEach(function(row){
     const singleCode =
@@ -697,8 +738,13 @@ function reorderDressingBarcode_(data){
         ? normalizeDressingCode_(row[table.boxGtinCol])
         : '';
 
+    const hospitalCode =
+      hospitalCodeCol >= 0
+        ? String(row[hospitalCodeCol] || '').trim()
+        : '';
+
     const key =
-      singleCode || boxCode;
+      singleCode || boxCode || hospitalCode;
 
     if(key){
       rowMap[key] = row;

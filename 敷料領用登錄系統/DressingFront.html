@@ -901,7 +901,7 @@ const TEST_HYDROCLEAN_CAVITY_SINGLE_CODE = '(01)04052199255484(11)250324(17)2803
 const TEST_HYDROCLEAN_CAVITY_BOX_CODE = '(01)04052199255491(11)250324(17)280301(10)500113156';
 
 function escapeHtml(value){
-  return String(value ?? '')
+  return String(value || '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
@@ -1178,19 +1178,23 @@ function createDictRow(item, isNew){
   return tr;
 }
 
-function getDictRowData(tr){
-  return {
-    hospitalCode: tr.querySelector('.dict-hospital-code')?.value.trim() || '',
-    dressingName: tr.querySelector('.dict-name')?.value.trim() || '',
-    size: tr.querySelector('.dict-size')?.value.trim() || '',
-    singleGtin: tr.querySelector('.dict-single-gtin')?.value.trim() || '',
-    boxGtin: tr.querySelector('.dict-box-gtin')?.value.trim() || '',
-    boxQuantity: tr.querySelector('.dict-box-qty')?.value.trim() || '',
-    category: tr.querySelector('.dict-category')?.value.trim() || '',
-    status: tr.querySelector('.dict-status')?.value.trim() || ''
-  };
+function getRowInputValue(tr, selector){
+  const input = tr ? tr.querySelector(selector) : null;
+  return input ? String(input.value || '').trim() : '';
 }
 
+function getDictRowData(tr){
+  return {
+    hospitalCode: getRowInputValue(tr, '.dict-hospital-code'),
+    dressingName: getRowInputValue(tr, '.dict-name'),
+    size: getRowInputValue(tr, '.dict-size'),
+    singleGtin: getRowInputValue(tr, '.dict-single-gtin'),
+    boxGtin: getRowInputValue(tr, '.dict-box-gtin'),
+    boxQuantity: getRowInputValue(tr, '.dict-box-qty'),
+    category: getRowInputValue(tr, '.dict-category'),
+    status: getRowInputValue(tr, '.dict-status')
+  };
+}
 function setDictRowSnapshot(tr){
   tr.dataset.originalData = JSON.stringify(getDictRowData(tr));
   tr.dataset.dirty = '0';
@@ -1333,13 +1337,17 @@ async function handleDictMainButton(btn){
 
 
 async function checkBarcodeConflictBeforeSave(data, originalData){
-  const originalSingle = originalData?.singleGtin || originalData?.gtin || '';
-  const originalBox = originalData?.boxGtin || '';
+  originalData = originalData || {};
+
+  const originalSingle = originalData.singleGtin || originalData.gtin || '';
+  const originalBox = originalData.boxGtin || '';
 
   const targets = [
     { type:'single', gtin:data.singleGtin || '' },
     { type:'box', gtin:data.boxGtin || '' }
-  ].filter(item => item.gtin);
+  ].filter(function(item){
+    return item.gtin;
+  });
 
   for(const target of targets){
     const isOriginal =
@@ -1354,13 +1362,26 @@ async function checkBarcodeConflictBeforeSave(data, originalData){
       const res = await lookupBarcode(target.gtin);
 
       if(res && res.found && res.data){
+        const sameHospitalCode =
+          data.hospitalCode &&
+          res.data.hospitalCode &&
+          String(data.hospitalCode).trim() === String(res.data.hospitalCode).trim();
+
+        const sameNameSize =
+          normalizeTextForCompare(data.dressingName) === normalizeTextForCompare(res.data.dressingName) &&
+          normalizeTextForCompare(data.size) === normalizeTextForCompare(res.data.size);
+
+        if(sameHospitalCode || sameNameSize){
+          continue;
+        }
+
         return {
           conflict:true,
           type:target.type,
           gtin:target.gtin,
           packageType:res.packageType || target.type,
           data:res.data,
-          message:`此 GTIN 已由其他資料使用：${describeDressingItem(res.data)}`
+          message:'此 GTIN 已由其他資料使用：' + describeDressingItem(res.data)
         };
       }
     } catch(error){
@@ -1370,7 +1391,6 @@ async function checkBarcodeConflictBeforeSave(data, originalData){
 
   return { conflict:false };
 }
-
 function getOriginalDictRowData(tr){
   try{
     return JSON.parse(tr.dataset.originalData || '{}');
@@ -1383,18 +1403,16 @@ function getOriginalDictRowData(tr){
 async function saveDictRow(btn){
   const tr = btn.closest('tr');
   const data = getDictRowData(tr);
-  const originalData = getOriginalDictRowData(tr);
+  const originalData = getOriginalDictRowData(tr) || {};
   const statusEl = tr.querySelector('.dictStatus');
 
-  if(!data.singleGtin && !data.boxGtin){
-    statusEl.innerText = '缺少GTIN';
-    statusEl.className = 'dictStatus error';
-    return;
-  }
+  const hasKeyField =
+    data.hospitalCode ||
+    data.singleGtin ||
+    data.boxGtin;
 
-  const isBoxOnly = data.boxGtin && !data.singleGtin;
-  if(!isBoxOnly && !data.dressingName){
-    statusEl.innerText = '缺少名稱';
+  if(!hasKeyField){
+    statusEl.innerText = '院內碼、單包GTIN、包裝GTIN至少填一項';
     statusEl.className = 'dictStatus error';
     return;
   }
@@ -1404,16 +1422,20 @@ async function saveDictRow(btn){
   btn.disabled = true;
   btn.innerText = '...';
 
-  const conflict = await checkBarcodeConflictBeforeSave(data, originalData);
+  let conflict = { conflict:false };
 
-  if(conflict.conflict){
+  try{
+    conflict = await checkBarcodeConflictBeforeSave(data, originalData);
+  } catch(error){
+    console.log('儲存前查重失敗，繼續交由後端判斷', error);
+  }
+
+  if(conflict && conflict.conflict){
     statusEl.innerText = '已存在，未儲存';
     statusEl.className = 'dictStatus error';
 
     showNotice(
-      `${conflict.message}
-
-請重新載入主檔，或改用既有資料。`,
+      String(conflict.message || '此資料已存在') + '\n\n請重新載入主檔，或改用既有資料。',
       'warning',
       '儲存前發現重複'
     );
@@ -1430,19 +1452,24 @@ async function saveDictRow(btn){
     const res = await saveBarcode({
       originalGtin: originalData.singleGtin || originalData.gtin || '',
       originalBoxGtin: originalData.boxGtin || '',
-      hospitalCode: data.hospitalCode,
-      singleGtin: data.singleGtin,
-      gtin: data.singleGtin,
-      dressingName: data.dressingName,
-      size: data.size,
-      category: data.category,
-      boxGtin: data.boxGtin,
-      boxQuantity: data.boxQuantity,
+      hospitalCode: data.hospitalCode || '',
+      singleGtin: data.singleGtin || '',
+      gtin: data.singleGtin || '',
+      dressingName: data.dressingName || '',
+      size: data.size || '',
+      category: data.category || '',
+      boxGtin: data.boxGtin || '',
+      boxQuantity: data.boxQuantity || '',
       status: data.status || '使用中'
     });
 
     if(res && res.ok){
-      tr.dataset.rowKey = data.singleGtin || data.boxGtin;
+      tr.dataset.rowKey =
+        data.hospitalCode ||
+        data.singleGtin ||
+        data.boxGtin ||
+        '';
+
       statusEl.innerText = res.mergeReason ? '已合併/儲存' : '已儲存';
       statusEl.className = 'dictStatus saved';
 
@@ -1458,29 +1485,10 @@ async function saveDictRow(btn){
       return;
     }
 
-    if(res && (res.conflict || res.duplicate || res.exists || res.found)){
-      const existing = res.data || res.existingItem || res.existing || {};
-      statusEl.innerText = '已存在，未儲存';
-      statusEl.className = 'dictStatus error';
-
-      showNotice(
-        (res.message || '此 GTIN 已由其他使用者建檔') +
-          (existing && (existing.dressingName || existing.size)
-            ? `
-
-既有資料：${describeDressingItem(existing)}`
-            : ''),
-        'warning',
-        '後端發現重複'
-      );
-
-      await loadDictList();
-      return;
-    }
-
     statusEl.innerText = (res && res.message) || '儲存失敗';
     statusEl.className = 'dictStatus error';
     showNotice((res && res.message) || '儲存失敗', 'error', '儲存失敗');
+
   } catch(err){
     statusEl.innerText = '儲存錯誤';
     statusEl.className = 'dictStatus error';
@@ -1556,9 +1564,9 @@ async function deleteDictRow(btn){
   }
 
   const data = getDictRowData(tr);
-  const gtin = data.singleGtin || data.boxGtin;
+  const key = data.singleGtin || data.boxGtin || data.hospitalCode;
 
-  if(!gtin){
+  if(!key){
     tr.remove();
     ensureDictEmptyRow();
     return;
@@ -1568,7 +1576,7 @@ async function deleteDictRow(btn){
   btn.innerText = '刪除中...';
 
   try{
-    const res = await deleteBarcode(gtin);
+    const res = await deleteBarcode(key, data.hospitalCode);
 
     if(res.ok && res.deleted){
       tr.remove();
@@ -1584,7 +1592,6 @@ async function deleteDictRow(btn){
   btn.disabled = false;
   btn.innerText = '刪除';
 }
-
 function ensureDictEmptyRow(){
   const tbody = document.getElementById('dictTbody');
   if(tbody && tbody.querySelectorAll('tr').length === 0){
@@ -1643,23 +1650,26 @@ function getScannedGtinFromRow(tr){
 function getExistingDressingItems(){
   const cache = Array.isArray(dressingMasterCache) ? dressingMasterCache : [];
 
-  const domItems = Array.from(document.querySelectorAll('#dictTbody tr:not(#dictEmptyRow)')).map(tr => ({
-    hospitalCode: tr.querySelector('.dict-hospital-code')?.value || '',
-    dressingName: tr.querySelector('.dict-name')?.value || '',
-    size: tr.querySelector('.dict-size')?.value || '',
-    singleGtin: tr.querySelector('.dict-single-gtin')?.value || '',
-    gtin: tr.querySelector('.dict-single-gtin')?.value || '',
-    boxGtin: tr.querySelector('.dict-box-gtin')?.value || '',
-    boxQuantity: tr.querySelector('.dict-box-qty')?.value || '',
-    category: tr.querySelector('.dict-category')?.value || '',
-    status: tr.querySelector('.dict-status')?.value || '使用中'
-  }));
+  const rows = Array.from(document.querySelectorAll('#dictTbody tr:not(#dictEmptyRow)'));
 
-  return cache.concat(domItems).filter(item =>
-    String(item.singleGtin || item.gtin || item.boxGtin || item.dressingName || '').trim()
-  );
+  const domItems = rows.map(function(tr){
+    return {
+      hospitalCode: getRowInputValue(tr, '.dict-hospital-code'),
+      dressingName: getRowInputValue(tr, '.dict-name'),
+      size: getRowInputValue(tr, '.dict-size'),
+      singleGtin: getRowInputValue(tr, '.dict-single-gtin'),
+      gtin: getRowInputValue(tr, '.dict-single-gtin'),
+      boxGtin: getRowInputValue(tr, '.dict-box-gtin'),
+      boxQuantity: getRowInputValue(tr, '.dict-box-qty'),
+      category: getRowInputValue(tr, '.dict-category'),
+      status: getRowInputValue(tr, '.dict-status') || '使用中'
+    };
+  });
+
+  return cache.concat(domItems).filter(function(item){
+    return String(item.hospitalCode || item.singleGtin || item.gtin || item.boxGtin || item.dressingName || '').trim();
+  });
 }
-
 async function pickValueByPrompt(title, values, defaultValue){
   if(!values || values.length === 0){
     const val = await openAppDialog({
@@ -1710,12 +1720,32 @@ async function pickValueByPrompt(title, values, defaultValue){
 }
 
 function findExistingItemByNameAndSize(name, size){
-  const cleanName = String(name || '').trim();
-  const cleanSize = String(size || '').trim();
+  const cleanName = normalizeTextForCompare(name);
+  const cleanSize = normalizeTextForCompare(size);
 
   return getExistingDressingItems().find(function(item){
-    return String(item.dressingName || '').trim() === cleanName &&
-      String(item.size || '').trim() === cleanSize;
+    return normalizeTextForCompare(item.dressingName) === cleanName &&
+      normalizeTextForCompare(item.size) === cleanSize;
+  });
+}
+
+function findExistingRowByNameAndSize(name, size, excludeTr){
+  const cleanName = normalizeTextForCompare(name);
+  const cleanSize = normalizeTextForCompare(size);
+
+  return Array.from(document.querySelectorAll('#dictTbody tr:not(#dictEmptyRow)')).find(function(row){
+    if(excludeTr && row === excludeTr){
+      return false;
+    }
+
+    if(row.dataset.isNewRow === '1'){
+      return false;
+    }
+
+    const data = getDictRowData(row);
+
+    return normalizeTextForCompare(data.dressingName) === cleanName &&
+      normalizeTextForCompare(data.size) === cleanSize;
   });
 }
 
@@ -1729,19 +1759,18 @@ function findExistingItemByGtin(gtin){
 
 function findExistingRowByGtin(gtin){
   return Array.from(document.querySelectorAll('#dictTbody tr:not(#dictEmptyRow)')).find(function(tr){
-    return sameGtin(tr.querySelector('.dict-single-gtin')?.value || '', gtin) ||
-      sameGtin(tr.querySelector('.dict-box-gtin')?.value || '', gtin) ||
+    return sameGtin(getRowInputValue(tr, '.dict-single-gtin'), gtin) ||
+      sameGtin(getRowInputValue(tr, '.dict-box-gtin'), gtin) ||
       sameGtin(tr.dataset.scannedGtin || '', gtin) ||
       sameGtin(tr.dataset.rowKey || '', gtin);
   });
 }
-
 function describeDressingItem(item){
-  const name = item?.dressingName || '未命名敷料';
-  const size = item?.size ? ' ' + item.size : '';
-  return `${name}${size}`;
+  item = item || {};
+  const name = item.dressingName || '未命名敷料';
+  const size = item.size ? ' ' + item.size : '';
+  return name + size;
 }
-
 function applyExistingItemToRow(tr, item, keepScannedAs){
   const scannedGtin = getScannedGtinFromRow(tr);
 
@@ -1834,7 +1863,7 @@ async function guideDictRowAfterScan(tr, forcedTarget){
 
   const sizesForName = Array.from(new Set(
     allItems
-      .filter(item => String(item.dressingName || '').trim() === String(name).trim())
+      .filter(item => normalizeTextForCompare(item.dressingName) === normalizeTextForCompare(name))
       .map(item => String(item.size || '').trim())
       .filter(Boolean)
   )).sort();
@@ -1853,7 +1882,93 @@ async function guideDictRowAfterScan(tr, forcedTarget){
   tr.querySelector('.dict-size').value = size;
 
   const existingItem = findExistingItemByNameAndSize(name, size);
+
   if(existingItem){
+    const existingRow = findExistingRowByNameAndSize(name, size, tr);
+
+    if(existingRow){
+      const originalBeforePatch = getDictRowData(existingRow);
+
+      existingRow.classList.add('editing');
+      setDictInputsEnabled(existingRow, true);
+      bindDictRowDirtyWatch(existingRow);
+      existingRow.dataset.originalData = JSON.stringify(originalBeforePatch);
+      delete existingRow.dataset.isNewRow;
+
+      if(target === 'single'){
+        const input = existingRow.querySelector('.dict-single-gtin');
+        if(input){
+          input.disabled = false;
+          input.value = scannedGtin;
+          input.dispatchEvent(new Event('input', { bubbles:true }));
+          input.dispatchEvent(new Event('change', { bubbles:true }));
+        }
+      }
+
+      if(target === 'box'){
+        const boxInput = existingRow.querySelector('.dict-box-gtin');
+        if(boxInput){
+          boxInput.disabled = false;
+          boxInput.value = scannedGtin;
+          boxInput.dispatchEvent(new Event('input', { bubbles:true }));
+          boxInput.dispatchEvent(new Event('change', { bubbles:true }));
+        }
+
+        const qtyInput = existingRow.querySelector('.dict-box-qty');
+        const currentQty = qtyInput ? qtyInput.value || '' : '';
+
+        const qty = await showInputDialog(
+          '步驟 4：一盒數量',
+          '請輸入一盒數量\n\n可以先略過，之後再補。',
+          currentQty
+        );
+
+        if(qty === null){
+          updateDictMainButton(existingRow);
+          return false;
+        }
+
+        if(qtyInput){
+          qtyInput.disabled = false;
+          qtyInput.value = String(qty).trim();
+          qtyInput.dispatchEvent(new Event('input', { bubbles:true }));
+          qtyInput.dispatchEvent(new Event('change', { bubbles:true }));
+        }
+      }
+
+      existingRow.dataset.scannedGtin = scannedGtin;
+      existingRow.dataset.rowKey =
+        existingRow.querySelector('.dict-single-gtin').value ||
+        existingRow.querySelector('.dict-box-gtin').value ||
+        scannedGtin;
+
+      updateDictMainButton(existingRow);
+
+      const statusEl = existingRow.querySelector('.dictStatus');
+      if(statusEl){
+        statusEl.innerText = '已找到既有敷料，請確認後儲存修改';
+        statusEl.className = 'dictStatus';
+      }
+
+      existingRow.scrollIntoView({ behavior:'smooth', block:'center' });
+      existingRow.classList.remove('highlight-flash');
+      void existingRow.offsetWidth;
+      existingRow.classList.add('highlight-flash');
+
+      tr.remove();
+      ensureDictEmptyRow();
+
+      showNotice(
+        target === 'box'
+          ? '已將盒裝GTIN填入既有資料列'
+          : '已將單包GTIN填入既有資料列',
+        'success',
+        describeDressingItem(existingItem)
+      );
+
+      return true;
+    }
+
     applyExistingItemToRow(tr, existingItem, target);
   }
 
@@ -2413,19 +2528,18 @@ function reorderBarcode(gtins){
   return callDressingBarcodeApi({ action:'reorderDressingBarcode', barcodes:gtins });
 }
 
-function deleteBarcode(gtin){
+function deleteBarcode(gtin, hospitalCode){
   if(isAppsScriptMode()){
     return new Promise(function(resolve, reject){
       google.script.run
         .withSuccessHandler(resolve)
         .withFailureHandler(reject)
-        .deleteDressingBarcode({ gtin:gtin });
+        .deleteDressingBarcode({ gtin:gtin, hospitalCode:hospitalCode || '' });
     });
   }
 
-  return callDressingBarcodeApi({ action:'deleteDressingBarcode', gtin:gtin });
+  return callDressingBarcodeApi({ action:'deleteDressingBarcode', gtin:gtin, hospitalCode:hospitalCode || '' });
 }
-
 function saveBarcode(data){
   if(isAppsScriptMode()){
     return new Promise(function(resolve, reject){
@@ -2438,6 +2552,8 @@ function saveBarcode(data){
 
   return callDressingBarcodeApi({
     action:'saveDressingBarcode',
+    originalGtin:data.originalGtin || '',
+    originalBoxGtin:data.originalBoxGtin || '',
     hospitalCode:data.hospitalCode,
     singleGtin:data.singleGtin || data.gtin,
     gtin:data.singleGtin || data.gtin,
@@ -2567,9 +2683,20 @@ function submitUse(){
 
 <script>
 if (window.location.hostname.includes('github.io')) {
+  document.body.style.padding = '0';
+  document.body.style.display = 'flex';
+  document.body.style.flexDirection = 'column';
+  document.body.style.minHeight = '100vh';
+
+  const mainShell = document.querySelector('.shell');
+  if (mainShell) {
+    mainShell.style.flex = '1';
+    mainShell.style.padding = '24px';
+    mainShell.style.boxSizing = 'border-box';
+  }
   const ghHeader = document.createElement('header');
   ghHeader.className = 'appHeader';
-  ghHeader.style.cssText = 'position:fixed; top:0; left:0; right:0; z-index:20; display:flex; justify-content:space-between; align-items:center; gap:18px; height:76px; margin:0; padding:0 max(24px,calc((100vw - 1400px) / 2 + 24px)); box-sizing:border-box; border-bottom:1px solid #dbe4ef; background:rgba(248,251,255,.92); backdrop-filter:blur(10px); box-shadow:0 8px 24px rgba(15,23,42,.06);';
+  ghHeader.style.cssText = 'position:relative; flex-shrink:0; z-index:20; display:flex; justify-content:space-between; align-items:center; gap:18px; height:76px; margin:0; padding:0 max(24px,calc((100vw - 1400px) / 2 + 24px)); box-sizing:border-box; border-bottom:1px solid #dbe4ef; background:rgba(248,251,255,.92); backdrop-filter:blur(10px); box-shadow:0 8px 24px rgba(15,23,42,.06);';
   ghHeader.innerHTML = `
     <div class="brand" onclick="goHome()" style="display:flex; align-items:center; gap:14px; cursor:pointer;">
       <div class="brandMark" style="width:46px; height:46px; display:grid; place-items:center; border-radius:14px; color:#ffffff; font-size:22px; font-weight:800; background:linear-gradient(135deg,#2563eb,#0f766e); box-shadow:0 12px 24px rgba(37,99,235,.2);">S</div>
@@ -2582,16 +2709,29 @@ if (window.location.hostname.includes('github.io')) {
   document.body.prepend(ghHeader);
 
   const ghFooter = document.createElement('div');
-  ghFooter.style.cssText = 'position:fixed; left:0; right:0; bottom:0; z-index:10000; height:42px; display:flex; align-items:center; justify-content:center; padding:0 16px; box-sizing:border-box; background:rgba(248,251,255,.94); border-top:1px solid rgba(148,163,184,.38); box-shadow:0 -8px 24px rgba(15,23,42,.08); backdrop-filter:blur(10px);';
+  ghFooter.style.cssText = 'position:relative; margin-top:auto; flex-shrink:0; z-index:10000; height:42px; display:flex; align-items:center; justify-content:center; padding:0 16px; box-sizing:border-box; background:rgba(248,251,255,.94); border-top:1px solid rgba(148,163,184,.38); box-shadow:0 -8px 24px rgba(15,23,42,.08); backdrop-filter:blur(10px);';
   ghFooter.innerHTML = `
     <div style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">
       <span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>
-      <span>v.2.15.3-202605291051</span>
+      <span>v.2.15.5-202605291153</span>
     </div>
   `;
   document.body.appendChild(ghFooter);
+}
+
+function normalizeTextForCompare(value){
+  return String(value || '')
+    .trim()
+    .replace(/\s+/g, '')
+    .replace(/[×Xx＊]/g, '*')
+    .toLowerCase();
 }
 </script>
 
 </body>
 </html>
+
+
+
+
+
