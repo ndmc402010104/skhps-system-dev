@@ -255,9 +255,14 @@ input:not([type="radio"]){ width:100%; }
 }
 
 .dictGtinScanBtn{
+  display:none;
   flex:0 0 auto;
   padding:7px 9px;
   font-size:13px;
+}
+
+tr.editing .dictGtinScanBtn{
+  display:inline-block;
 }
 
 .cameraBtn{
@@ -988,56 +993,6 @@ function syncDictTableModeFromRows(){
   setDictTableMode(getDictNextIdleMode());
 }
 
-function getFrontOnlyDictRows(excludeTr){
-  return Array.from(document.querySelectorAll('#dictTbody tr:not(#dictEmptyRow)')).filter(function(row){
-    if(excludeTr && row === excludeTr){
-      return false;
-    }
-
-    return row.dataset.frontOnly === '1' || row.dataset.isNewRow === '1';
-  });
-}
-
-function hasFrontOnlyDictRows(excludeTr){
-  return getFrontOnlyDictRows(excludeTr).length > 0;
-}
-
-function finishDictLocalMutation(message, title, type){
-  ensureDictEmptyRow();
-  syncDictTableModeFromRows();
-  updateBatchSaveButtonVisibility();
-
-  if(message){
-    showNotice(message, type || 'success', title || '完成');
-  }
-}
-
-async function reloadDictListAfterDataChangePreservingFrontOnly(excludeTr, message, title, type){
-  /*
-    只要畫面上仍有未儲存新增列，就不能整張表 reload，
-    否則 loadDictList() 會用後端主檔重建 tbody，把前端暫存列洗掉。
-  */
-  if(hasFrontOnlyDictRows(excludeTr)){
-    finishDictLocalMutation(
-      (message || '資料已更新') + '；已保留未儲存新增列',
-      title || '已局部更新',
-      type || 'success'
-    );
-
-    return {
-      reloaded:false,
-      preservedFrontOnly:true
-    };
-  }
-
-  await reloadDictListAfterDataChange(message, title, type);
-
-  return {
-    reloaded:true,
-    preservedFrontOnly:false
-  };
-}
-
 function renderDictTableControls(){
   const busy = isDictTableBusy();
   const dirtyCount = getDictDirtyCount();
@@ -1087,8 +1042,13 @@ function renderDictTableControls(){
       input.disabled = busy || !rowEditing;
     });
 
-    tr.querySelectorAll('.dictActionBtn, .dictGtinScanBtn').forEach(function(btn){
+    tr.querySelectorAll('.dictActionBtn').forEach(function(btn){
       btn.disabled = busy || isReorderMode;
+    });
+
+    tr.querySelectorAll('.dictGtinScanBtn').forEach(function(btn){
+      btn.style.display = rowEditing ? '' : 'none';
+      btn.disabled = busy || isReorderMode || !rowEditing;
     });
   });
 }
@@ -1967,11 +1927,35 @@ async function syncDictListIfChanged(options){
 }
 
 
+function hasUnsavedFrontOnlyRows(excludeTr){
+  return Array.from(document.querySelectorAll('#dictTbody tr:not(#dictEmptyRow)')).some(function(row){
+    if(excludeTr && row === excludeTr){
+      return false;
+    }
+
+    return row.dataset.frontOnly === '1' || row.dataset.isNewRow === '1';
+  });
+}
+
+function finishDictLocalChange(message, title, type){
+  ensureDictEmptyRow();
+  syncDictTableModeFromRows();
+  updateBatchSaveButtonVisibility();
+
+  if(message){
+    showNotice(message, type || 'success', title || '完成');
+  }
+}
+
+
 async function saveDictRow(btn){
   const tr = btn.closest('tr');
   if(isDictTableBusy()){
     return;
   }
+
+  const shouldReloadAfterSave = !hasUnsavedFrontOnlyRows(tr);
+
   setDictTableMode('saving', '儲存中...');
   const data = getDictRowData(tr);
   const originalData = getOriginalDictRowData(tr) || {};
@@ -2059,12 +2043,19 @@ async function saveDictRow(btn){
         moveDictRowToTop(existingTargetRow);
         flashDictRow(existingTargetRow);
 
-        await reloadDictListAfterDataChangePreservingFrontOnly(
-          existingTargetRow,
-          '已儲存並同步主檔',
-          '儲存完成',
-          'success'
-        );
+        if(shouldReloadAfterSave){
+          await reloadDictListAfterDataChange(
+            '已儲存並重新讀取主檔，掃描記憶已清空',
+            '儲存完成',
+            'success'
+          );
+        } else {
+          finishDictLocalChange(
+            '已儲存；因仍有未儲存新增列，暫不重新讀取主檔',
+            '儲存完成',
+            'success'
+          );
+        }
         return;
       }
 
@@ -2079,12 +2070,19 @@ async function saveDictRow(btn){
       delete tr.dataset.frontOnly;
       leaveDictEditMode(tr);
 
-      await reloadDictListAfterDataChangePreservingFrontOnly(
-        tr,
-        '資料已儲存並同步主檔',
-        '儲存完成',
-        'success'
-      );
+      if(shouldReloadAfterSave){
+        await reloadDictListAfterDataChange(
+          '資料已儲存並重新讀取主檔，掃描記憶已清空',
+          '儲存完成',
+          'success'
+        );
+      } else {
+        finishDictLocalChange(
+          '已儲存；因仍有未儲存新增列，暫不重新讀取主檔',
+          '儲存完成',
+          'success'
+        );
+      }
       return;
     }
 
@@ -2462,14 +2460,13 @@ async function deleteDictRow(btn){
     );
   }
 
-  async function removePersistedFrontEndRowAfterBackendChange(message, title){
+  async function removeFrontEndRowAndReload(message, title){
     removeDressingItemFromCache(data);
-    forgetDictScanMemoryForRow(tr);
     tr.remove();
+    ensureDictEmptyRow();
 
-    await reloadDictListAfterDataChangePreservingFrontOnly(
-      null,
-      message || '已移除資料並同步主檔',
+    await reloadDictListAfterDataChange(
+      message || '已移除前端列，並重新讀取主檔',
       title || '移除完成',
       'success'
     );
@@ -2501,12 +2498,23 @@ async function deleteDictRow(btn){
     const res = await deleteBarcode(key, data.hospitalCode);
 
     if(res && res.ok && res.deleted){
-      await removePersistedFrontEndRowAfterBackendChange('後端主檔已刪除並同步主檔', '刪除完成');
+      if(hasUnsavedFrontOnlyRows(tr)){
+        removeDressingItemFromCache(data);
+        tr.remove();
+        finishDictLocalChange('後端主檔已刪除；因仍有未儲存新增列，暫不重新讀取主檔', '刪除完成', 'success');
+      } else {
+        await removeFrontEndRowAndReload('後端主檔已刪除，已重新讀取主檔並清空掃描記憶', '刪除完成');
+      }
       return;
     }
 
     if(res && res.ok && !res.deleted){
-      await removePersistedFrontEndRowAfterBackendChange('後端沒有這筆資料，已移除前端列', '前端移除');
+      if(hasUnsavedFrontOnlyRows(tr)){
+        tr.remove();
+        finishDictLocalChange('後端沒有這筆資料，已直接移除前端列；其他新增列已保留', '前端移除', 'success');
+      } else {
+        await removeFrontEndRowAndReload('後端沒有這筆資料，已直接移除前端列並清空掃描記憶', '前端移除');
+      }
       return;
     }
 
@@ -2546,10 +2554,11 @@ function openDictGtinScanner(button){
   }
 
   if(!tr.classList.contains('editing')){
-    enterDictEditMode(tr);
-  } else {
-    setDictInputsEnabled(tr, true);
+    showNotice('請先按「編輯」後再掃描此列GTIN', 'warning', '請先編輯');
+    return;
   }
+
+  setDictInputsEnabled(tr, true);
 
   activeDictGtinInput = input;
   scannerMode = 'dictField';
@@ -4360,7 +4369,7 @@ if (window.location.hostname.includes('github.io')) {
   ghFooter.innerHTML = `
     <div style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">
       <span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>
-      <span>v.2.16.5-202605292245</span>
+      <span>v.2.16.6-202605292253</span>
     </div>
   `;
   document.body.appendChild(ghFooter);
@@ -4377,3 +4386,4 @@ function normalizeTextForCompare(value){
 
 </body>
 </html>
+
