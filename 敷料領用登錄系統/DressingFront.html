@@ -436,6 +436,9 @@ input:not([type="radio"]){ width:100%; }
   flex-direction:column;
   gap:8px;
   margin-top:12px;
+  max-height:55vh;
+  overflow-y:auto;
+  padding-right:4px;
 }
 
 .appDialogChoiceBtn{
@@ -1638,33 +1641,53 @@ function getExistingDressingItems(){
   );
 }
 
-function buildNumberedPrompt(title, values){
-  if(!values || values.length === 0){
-    return title + '\n\n目前沒有既有選項，請直接輸入。';
-  }
-
-  return title + '\n\n' +
-    values.map(function(value, index){
-      return (index + 1) + '. ' + value;
-    }).join('\n') +
-    '\n\n請輸入編號，或直接輸入新文字。';
-}
-
 async function pickValueByPrompt(title, values, defaultValue){
-  const answer = await showInputDialog(title, buildNumberedPrompt(title, values), defaultValue || '');
-
-  if(answer === null){
-    return null;
+  if(!values || values.length === 0){
+    const val = await openAppDialog({
+      title: title,
+      message: '目前沒有既有選項，請直接輸入：',
+      input: true,
+      defaultValue: defaultValue || '',
+      okText: '確定',
+      cancelText: '取消'
+    });
+    return (val === null || val === false) ? null : String(val).trim();
   }
 
-  const trimmed = String(answer).trim();
-  const index = Number(trimmed);
+  while(true){
+    const choices = values.map(function(v){ return { label: v, value: v }; });
+    choices.push({ label: '➕ 自行輸入...', value: '__MANUAL_INPUT__' });
 
-  if(Number.isInteger(index) && index >= 1 && index <= values.length){
-    return values[index - 1];
+    const choice = await openAppDialog({
+      title: title,
+      message: '請選擇現有項目，或點擊最下方「自行輸入...」：',
+      input: false,
+      choices: choices,
+      cancelText: '取消'
+    });
+
+    if(choice === null || choice === false){
+      return null;
+    }
+
+    if(choice === '__MANUAL_INPUT__'){
+      const manualVal = await openAppDialog({
+        title: title + ' (自行輸入)',
+        message: '請輸入內容：',
+        input: true,
+        defaultValue: defaultValue || '',
+        okText: '確定',
+        cancelText: '返回選項'
+      });
+
+      if(manualVal === null || manualVal === false){
+        continue;
+      }
+      return String(manualVal).trim();
+    }
+
+    return choice;
   }
-
-  return trimmed;
 }
 
 function findExistingItemByNameAndSize(name, size){
@@ -2544,7 +2567,7 @@ if (window.location.hostname.includes('github.io')) {
   ghFooter.innerHTML = `
     <div style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">
       <span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>
-      <span>v.2.15.3-202605291009</span>
+      <span>v.2.15.3-202605291011</span>
     </div>
   `;
   document.body.appendChild(ghFooter);
@@ -2553,6 +2576,7 @@ if (window.location.hostname.includes('github.io')) {
 
 </body>
 </html>
+
 
 
 
