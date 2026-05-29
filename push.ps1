@@ -261,11 +261,11 @@ function Update-ReadmeCurrentVersions {
 
   if ($updated -cne $content) {
     Set-Content -Path $ReadmePath -Value $updated -Encoding UTF8
-    Write-Host "README current versions updated." -ForegroundColor Green
+    Write-Host "README 當前版本號已更新。" -ForegroundColor Green
     return $true
   }
 
-  Write-Host "README current versions unchanged." -ForegroundColor DarkGray
+  Write-Host "README 當前版本號未變更。" -ForegroundColor DarkGray
   return $false
 }
 

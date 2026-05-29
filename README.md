@@ -1,539 +1,293 @@
-﻿param(
-  [ValidateSet('ask','push','push-github','deploy')]
-  [string]$Action = 'ask',
+﻿# 新光整形外科科室系統
 
-  [ValidateSet('ask','major','minor','patch','none')]
-  [string]$Bump = 'ask',
+Plastic Surgery Department System
 
-  [string[]]$Note = @(),
+Google Apps Script × Google Sheets × GitHub
 
-  [switch]$NoSaveAllPrompt,
+---
 
-  [switch]$NoReadmePrompt,
+# 當前版本號
+正式版: v2.17.0-202605292351
+Github: v2.17.0-202605292351
 
-  [switch]$NoGitHubPrompt
-)
+## 系統簡介
 
-chcp 65001 | Out-Null
+本專案為新光整形外科科內自行開發之資訊平台。
 
-[Console]::InputEncoding =
-  [System.Text.UTF8Encoding]::new()
+目前包含：
 
-[Console]::OutputEncoding =
-  [System.Text.UTF8Encoding]::new()
+- 晨會 QR 簽到系統
+- 敷料建檔系統
+- 敷料領用登錄系統
+- GitHub 自動化部署流程
 
-$OutputEncoding =
-  [System.Text.UTF8Encoding]::new()
+未來規劃：
 
-$ErrorActionPreference = 'Stop'
+- 敷料庫存系統
+- 批號與效期管理
+- Patient List MVP
+- PWA / App 化
 
-. (Join-Path $PSScriptRoot 'clasp-tools.ps1')
+---
 
-$rootPath = $PSScriptRoot
+# 文件導航
 
-function Test-CommandExists {
-  param(
-    [Parameter(Mandatory = $true)]
-    [string]$Name
-  )
+## 敷料系統
 
-  return [bool](Get-Command $Name -ErrorAction SilentlyContinue)
-}
+### Regression Checklist
 
-function Read-MenuChoice {
-  param(
-    [Parameter(Mandatory = $true)]
-    [string]$Message,
+- [敷料建檔 Regression Checklist](敷料領用登錄系統/Dressing_table_regression_checklist.md)
 
-    [Parameter(Mandatory = $true)]
-    [hashtable]$Choices,
+用途：
 
-    [Parameter(Mandatory = $true)]
-    [string]$Default
-  )
+- 每次修改敷料建檔功能後進行回歸測試
+- 每修正一個 Bug 必須新增對應測項
+- Merge 回 master 前必須完成核心測試與壓力測試
 
-  while ($true) {
-    $answer = Read-Host $Message
+---
 
-    if ([string]::IsNullOrWhiteSpace($answer)) {
-      return $Default
-    }
+## 開發沿革
 
-    $key = $answer.Trim().ToLower()
+- [README-v2.16.9-202605292314](archive/README-v2.16.9-202605292314.md)
 
-    if ($Choices.ContainsKey($key)) {
-      return $Choices[$key]
-    }
+記錄：
 
-    Write-Host "請輸入其中一個選項：$($Choices.Keys -join ', ')；或直接按 Enter 使用預設值。" -ForegroundColor Yellow
-  }
-}
+- 晨會系統發展歷程
+- 敷料系統啟動
+- GitHub 自動化流程建立
+- Table State Foundation 建立前後歷史
 
-function Read-YesNo {
-  param(
-    [Parameter(Mandatory = $true)]
-    [string]$Message,
+---
 
-    [bool]$Default = $true
-  )
+# 最新里程碑
 
-  $suffix = if ($Default) { '[Y]' } else { '[N]' }
+## v2.17.0 Table State Foundation
 
-  while ($true) {
-    $answer = Read-Host "$Message $suffix"
+完成：
 
-    if ([string]::IsNullOrWhiteSpace($answer)) {
-      return $Default
-    }
+- 新增與編輯共存
+- 前端暫存列（frontOnly）
+- Scan Memory 管理
+- 掃描取消流程
+- 離開頁面保護
+- Regression Checklist 建立
+- Branch 開發流程建立
 
-    if ($answer -match '^[Yy]') {
-      return $true
-    }
+---
 
-    if ($answer -match '^[Nn]') {
-      return $false
-    }
+# 開發原則
 
-    Write-Host '請輸入 Y 或 N。' -ForegroundColor Yellow
-  }
-}
+```text
+發現 Bug
+↓
+修正 Bug
+↓
+加入 Regression Checklist
+↓
+重新測試
+↓
+Merge
+```
 
-function Request-ManualSaveBeforeContinue {
-  Write-Host "無法自動儲存，請先在 VS Code 手動儲存檔案。" -ForegroundColor Yellow
-
-  $continue =
-    Read-Host "手動儲存後按 Enter 繼續；輸入 N 取消"
-
-  if ($continue -match '^[Nn]$') {
-    Write-Host "已取消" -ForegroundColor Red
-    exit 1
-  }
-}
-
-function Save-AllOpenFiles {
-  if ($NoSaveAllPrompt) {
-    return
-  }
-
-  Write-Host ""
-
-  if (-not (Read-YesNo -Message "要先儲存所有 VS Code 開啟中的檔案嗎？" -Default $true)) {
-    return
-  }
-
-  if (Test-CommandExists -Name 'code') {
-    try {
-      code --reuse-window --command workbench.action.files.saveAll
-
-      if ($LASTEXITCODE -ne 0) {
-        throw "VS Code 儲存全部指令失敗。"
-      }
-
-      Start-Sleep -Milliseconds 800
-
-      Write-Host "已送出 VS Code 儲存全部指令" -ForegroundColor Green
-    }
-    catch {
-      Request-ManualSaveBeforeContinue
-    }
-  }
-  else {
-    Write-Host "找不到 code 指令，所以無法自動執行 VS Code 儲存全部。" -ForegroundColor Yellow
-    Request-ManualSaveBeforeContinue
-  }
-}
-
-function Invoke-ClaspCapture {
-  param(
-    [Parameter(Mandatory = $true)]
-    [string[]]$Arguments
-  )
-
-  Push-Location -LiteralPath $rootPath
-
-  try {
-    $output = & clasp @Arguments 2>&1
-    $exitCode = $LASTEXITCODE
-  }
-  finally {
-    Pop-Location
-  }
-
-  if ($exitCode -ne 0) {
-    throw ($output -join "`n")
-  }
-
-  if ($output) {
-    Write-Host ($output -join "`n")
-  }
-
-  return @($output)
-}
-
-function Get-ClaspVersionNumberFromOutput {
-  param(
-    [Parameter(Mandatory = $true)]
-    [string[]]$Output
-  )
-
-  foreach ($line in $Output) {
-    if ($line -match '(?i)\bversion\s+(\d+)\b') {
-      return $Matches[1]
-    }
-  }
-
-  foreach ($line in $Output) {
-    if ($line -match '\b(\d+)\b') {
-      return $Matches[1]
-    }
-  }
-
-  throw "無法從 clasp 輸出解析 Apps Script version number：$($Output -join ' ')"
-}
-
-
-function Format-ReadmeVersionText {
-  param(
-    [string]$Version
-  )
-
-  if ([string]::IsNullOrWhiteSpace($Version)) {
-    return ''
-  }
-
-  $value = $Version.Trim()
-
-  if ($value -match '^v') {
-    return $value
-  }
-
-  return "v$value"
-}
-
-function Update-ReadmeCurrentVersions {
-  param(
-    [Parameter(Mandatory = $true)]
-    [string]$ReadmePath,
-
-    [string]$ProdVersion,
-
-    [string]$TestVersion,
-
-    [string]$GitHubVersion
-  )
-
-  if (-not (Test-Path -LiteralPath $ReadmePath)) {
-    Write-Host "找不到 README.md，略過當前版本號更新。" -ForegroundColor Yellow
-    return $false
-  }
-
-  $content =
-    Get-Content -Path $ReadmePath -Raw -Encoding UTF8
-
-  $updated = $content
-
-  if (-not [string]::IsNullOrWhiteSpace($ProdVersion)) {
-    $prodText = Format-ReadmeVersionText -Version $ProdVersion
-    $updated = [regex]::Replace(
-      $updated,
-      '(?m)^正式版\s*[:：]\s*.*$',
-      "正式版: $prodText"
-    )
-  }
-
-  if (-not [string]::IsNullOrWhiteSpace($TestVersion)) {
-    $testText = Format-ReadmeVersionText -Version $TestVersion
-    $updated = [regex]::Replace(
-      $updated,
-      '(?m)^測試版\s*[:：]\s*.*$',
-      "測試版: $testText"
-    )
-  }
-
-  if (-not [string]::IsNullOrWhiteSpace($GitHubVersion)) {
-    $githubText = Format-ReadmeVersionText -Version $GitHubVersion
-    $updated = [regex]::Replace(
-      $updated,
-      '(?m)^Github\s*[:：]\s*.*$',
-      "Github: $githubText"
-    )
-  }
-
-  if ($updated -cne $content) {
-    Set-Content -Path $ReadmePath -Value $updated -Encoding UTF8
-    Write-Host "README 當前版本號已更新。" -ForegroundColor Green
-    return $true
-  }
-
-  Write-Host "README 當前版本號未變更。" -ForegroundColor DarkGray
-  return $false
-}
-
-
-function Push-GitHubIfRequested {
-  param(
-    [pscustomobject]$Config,
-    [string]$Action,
-    [string]$ReadmePath
-  )
-
-  if ($NoGitHubPrompt -or $Action -eq 'push') {
-    if ($Action -eq 'push') {
-      Write-Host ""
-      Write-Host "依據選項，略過上傳 GitHub。" -ForegroundColor Yellow
-    }
-    return
-  }
-
-  Write-Host ""
-  Write-Host "==========================" -ForegroundColor Cyan
-  Write-Host "GitHub commit" -ForegroundColor Cyan
-  Write-Host "=========================="
-  Write-Host "自動將最新版號與 API 網址同步至 GitHub。"
-
-  $defaultMsg = if ($Config) { "Bump version to v$($Config.Version)" } else { "Update version" }
-  
-  $commitMessage =
-    Read-Host "Git commit message（直接按 Enter 使用 '$defaultMsg'，輸入 skip 略過）"
-
-  if ($commitMessage.Trim().ToLower() -eq 'skip') {
-    Write-Host ""
-    Write-Host "已略過 GitHub commit" -ForegroundColor Yellow
-    return
-  }
-
-  if ([string]::IsNullOrWhiteSpace($commitMessage)) {
-    $commitMessage = $defaultMsg
-  }
-
-  if ($Config -and $ReadmePath) {
-    Update-ReadmeCurrentVersions `
-      -ReadmePath $ReadmePath `
-      -GitHubVersion $Config.Version | Out-Null
-  }
-
-  if (-not (Test-CommandExists -Name 'git')) {
-    throw "找不到 git 指令，無法 commit 到 GitHub。"
-  }
-
-  Push-Location $rootPath
-
-  try {
-    git add .
-
-    if ($LASTEXITCODE -ne 0) {
-      throw "git add 失敗。"
-    }
-
-    # 加入延遲讓 OneDrive 有時間解除暫存檔鎖定
-    Start-Sleep -Seconds 1
-
-    $stagedFiles = git diff --cached --name-only
-
-    if ($LASTEXITCODE -ne 0) {
-      throw "無法讀取已 staged 的 git 變更。"
-    }
-
-    if (-not $stagedFiles) {
-      Write-Host ""
-      Write-Host "沒有 staged 變更，已略過 GitHub commit。" -ForegroundColor Yellow
-      return
-    }
-
-    git commit -m $commitMessage
-
-    if ($LASTEXITCODE -ne 0) {
-      throw "git commit 失敗。"
-    }
-
-    # 加入延遲讓 OneDrive 有時間解除暫存檔鎖定
-    Start-Sleep -Seconds 2
-
-    git push
-
-    if ($LASTEXITCODE -ne 0) {
-      Write-Host ""
-      Write-Host "git push 發生錯誤。如果遇到終端機權限或版本分歧問題，請嘗試手動執行：" -ForegroundColor Yellow
-      Write-Host "git push -f origin master" -ForegroundColor Cyan
-      throw "git push 失敗。"
-    }
-
-    Write-Host ""
-    Write-Host "GitHub updated" -ForegroundColor Green
-  }
-  finally {
-    Pop-Location
-  }
-}
-
-Save-AllOpenFiles
-
-if ($env:APP_VERSION_BUMP) {
-  $Bump = $env:APP_VERSION_BUMP
-}
-
-if ($Action -eq 'ask') {
-  Write-Host ""
-  $Action = Read-MenuChoice `
-    -Message "這次要做什麼？1=僅推送測試版(不傳GitHub)，2=推送測試版並傳GitHub，3=Deploy正式版(傳GitHub) [1]" `
-    -Choices @{
-      '1' = 'push'
-      '2' = 'push-github'
-      '3' = 'deploy'
-      'p' = 'push'
-      'push' = 'push'
-      'pg' = 'push-github'
-      'push-github' = 'push-github'
-      'd' = 'deploy'
-      'deploy' = 'deploy'
-      'prod' = 'deploy'
-    } `
-    -Default 'push'
-}
-
-if ($Bump -eq 'ask') {
-  Write-Host ""
-  $Bump = Read-MenuChoice `
-    -Message "要更新哪種版本？P=patch 小修，M=minor 新功能，A=major 大改，N=none 不升版 [N]" `
-    -Choices @{
-      'p' = 'patch'
-      'patch' = 'patch'
-      'm' = 'minor'
-      'minor' = 'minor'
-      'a' = 'major'
-      'major' = 'major'
-      'n' = 'none'
-      'none' = 'none'
-    } `
-    -Default 'none'
-}
-
-$defaultReadme = $Bump -in @('minor','major')
-
-$writeReadme = $false
-
-if (-not $NoReadmePrompt) {
-  Write-Host ""
-  $writeReadme = Read-YesNo -Message "要寫入 README 版本日誌嗎？none/patch 預設 N，minor/major 預設 Y" -Default $defaultReadme
-}
-
-if ($writeReadme -and -not ($Note -and ($Note -join '').Trim())) {
-  Write-Host ""
-  $noteText = Read-Host "README 版本日誌要寫什麼？（留空 = 自動摘要）"
-
-  if (-not [string]::IsNullOrWhiteSpace($noteText)) {
-    $Note = @($noteText)
-  }
-}
-
-$sourceVersion = Get-CurrentAppVersion -RootPath $rootPath
-$version = New-AppVersion -RootPath $rootPath -Bump $Bump
-$defaultEnv = if ($Action -eq 'deploy') { 'prod' } else { 'dev' }
-
-$appConfig =
-  Sync-AppVersion `
-    -RootPath $rootPath `
-    -Version $version `
-    -DefaultEnv $defaultEnv
-
-$readmePath =
-  Join-Path $rootPath 'README.md'
-
-$prodVersionForReadme = $null
-if ($Action -eq 'deploy') {
-  $prodVersionForReadme = $appConfig.Version
-}
-
-Update-ReadmeCurrentVersions `
-  -ReadmePath $readmePath `
-  -ProdVersion $prodVersionForReadme `
-  -TestVersion $appConfig.Version | Out-Null
-
-# 自動更新 DressingFront.html 中的 GitHub 版號
-$dressingFrontPath = Join-Path $rootPath '敷料領用登錄系統\DressingFront.html'
-if (Test-Path -LiteralPath $dressingFrontPath) {
-  $dfContent = Get-Content -Path $dressingFrontPath -Raw -Encoding UTF8
-  $dfNewContent = [regex]::Replace($dfContent, '(<span[^>]*>GitHub 版</span>\s*<span>v\.)[^<]+(</span>)', "`${1}$($appConfig.Version)`$2")
-  
-  # 自動寫入真實的 Apps Script API 部署網址
-  if ($appConfig.DeploymentId) {
-    $realUrl = "https://script.google.com/macros/s/$($appConfig.DeploymentId)/exec"
-    $dfNewContent = [regex]::Replace($dfNewContent, "(APP_ENTRY_URL\s*=\s*')https://script\.google\.com/macros/s/[^/']+/exec(')", "`${1}$realUrl`$2")
-  }
-
-  if ($dfContent -cne $dfNewContent) {
-    Set-Content -Path $dressingFrontPath -Value $dfNewContent -Encoding UTF8
-    Write-Host "Updated GitHub version & API URL in DressingFront.html to v.$($appConfig.Version)" -ForegroundColor Green
-  }
-}
-
-if ($writeReadme) {
-  $releaseType = if ($Action -eq 'deploy') { 'prod' } else { 'dev' }
-
-  $readmeUpdated =
-    Update-ReadmeVersionLog `
-      -RootPath $rootPath `
-      -Version $version `
-      -ReleaseType $releaseType `
-      -SourceVersion $sourceVersion `
-      -Notes $Note
-}
-else {
-  $readmeUpdated = $false
-}
-
-Write-Host "APP_VERSION updated from $sourceVersion to $($appConfig.Version)"
-
-if ($writeReadme -and $readmeUpdated) {
-  Write-Host "README version log updated with $($appConfig.Description)"
-}
-elseif ($writeReadme) {
-  Write-Host "README already contains $($appConfig.Description)"
-}
-else {
-  Write-Host "README version log skipped."
-}
-
-Write-Host "Synced .clasp.json scriptId to $($appConfig.ScriptId)"
-Write-Host "Pushing source files to Apps Script"
-
-Invoke-Clasp -Arguments @('push') -WorkingDirectory $rootPath
-
-if ($Action -eq 'deploy') {
-  if (-not $appConfig.DeploymentId) {
-    throw 'Config.js 找不到 DEPLOYMENT_ID'
-  }
-
-  $description = $appConfig.Description
-
-  Write-Host "Creating Apps Script version $description"
-
-  $versionOutput =
-    Invoke-ClaspCapture `
-      -Arguments @('version', $description)
-
-  $versionNumber =
-    Get-ClaspVersionNumberFromOutput `
-      -Output $versionOutput
-
-  Write-Host "Updating deployment $($appConfig.DeploymentId) to version $versionNumber"
-
-  Invoke-Clasp `
-    -Arguments @(
-      'deploy',
-      '-i',
-      $appConfig.DeploymentId,
-      '-V',
-      [string]$versionNumber,
-      '-d',
-      $description
-    ) `
-    -WorkingDirectory $rootPath
-
-  Write-Host "Deploy completed with $description at Apps Script version $versionNumber"
-}
-else {
-  Write-Host "Push completed with version $($appConfig.Description)"
-}
-
-Push-GitHubIfRequested -Config $appConfig -Action $Action -ReadmePath $readmePath
+Checklist 與程式碼同等重要。
+
+---
+
+# 快速部署
+
+## 最簡單流程
+
+按：
+
+```text
+Ctrl + Shift + B
+```
+
+之後照問題回答即可。
+
+建議：
+
+```text
+小修正
+→ patch
+→ push
+
+新增功能
+→ minor
+→ push
+
+大改版
+→ major
+→ push
+
+正式上線
+→ deploy
+```
+
+---
+
+## 手動執行
+
+```powershell
+.\push.ps1
+```
+
+---
+
+# 版本規則
+
+格式：
+
+```text
+vMajor.Minor.Patch-YYYYMMDDHHmm
+```
+
+範例：
+
+```text
+v2.17.0-202605292314
+```
+
+說明：
+
+- Major → 大改版
+- Minor → 新功能
+- Patch → Bug 修正
+- 時間 → Push 時間
+
+---
+
+# 版本日誌
+
+## 最新版本（保留近期）
+
+---
+
+正式版 v2.17.0-202605292346
+
+來源：
+v2.16.9-202605292314
+
+更新：
+
+- 成功完成敷料登陸table checklist
+
+---
+
+v2.17.0-202605292314
+
+更新：
+
+- 完成 Table State Foundation
+- 建立 Regression Checklist
+- 建立 Branch 開發流程
+
+---
+
+# 專案架構
+
+```text
+Root
+│
+├─ README.md
+│
+├─ archive
+│   └─ README-v2.16.9-202605292314.md
+│
+├─ 共用設定檔
+│
+├─ 科室系統用戶端
+│
+├─ 後台
+│
+└─ 敷料領用登錄系統
+    │
+    ├─ Dressing.js
+    ├─ DressingBarcodeFetch.js
+    ├─ DressingFront.html
+    └─ Dressing_table_regression_checklist.md
+```
+
+---
+
+# 系統模組
+
+## 晨會 QR 簽到系統
+
+- 建立會議
+- QR 簽到
+- 後台管理
+- 匯出功能
+
+---
+
+## 敷料建檔系統
+
+- GTIN 建檔
+- GS1 / UDI 解析
+- 條碼掃描
+- Table State Foundation
+
+---
+
+## 敷料領用登錄系統
+
+- 領用登錄
+- 健保 / 自費管理
+- 主治醫師紀錄
+- 使用紀錄保存
+
+---
+
+## 敷料庫存系統（開發中）
+
+規劃：
+
+- LOT
+- EXP
+- 庫存管理
+- 效期管理
+
+---
+
+# 待辦事項
+
+## 敷料系統
+
+- 庫存批號管理
+- 效期管理
+- 自動扣庫
+- 庫存查詢
+
+---
+
+## 病人管理
+
+- Patient List MVP
+- 病人資料整合
+- 領用紀錄串接
+
+---
+
+## 系統功能
+
+- App 包裝
+- PWA
+- 多科別支援
+- 權限管理
+
+---
+
+# 核心理念
+
+```text
+流程比功能重要
+
+Checklist 比記憶可靠
+
+每個 Bug
+都應該成為下一次不再發生的測試項目
+```
+
+
+
