@@ -1761,12 +1761,62 @@ async function batchSaveDict(){
   }
 }
 
+
+function removeDressingItemFromCache(data){
+  data = data || {};
+
+  const targetHospitalCode = String(data.hospitalCode || '').trim();
+  const targetSingleGtin = data.singleGtin || data.gtin || '';
+  const targetBoxGtin = data.boxGtin || '';
+  const targetName = normalizeTextForCompare(data.dressingName || '');
+  const targetSize = normalizeTextForCompare(data.size || '');
+
+  if(!Array.isArray(dressingMasterCache)){
+    dressingMasterCache = [];
+    return;
+  }
+
+  dressingMasterCache = dressingMasterCache.filter(function(item){
+    item = item || {};
+
+    const itemHospitalCode = String(item.hospitalCode || '').trim();
+    const itemSingleGtin = item.singleGtin || item.gtin || '';
+    const itemBoxGtin = item.boxGtin || '';
+
+    const sameHospitalCode =
+      targetHospitalCode &&
+      itemHospitalCode &&
+      targetHospitalCode === itemHospitalCode;
+
+    const sameSingleGtin =
+      targetSingleGtin &&
+      sameGtin(itemSingleGtin, targetSingleGtin);
+
+    const sameBoxGtin =
+      targetBoxGtin &&
+      sameGtin(itemBoxGtin, targetBoxGtin);
+
+    const sameNameSizeFallback =
+      !targetHospitalCode &&
+      !targetSingleGtin &&
+      !targetBoxGtin &&
+      targetName &&
+      targetSize &&
+      normalizeTextForCompare(item.dressingName || '') === targetName &&
+      normalizeTextForCompare(item.size || '') === targetSize;
+
+    return !(sameHospitalCode || sameSingleGtin || sameBoxGtin || sameNameSizeFallback);
+  });
+}
+
 async function deleteDictRow(btn){
   const tr = btn.closest('tr');
 
   if(tr.classList.contains('editing') && tr.dataset.isNewRow === '1'){
+    removeDressingItemFromCache(getDictRowData(tr));
     tr.remove();
     ensureDictEmptyRow();
+    showNotice('已刪除暫存列，快取已更新', 'success', '刪除完成');
     return;
   }
 
@@ -1778,8 +1828,10 @@ async function deleteDictRow(btn){
   const key = data.singleGtin || data.boxGtin || data.hospitalCode;
 
   if(!key){
+    removeDressingItemFromCache(data);
     tr.remove();
     ensureDictEmptyRow();
+    showNotice('已刪除空白列，快取已更新', 'success', '刪除完成');
     return;
   }
 
@@ -1790,8 +1842,10 @@ async function deleteDictRow(btn){
     const res = await deleteBarcode(key, data.hospitalCode);
 
     if(res.ok && res.deleted){
+      removeDressingItemFromCache(data);
       tr.remove();
       ensureDictEmptyRow();
+      showNotice('已刪除資料，快取已更新', 'success', '刪除完成');
       return;
     }
 
@@ -1902,7 +1956,29 @@ function getExistingDressingItems(){
     return String(item.hospitalCode || item.singleGtin || item.gtin || item.boxGtin || item.dressingName || '').trim();
   });
 }
+
+function ensureOptionContainsCurrentValue(values, currentValue){
+  const list = Array.isArray(values) ? values.slice() : [];
+  const current = String(currentValue || '').trim();
+
+  if(!current){
+    return list;
+  }
+
+  const currentKey = normalizeTextForCompare(current);
+  const exists = list.some(function(item){
+    return normalizeTextForCompare(item) === currentKey;
+  });
+
+  if(!exists){
+    list.unshift(current);
+  }
+
+  return list;
+}
 async function pickValueByPrompt(title, values, defaultValue){
+  values = ensureOptionContainsCurrentValue(values || [], defaultValue);
+
   if(!values || values.length === 0){
     const val = await openAppDialog({
       title: title,
@@ -2086,16 +2162,20 @@ async function guideDictRowAfterScan(tr, forcedTarget){
   }
 
   const allItems = getExistingDressingItems();
-  const names = Array.from(new Set(
-    allItems.map(function(item){
-      return String(item.dressingName || '').trim();
-    }).filter(Boolean)
-  )).sort();
+  const currentNameValue = tr.querySelector('.dict-name').value || '';
+  const names = ensureOptionContainsCurrentValue(
+    Array.from(new Set(
+      allItems.map(function(item){
+        return String(item.dressingName || '').trim();
+      }).filter(Boolean)
+    )).sort(),
+    currentNameValue
+  );
 
   const name = await pickValueByPrompt(
     '步驟 2：請選擇或輸入敷料名稱',
     names,
-    tr.querySelector('.dict-name').value || ''
+    currentNameValue
   );
 
   if(name === null){
@@ -2105,21 +2185,25 @@ async function guideDictRowAfterScan(tr, forcedTarget){
 
   tr.querySelector('.dict-name').value = name;
 
-  const sizesForName = Array.from(new Set(
-    allItems
-      .filter(function(item){
-        return normalizeTextForCompare(item.dressingName) === normalizeTextForCompare(name);
-      })
-      .map(function(item){
-        return String(item.size || '').trim();
-      })
-      .filter(Boolean)
-  )).sort();
+  const currentSizeValue = tr.querySelector('.dict-size').value || '';
+  const sizesForName = ensureOptionContainsCurrentValue(
+    Array.from(new Set(
+      allItems
+        .filter(function(item){
+          return normalizeTextForCompare(item.dressingName) === normalizeTextForCompare(name);
+        })
+        .map(function(item){
+          return String(item.size || '').trim();
+        })
+        .filter(Boolean)
+    )).sort(),
+    currentSizeValue
+  );
 
   const size = await pickValueByPrompt(
     '步驟 3：請選擇或輸入規格描述',
     sizesForName,
-    tr.querySelector('.dict-size').value || ''
+    currentSizeValue
   );
 
   if(size === null){
@@ -3077,7 +3161,7 @@ if (window.location.hostname.includes('github.io')) {
   ghFooter.innerHTML = `
     <div style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">
       <span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>
-      <span>v.2.15.8-202605291226</span>
+      <span>v.2.15.9-202605291237</span>
     </div>
   `;
   document.body.appendChild(ghFooter);
