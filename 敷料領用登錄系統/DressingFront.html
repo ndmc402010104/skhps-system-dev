@@ -1970,10 +1970,6 @@ function findExistingRowByNameAndSize(name, size, excludeTr){
       return false;
     }
 
-    if(row.dataset.isNewRow === '1'){
-      return false;
-    }
-
     const data = getDictRowData(row);
 
     return normalizeTextForCompare(data.dressingName) === cleanName &&
@@ -2695,7 +2691,17 @@ function closeDressingScanner(){
 
 async function handleBarcodeScanResult(barcode){
   const parsed = parseUDI(barcode);
-  const gtin = parsed.gtin || barcode;
+  const gtin = parsed.gtin || '';
+
+  if(!gtin){
+    showNotice(
+      '掃描內容無法提取有效 GTIN。請確認掃到的是含 AI(01) 的 UDI/GS1 條碼，或是 8/12/13/14 碼純數字條碼。',
+      'warning',
+      '無法提取GTIN'
+    );
+    activeDictGtinInput = null;
+    return;
+  }
 
   if(scannerMode === 'row'){
     if(activeDressingInput){
@@ -2822,10 +2828,27 @@ function parseUDI(barcode){
   }
 
   if(!gtin){
-    gtin = raw.replace(/[\x00-\x1F\x7F]/g, '').trim();
+    const plainDigits =
+      raw
+        .replace(/[\x00-\x1F\x7F]/g, '')
+        .replace(/\s+/g, '')
+        .trim();
+
+    if(/^\d{8}$/.test(plainDigits) ||
+       /^\d{12}$/.test(plainDigits) ||
+       /^\d{13}$/.test(plainDigits) ||
+       /^\d{14}$/.test(plainDigits)){
+      gtin = plainDigits;
+    }
   }
 
-  return { raw:raw, gtin:gtin, lot:lot, exp:exp };
+  return {
+    raw:raw,
+    gtin:gtin,
+    lot:lot,
+    exp:exp,
+    extracted:!!gtin
+  };
 }
 
 /* API */
@@ -3054,7 +3077,7 @@ if (window.location.hostname.includes('github.io')) {
   ghFooter.innerHTML = `
     <div style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">
       <span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>
-      <span>v.2.15.7-202605291212</span>
+      <span>v.2.15.8-202605291226</span>
     </div>
   `;
   document.body.appendChild(ghFooter);
