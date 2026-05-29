@@ -1008,9 +1008,11 @@ function renderDictTableControls(){
   const saveOrderBtn = document.getElementById('saveOrderBtn');
   const batchSaveBtn = document.getElementById('batchSaveBtn');
 
-  if(scanBtn) scanBtn.disabled = !ready || blockNormalActions || hasEditingRows;
-  if(testSingleBtn) testSingleBtn.disabled = !ready || blockNormalActions || hasEditingRows;
-  if(testBoxBtn) testBoxBtn.disabled = !ready || blockNormalActions || hasEditingRows;
+  // 編輯中仍允許主掃描/測試碼，方便邊補資料邊加入新掃描流程。
+  // 只有 busy 或排序模式才鎖住掃描。
+  if(scanBtn) scanBtn.disabled = !ready || busy || isReorderMode;
+  if(testSingleBtn) testSingleBtn.disabled = !ready || busy || isReorderMode;
+  if(testBoxBtn) testBoxBtn.disabled = !ready || busy || isReorderMode;
 
   if(reorderBtn){
     reorderBtn.disabled = !ready || busy || hasEditingRows;
@@ -2468,8 +2470,8 @@ function openDictGtinScanner(button){
 }
 
 function startDictScanner(){
-  if(isDictTableBusy() || isReorderMode || hasDictEditingRows()){
-    showNotice('請先儲存、返回或取消目前編輯，再開啟掃描', 'warning', '尚有未完成變更');
+  if(isDictTableBusy() || isReorderMode){
+    showNotice('表格處理中或排序模式中，暫時不能開啟掃描', 'warning', '請稍候');
     return;
   }
 
@@ -2491,8 +2493,8 @@ function manualDictScanForDebug(barcode){
 }
 
 function triggerHydrocleanCavityTest(type){
-  if(isDictTableBusy() || isReorderMode || hasDictEditingRows()){
-    showNotice('請先儲存、返回或取消目前編輯，再測試條碼。', 'warning', '尚有未完成變更');
+  if(isDictTableBusy() || isReorderMode){
+    showNotice('表格處理中或排序模式中，暫時不能測試條碼。', 'warning', '請稍候');
     return;
   }
 
@@ -4128,7 +4130,7 @@ if (window.location.hostname.includes('github.io')) {
   ghFooter.innerHTML = `
     <div style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">
       <span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>
-      <span>v.2.16.0-202605292205</span>
+      <span>v.2.16.1-202605292211</span>
     </div>
   `;
   document.body.appendChild(ghFooter);
