@@ -365,6 +365,14 @@ function findDressingPairCandidates_(data){
   };
 }
 
+function keepSubmittedValue_(value, fallback){
+  if(value === undefined || value === null){
+    return fallback || '';
+  }
+
+  return value;
+}
+
 function saveDressingBarcode_(data){
   const table = getDressingTable_();
 
@@ -507,40 +515,39 @@ function saveDressingBarcode_(data){
   }
 
   const rowData = {
-    hospitalCode:
-      data.hospitalCode ||
-      (existingObj ? existingObj.hospitalCode : '') ||
-      '',
-    dressingName:
-      data.dressingName ||
-      (existingObj ? existingObj.dressingName : '') ||
-      '',
-    size:
-      data.size ||
-      (existingObj ? existingObj.size : '') ||
-      '',
-    gtin:
-      gtin ||
-      (existingObj ? existingObj.gtin : '') ||
-      '',
-    boxGtin:
-      boxGtin ||
-      (existingObj ? existingObj.boxGtin : '') ||
-      '',
-    boxQuantity:
-      data.boxQuantity ||
-      (existingObj ? existingObj.boxQuantity : '') ||
-      '',
-    category:
-      data.category ||
-      (existingObj ? existingObj.category : '') ||
-      '',
-    status:
-      data.status ||
-      (existingObj ? existingObj.status : '') ||
-      '使用中'
+    hospitalCode: keepSubmittedValue_(
+      data.hospitalCode,
+      existingObj ? existingObj.hospitalCode : ''
+    ),
+    dressingName: keepSubmittedValue_(
+      data.dressingName,
+      existingObj ? existingObj.dressingName : ''
+    ),
+    size: keepSubmittedValue_(
+      data.size,
+      existingObj ? existingObj.size : ''
+    ),
+    gtin: keepSubmittedValue_(
+      gtin,
+      existingObj ? existingObj.gtin : ''
+    ),
+    boxGtin: keepSubmittedValue_(
+      boxGtin,
+      existingObj ? existingObj.boxGtin : ''
+    ),
+    boxQuantity: keepSubmittedValue_(
+      data.boxQuantity,
+      existingObj ? existingObj.boxQuantity : ''
+    ),
+    category: keepSubmittedValue_(
+      data.category,
+      existingObj ? existingObj.category : ''
+    ),
+    status: keepSubmittedValue_(
+      data.status,
+      existingObj ? existingObj.status : '使用中'
+    ) || '使用中'
   };
-
   const row =
     objectToRow_(rowData, table.headers);
 

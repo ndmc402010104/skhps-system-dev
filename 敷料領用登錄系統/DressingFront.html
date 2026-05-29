@@ -2554,15 +2554,15 @@ function saveBarcode(data){
     action:'saveDressingBarcode',
     originalGtin:data.originalGtin || '',
     originalBoxGtin:data.originalBoxGtin || '',
-    hospitalCode:data.hospitalCode,
-    singleGtin:data.singleGtin || data.gtin,
-    gtin:data.singleGtin || data.gtin,
-    dressingName:data.dressingName,
-    size:data.size,
-    category:data.category,
-    boxGtin:data.boxGtin,
-    boxQuantity:data.boxQuantity,
-    status:data.status
+    hospitalCode:data.hospitalCode || '',
+    singleGtin:data.singleGtin || data.gtin || '',
+    gtin:data.singleGtin || data.gtin || '',
+    dressingName:data.dressingName || '',
+    size:data.size || '',
+    category:data.category || '',
+    boxGtin:data.boxGtin || '',
+    boxQuantity:data.boxQuantity || '',
+    status:data.status || '使用中'
   });
 }
 
@@ -2713,7 +2713,7 @@ if (window.location.hostname.includes('github.io')) {
   ghFooter.innerHTML = `
     <div style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">
       <span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>
-      <span>v.2.15.5-202605291153</span>
+      <span>v.2.15.5-202605291159</span>
     </div>
   `;
   document.body.appendChild(ghFooter);
@@ -2730,6 +2730,7 @@ function normalizeTextForCompare(value){
 
 </body>
 </html>
+
 
 
 
