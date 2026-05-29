@@ -259,42 +259,55 @@ input:not([type="radio"]){ width:100%; }
 
 /* 畫面提示與自訂對話框：取代 alert / confirm / prompt */
 .noticeStack{
-  position:fixed;
-  top:76px;
-  right:18px;
-  z-index:1200;
+  flex:0 0 100%;
   display:flex;
-  flex-direction:column;
+  justify-content:flex-end;
   gap:8px;
-  width:min(320px,calc(100vw - 32px));
+  min-height:0;
+  margin-top:8px;
+  pointer-events:none;
 }
 
 .noticeCard{
   position:relative;
-  padding:10px 14px;
+  width:min(360px,100%);
+  padding:8px 12px;
   border:1px solid var(--line);
   border-left:4px solid var(--primary);
   border-radius:12px 0 12px 12px;
   background:rgba(255,255,255,.94);
   backdrop-filter:blur(10px);
-  box-shadow:0 8px 20px rgba(15,23,42,.12);
+  box-shadow:0 6px 16px rgba(15,23,42,.10);
   color:var(--text);
-  line-height:1.45;
+  line-height:1.4;
   white-space:pre-line;
-  font-size:14px;
+  font-size:13px;
+  pointer-events:auto;
+  animation:noticeGrow .16s ease;
 }
 
 .noticeCard::before{
   content:'';
   position:absolute;
-  top:-8px;
+  top:-7px;
   right:18px;
-  width:16px;
-  height:16px;
+  width:14px;
+  height:14px;
   background:rgba(255,255,255,.94);
   border-top:1px solid var(--line);
   border-left:1px solid var(--line);
   transform:rotate(45deg);
+}
+
+@keyframes noticeGrow{
+  from{
+    opacity:0;
+    transform:translateY(-4px) scale(.98);
+  }
+  to{
+    opacity:1;
+    transform:translateY(0) scale(1);
+  }
 }
 
 .noticeCard.success{ border-left-color:#16a34a; }
@@ -408,9 +421,10 @@ input:not([type="radio"]){ width:100%; }
 .dictHeader{
   display:flex;
   justify-content:space-between;
-  align-items:center;
+  align-items:flex-start;
   gap:16px;
   margin-bottom:14px;
+  flex-wrap:wrap;
 }
 
 .dictHeader h2{
@@ -583,62 +597,6 @@ tr.editing select:not(.readonly):focus{
 }
 
 
-.toastContainer{
-  position:fixed;
-  top:86px;
-  left:50%;
-  transform:translateX(-50%);
-  z-index:2000;
-  display:flex;
-  flex-direction:column;
-  gap:8px;
-  pointer-events:none;
-  width:min(420px,calc(100vw - 32px));
-}
-
-.toast{
-  padding:10px 14px;
-  border-radius:10px;
-  font-size:14px;
-  font-weight:700;
-  box-shadow:0 6px 20px rgba(15,23,42,.12);
-  border:1px solid var(--line);
-  background:#ffffffee;
-  backdrop-filter:blur(8px);
-  color:var(--text);
-  animation:toastIn .18s ease;
-}
-
-.toast.success{
-  border-color:#bbf7d0;
-  background:#f0fdf4ee;
-  color:#166534;
-}
-
-.toast.error{
-  border-color:#fecaca;
-  background:#fef2f2ee;
-  color:#991b1b;
-}
-
-.toast.info{
-  border-color:#bfdbfe;
-  background:#eff6ffee;
-  color:#1d4ed8;
-}
-
-@keyframes toastIn{
-  from{
-    opacity:0;
-    transform:translateY(-6px);
-  }
-  to{
-    opacity:1;
-    transform:translateY(0);
-  }
-}
-
-
 @media(max-width:960px){
   body{
     padding:104px 8px 72px;
@@ -702,7 +660,6 @@ function goHome(){
 </head>
 
 <body>
-<div id="toastContainer" class="toastContainer"></div>
 <main class="shell">
 
 <?!= include('共用設定檔/AppHeader', { subtitle: '敷料領用登錄', onClick: 'goHome()', maxWidth: '1400px' }) ?>
@@ -761,6 +718,7 @@ function goHome(){
       <button type="button" id="testHydrocleanSingleBtn" class="primary" onclick="triggerHydrocleanCavityTest('single')" disabled>測試單包碼</button>
       <button type="button" id="testHydrocleanBoxBtn" class="primary" onclick="triggerHydrocleanCavityTest('box')" disabled>測試盒裝碼</button>
     </div>
+    <div id="noticeStack" class="noticeStack" aria-live="polite"></div>
   </div>
 
   <div class="dictTableWrap">
@@ -795,9 +753,6 @@ function goHome(){
     </div>
   </div>
 </div>
-
-<div id="noticeStack" class="noticeStack" aria-live="polite"></div>
-
 <div id="appDialogOverlay" class="appDialogOverlay">
   <div class="appDialog" role="dialog" aria-modal="true" aria-labelledby="appDialogTitle">
     <h3 id="appDialogTitle" class="appDialogTitle"></h3>
@@ -866,7 +821,7 @@ function showNotice(message, type, title){
 
   setTimeout(function(){
     card.style.opacity = '0';
-    card.style.transform = 'translateY(-6px)';
+    card.style.transform = 'scale(.98)';
     card.style.transition = 'all .2s ease';
     setTimeout(function(){ card.remove(); }, 220);
   }, 3600);
@@ -1388,7 +1343,6 @@ function triggerHydrocleanCavityTest(type){
   }
 
   scannerMode = 'dict';
-  showNotice(type === 'box' ? '已送出 HydroClean cavity 盒裝測試碼' : '已送出 HydroClean cavity 單包測試碼', 'info');
   return handleBarcodeScanResult(code);
 }
 
@@ -2299,27 +2253,6 @@ function debugDressingBarcode(label, data){
 }
 
 
-function showToast(message, type='info'){
-  const container = document.getElementById('toastContainer');
-  if(!container) return;
-
-  const toast = document.createElement('div');
-  toast.className = 'toast ' + type;
-  toast.innerText = message;
-
-  container.appendChild(toast);
-
-  setTimeout(function(){
-    toast.style.opacity = '0';
-    toast.style.transform = 'translateY(-4px)';
-    toast.style.transition = 'all .2s ease';
-
-    setTimeout(function(){
-      toast.remove();
-    }, 220);
-  }, 2400);
-}
-
 
 document.addEventListener('click', function(e){
   if(e.target.classList.contains('deleteRow')){
@@ -2379,7 +2312,7 @@ if (window.location.hostname.includes('github.io')) {
   ghFooter.innerHTML = `
     <div style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">
       <span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>
-      <span>v.2.15.3-202605290839</span>
+      <span>v.2.15.3-202605290842</span>
     </div>
   `;
   document.body.appendChild(ghFooter);
