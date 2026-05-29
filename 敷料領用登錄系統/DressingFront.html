@@ -1072,25 +1072,41 @@ function setDictLoadState(state, message){
   const scanBtn = document.getElementById('dictScanBtn');
   const testSingleBtn = document.getElementById('testHydrocleanSingleBtn');
   const testBoxBtn = document.getElementById('testHydrocleanBoxBtn');
+  const reorderBtn = document.getElementById('reorderBtn');
+  const saveOrderBtn = document.getElementById('saveOrderBtn');
+  const batchSaveBtn = document.getElementById('batchSaveBtn');
   const status = document.getElementById('dictLoadStatus');
+  const ready = state === 'ready';
 
   if(status){
     status.innerText = message || '';
   }
 
   if(scanBtn){
-    scanBtn.disabled = state !== 'ready';
+    scanBtn.disabled = !ready;
   }
 
   if(testSingleBtn){
-    testSingleBtn.disabled = state !== 'ready';
+    testSingleBtn.disabled = !ready;
   }
 
   if(testBoxBtn){
-    testBoxBtn.disabled = state !== 'ready';
+    testBoxBtn.disabled = !ready;
   }
 
-  dictLoaded = state === 'ready';
+  if(reorderBtn){
+    reorderBtn.disabled = !ready;
+  }
+
+  if(saveOrderBtn){
+    saveOrderBtn.disabled = !ready;
+  }
+
+  if(batchSaveBtn){
+    batchSaveBtn.disabled = !ready;
+  }
+
+  dictLoaded = ready;
 }
 
 function openDressingDict(){
@@ -3941,7 +3957,7 @@ if (window.location.hostname.includes('github.io')) {
   ghFooter.innerHTML = `
     <div style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">
       <span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>
-      <span>v.2.15.16-202605292150</span>
+      <span>v.2.15.16-202605292153</span>
     </div>
   `;
   document.body.appendChild(ghFooter);
