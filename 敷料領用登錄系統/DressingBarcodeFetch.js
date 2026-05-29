@@ -25,7 +25,7 @@ const DRESSING_MASTER_DISPLAY_NAMES = [
   '單包GTIN',
   '包裝GTIN',
   '一盒數量',
-  '敷料分類',
+  '自費價格',
   '狀態'
 ];
 
@@ -240,7 +240,7 @@ function lookupDressingBarcode_(gtin){
     hospitalCode: '',
     dressingName: '',
     size: '',
-    category: '自費',
+    category: '',
     boxGtin: '',
     boxQuantity: '',
     status: '使用中'
@@ -539,11 +539,9 @@ function saveDressingBarcode_(data){
       data.boxQuantity,
       existingObj ? existingObj.boxQuantity : ''
     ),
-    category: (
-      keepSubmittedValue_(
-        data.category,
-        existingObj ? existingObj.category : ''
-      ) || '自費'
+    category: keepSubmittedValue_(
+      data.category,
+      existingObj ? existingObj.category : ''
     ),
     status: keepSubmittedValue_(
       data.status,
