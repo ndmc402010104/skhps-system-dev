@@ -255,9 +255,14 @@ input:not([type="radio"]){ width:100%; }
 }
 
 .dictGtinScanBtn{
+  display:none;
   flex:0 0 auto;
   padding:7px 9px;
   font-size:13px;
+}
+
+tr.editing .dictGtinScanBtn{
+  display:inline-block;
 }
 
 .cameraBtn{
@@ -914,6 +919,139 @@ let dressingMasterCache = [];
 let dictLoaded = false;
 let draggedRow = null;
 let dictScanMemory = {};
+let cancelledDictScanKeys = {};
+
+const DICT_TABLE_STATE = {
+  mode:'closed', // closed | loading | clean | editing | adding | saving | deleting | refreshing | reordering | error
+  cacheUpdatedAt:0,
+  lastMessage:''
+};
+
+function isDictTableBusy(){
+  return ['loading','saving','deleting','refreshing'].indexOf(DICT_TABLE_STATE.mode) >= 0;
+}
+
+function setDictTableMode(mode, message){
+  DICT_TABLE_STATE.mode = mode || 'clean';
+  DICT_TABLE_STATE.lastMessage = message || '';
+  renderDictTableControls();
+}
+
+function invalidateDressingMasterCache(reason){
+  dressingMasterCache = [];
+  DICT_TABLE_STATE.cacheUpdatedAt = 0;
+  clearDictScanMemory();
+  if(reason){
+    console.log('invalidate dressing cache:', reason);
+  }
+}
+
+function getDictDirtyCount(){
+  try{
+    return getDirtyDictRows().length;
+  } catch(error){
+    return 0;
+  }
+}
+
+function getDictEditingCount(){
+  try{
+    return document.querySelectorAll('#dictTbody tr.editing:not(#dictEmptyRow)').length;
+  } catch(error){
+    return 0;
+  }
+}
+
+function hasDictEditingRows(){
+  return getDictEditingCount() > 0;
+}
+
+function getDictNextIdleMode(){
+  if(isReorderMode){
+    return 'reordering';
+  }
+
+  const rows = Array.from(document.querySelectorAll('#dictTbody tr:not(#dictEmptyRow)'));
+  const hasNewRow = rows.some(function(tr){ return tr.dataset.isNewRow === '1'; });
+  if(hasNewRow){
+    return 'adding';
+  }
+
+  if(hasDictEditingRows()){
+    return 'editing';
+  }
+
+  return 'clean';
+}
+
+function syncDictTableModeFromRows(){
+  if(isDictTableBusy() || DICT_TABLE_STATE.mode === 'error'){
+    renderDictTableControls();
+    return;
+  }
+
+  setDictTableMode(getDictNextIdleMode());
+}
+
+function renderDictTableControls(){
+  const busy = isDictTableBusy();
+  const dirtyCount = getDictDirtyCount();
+  const editingCount = getDictEditingCount();
+  const hasDirtyRows = dirtyCount > 0;
+  const hasEditingRows = editingCount > 0;
+  const ready = dictLoaded && DICT_TABLE_STATE.mode !== 'error';
+  const blockNormalActions = busy || isReorderMode;
+
+  const status = document.getElementById('dictLoadStatus');
+  if(status && DICT_TABLE_STATE.lastMessage){
+    status.innerText = DICT_TABLE_STATE.lastMessage;
+  }
+
+  const scanBtn = document.getElementById('dictScanBtn');
+  const testSingleBtn = document.getElementById('testHydrocleanSingleBtn');
+  const testBoxBtn = document.getElementById('testHydrocleanBoxBtn');
+  const reorderBtn = document.getElementById('reorderBtn');
+  const saveOrderBtn = document.getElementById('saveOrderBtn');
+  const batchSaveBtn = document.getElementById('batchSaveBtn');
+
+  // 編輯中仍允許主掃描/測試碼，方便邊補資料邊加入新掃描流程。
+  // 只有 busy 或排序模式才鎖住掃描。
+  if(scanBtn) scanBtn.disabled = !ready || busy || isReorderMode;
+  if(testSingleBtn) testSingleBtn.disabled = !ready || busy || isReorderMode;
+  if(testBoxBtn) testBoxBtn.disabled = !ready || busy || isReorderMode;
+
+  if(reorderBtn){
+    reorderBtn.disabled = !ready || busy || hasEditingRows;
+    if(!isReorderMode){
+      reorderBtn.title = hasEditingRows ? '有正在編輯或未儲存的列時不能排序' : '';
+    }
+  }
+
+  if(saveOrderBtn){
+    saveOrderBtn.disabled = !ready || busy;
+  }
+
+  if(batchSaveBtn){
+    batchSaveBtn.style.display = (!isReorderMode && dirtyCount >= 2) ? 'inline-block' : 'none';
+    batchSaveBtn.disabled = !ready || busy;
+  }
+
+  document.querySelectorAll('#dictTbody tr:not(#dictEmptyRow)').forEach(function(tr){
+    const rowEditing = tr.classList.contains('editing');
+    tr.querySelectorAll('input, select').forEach(function(input){
+      input.disabled = busy || !rowEditing;
+    });
+
+    tr.querySelectorAll('.dictActionBtn').forEach(function(btn){
+      btn.disabled = busy || isReorderMode;
+    });
+
+    tr.querySelectorAll('.dictGtinScanBtn').forEach(function(btn){
+      btn.style.display = rowEditing ? '' : 'none';
+      btn.disabled = busy || isReorderMode || !rowEditing;
+    });
+  });
+}
 
 // HydroClean cavity 測試用完整碼：等你拿到完整碼後，只要改這兩行即可。
 const TEST_HYDROCLEAN_CAVITY_SINGLE_CODE = '(01)04052199255484(11)250324(17)280301(10)500113156';
@@ -1069,12 +1207,6 @@ function isAppsScriptMode(){
 }
 
 function setDictLoadState(state, message){
-  const scanBtn = document.getElementById('dictScanBtn');
-  const testSingleBtn = document.getElementById('testHydrocleanSingleBtn');
-  const testBoxBtn = document.getElementById('testHydrocleanBoxBtn');
-  const reorderBtn = document.getElementById('reorderBtn');
-  const saveOrderBtn = document.getElementById('saveOrderBtn');
-  const batchSaveBtn = document.getElementById('batchSaveBtn');
   const status = document.getElementById('dictLoadStatus');
   const ready = state === 'ready';
 
@@ -1082,34 +1214,60 @@ function setDictLoadState(state, message){
     status.innerText = message || '';
   }
 
-  if(scanBtn){
-    scanBtn.disabled = !ready;
-  }
-
-  if(testSingleBtn){
-    testSingleBtn.disabled = !ready;
-  }
-
-  if(testBoxBtn){
-    testBoxBtn.disabled = !ready;
-  }
-
-  if(reorderBtn){
-    reorderBtn.disabled = !ready;
-  }
-
-  if(saveOrderBtn){
-    saveOrderBtn.disabled = !ready;
-  }
-
-  if(batchSaveBtn){
-    batchSaveBtn.disabled = !ready;
-  }
-
   dictLoaded = ready;
+
+  if(state === 'loading'){
+    setDictTableMode('loading', message || '正在讀取敷料主檔');
+    return;
+  }
+
+  if(state === 'error'){
+    setDictTableMode('error', message || '敷料主檔讀取失敗');
+    return;
+  }
+
+  if(ready){
+    DICT_TABLE_STATE.cacheUpdatedAt = Date.now();
+    setDictTableMode(getDictNextIdleMode(), message || '已讀取敷料主檔');
+    return;
+  }
+
+  setDictTableMode('closed', message || '尚未讀取敷料主檔');
 }
 
-function openDressingDict(){
+function hasPendingDictWork(){
+  /*
+    離開/重開建檔頁前的保護：
+    只要還有前端暫存列、正在編輯列、排序模式或儲存/刪除/刷新中，
+    切換頁面或重新讀取都可能洗掉畫面上的未儲存狀態。
+  */
+  try{
+    return isDictTableBusy() || isReorderMode || hasPendingLocalRows();
+  } catch(error){
+    return false;
+  }
+}
+
+async function confirmLeaveDictWork(targetAction){
+  if(!hasPendingDictWork()){
+    return true;
+  }
+
+  return await showConfirmDialog(
+    '目前敷料建檔表格還有未儲存或正在編輯的項目。\n\n若繼續「' +
+      (targetAction || '離開') +
+      '」，這些前端暫存內容可能會消失。\n\n確定要繼續嗎？',
+    '尚有未儲存項目'
+  );
+}
+
+async function openDressingDict(){
+  const ok = await confirmLeaveDictWork('重新開啟敷料建檔');
+  if(!ok){
+    showNotice('已停留在目前畫面，未重新讀取敷料主檔', 'warning', '已取消');
+    return;
+  }
+
   document.getElementById('formArea').style.display = 'none';
   document.getElementById('dictArea').style.display = 'block';
   loadDictList();
@@ -1177,6 +1335,7 @@ function createDictRow(item, isNew){
   if(isNew){
     tr.classList.add('editing');
     tr.dataset.isNewRow = '1';
+    tr.dataset.frontOnly = '1';
   }
 
   tr.innerHTML = `
@@ -1213,6 +1372,7 @@ function createDictRow(item, isNew){
     tr.dataset.originalData = JSON.stringify({});
     tr.dataset.dirty = '1';
     updateDictMainButton(tr);
+    setDictTableMode('adding');
   } else {
     setDictRowSnapshot(tr);
     leaveDictEditMode(tr);
@@ -1263,18 +1423,7 @@ function getDirtyDictRows(){
 }
 
 function updateBatchSaveButtonVisibility(){
-  const btn = document.getElementById('batchSaveBtn');
-  if(!btn){
-    return;
-  }
-
-  if(isReorderMode){
-    btn.style.display = 'none';
-    return;
-  }
-
-  const dirtyCount = getDirtyDictRows().length;
-  btn.style.display = dirtyCount >= 2 ? 'inline-block' : 'none';
+  renderDictTableControls();
 }
 
 function bindDictRowDirtyWatch(tr){
@@ -1288,12 +1437,14 @@ function bindDictRowDirtyWatch(tr){
     input.addEventListener('input', function(){
       if(tr.classList.contains('editing')){
         updateDictMainButton(tr);
+        syncDictTableModeFromRows();
       }
     });
 
     input.addEventListener('change', function(){
       if(tr.classList.contains('editing')){
         updateDictMainButton(tr);
+        syncDictTableModeFromRows();
       }
     });
   });
@@ -1582,11 +1733,18 @@ function restoreDictRowSnapshot(tr){
 }
 
 function enterDictEditMode(tr){
+  if(isDictTableBusy() || isReorderMode){
+    showNotice('表格處理中，暫時不能編輯', 'warning', '請稍候');
+    return;
+  }
+
   tr.classList.add('editing');
   setDictInputsEnabled(tr, true);
   setDictRowSnapshot(tr);
   bindDictRowDirtyWatch(tr);
   updateDictMainButton(tr);
+
+  setDictTableMode(getDictNextIdleMode());
 
   const nameInput = tr.querySelector('.dict-name');
   if(nameInput){
@@ -1600,6 +1758,7 @@ function leaveDictEditMode(tr){
 
   setDictInputsEnabled(tr, false);
   updateDictMainButton(tr);
+  syncDictTableModeFromRows();
 }
 
 async function handleDictMainButton(btn){
@@ -1800,8 +1959,66 @@ async function syncDictListIfChanged(options){
 }
 
 
+function hasUnsavedFrontOnlyRows(excludeTr){
+  return Array.from(document.querySelectorAll('#dictTbody tr:not(#dictEmptyRow)')).some(function(row){
+    if(excludeTr && row === excludeTr){
+      return false;
+    }
+
+    return row.dataset.frontOnly === '1' || row.dataset.isNewRow === '1';
+  });
+}
+
+function hasPendingLocalRows(excludeTr){
+  /*
+    只要畫面上還有其他尚未完成的本地狀態，就不能整張 reload。
+    包含：
+    1. frontOnly/isNewRow：掃描新增但尚未儲存的列。
+    2. editing：正在編輯但尚未完成的既有列。
+
+    原因：reload 只會帶回後端資料，會洗掉前端暫存列，
+    也會殺掉正在編輯中的欄位值。
+  */
+  return Array.from(document.querySelectorAll('#dictTbody tr:not(#dictEmptyRow)')).some(function(row){
+    if(excludeTr && row === excludeTr){
+      return false;
+    }
+
+    return (
+      row.dataset.frontOnly === '1' ||
+      row.dataset.isNewRow === '1' ||
+      row.classList.contains('editing')
+    );
+  });
+}
+
+function finishDictLocalChange(message, title, type){
+  ensureDictEmptyRow();
+
+  /*
+    局部儲存/刪除完成後不能呼叫 syncDictTableModeFromRows() 來解除 saving，
+    因為 syncDictTableModeFromRows() 會在 busy 狀態直接 return。
+    這裡必須明確把 table mode 從 saving/deleting 拉回目前畫面應有狀態，
+    否則其他列會一直 disabled，畫面顯示「儲存中...」。
+  */
+  setDictTableMode(getDictNextIdleMode());
+  updateBatchSaveButtonVisibility();
+
+  if(message){
+    showNotice(message, type || 'success', title || '完成');
+  }
+}
+
+
 async function saveDictRow(btn){
   const tr = btn.closest('tr');
+  if(isDictTableBusy()){
+    return;
+  }
+
+  const shouldReloadAfterSave = !hasPendingLocalRows(tr);
+
+  setDictTableMode('saving', '儲存中...');
   const data = getDictRowData(tr);
   const originalData = getOriginalDictRowData(tr) || {};
   const statusEl = tr.querySelector('.dictStatus');
@@ -1814,6 +2031,7 @@ async function saveDictRow(btn){
   if(!hasKeyField){
     statusEl.innerText = '院內碼、單包GTIN、包裝GTIN至少填一項';
     statusEl.className = 'dictStatus error';
+    setDictTableMode(getDictNextIdleMode());
     return;
   }
 
@@ -1842,6 +2060,7 @@ async function saveDictRow(btn){
 
     btn.disabled = false;
     updateDictMainButton(tr);
+    setDictTableMode(getDictNextIdleMode());
     return;
   }
 
@@ -1872,6 +2091,7 @@ async function saveDictRow(btn){
         applyDressingItemToDictRow(existingTargetRow, mergedItem);
         updateDressingMasterCacheItem(mergedItem);
         setDictRowSnapshot(existingTargetRow);
+        delete existingTargetRow.dataset.frontOnly;
         leaveDictEditMode(existingTargetRow);
 
         const targetStatusEl = existingTargetRow.querySelector('.dictStatus');
@@ -1885,11 +2105,19 @@ async function saveDictRow(btn){
         moveDictRowToTop(existingTargetRow);
         flashDictRow(existingTargetRow);
 
-        await reloadDictListAfterDataChange(
-          '已儲存並重新讀取主檔，掃描記憶已清空',
-          '儲存完成',
-          'success'
-        );
+        if(shouldReloadAfterSave){
+          await reloadDictListAfterDataChange(
+            '已儲存並重新讀取主檔，掃描記憶已清空',
+            '儲存完成',
+            'success'
+          );
+        } else {
+          finishDictLocalChange(
+            '已儲存；因仍有未儲存新增列，暫不重新讀取主檔',
+            '儲存完成',
+            'success'
+          );
+        }
         return;
       }
 
@@ -1901,13 +2129,22 @@ async function saveDictRow(btn){
       statusEl.className = 'dictStatus saved';
 
       setDictRowSnapshot(tr);
+      delete tr.dataset.frontOnly;
       leaveDictEditMode(tr);
 
-      await reloadDictListAfterDataChange(
-        '資料已儲存並重新讀取主檔，掃描記憶已清空',
-        '儲存完成',
-        'success'
-      );
+      if(shouldReloadAfterSave){
+        await reloadDictListAfterDataChange(
+          '資料已儲存並重新讀取主檔，掃描記憶已清空',
+          '儲存完成',
+          'success'
+        );
+      } else {
+        finishDictLocalChange(
+          '已儲存；因仍有未儲存新增列，暫不重新讀取主檔',
+          '儲存完成',
+          'success'
+        );
+      }
       return;
     }
 
@@ -1924,6 +2161,7 @@ async function saveDictRow(btn){
 
   btn.disabled = false;
   updateDictMainButton(tr);
+  setDictTableMode(getDictNextIdleMode());
 }
 
 function buildDictSavePayloadFromRow(tr){
@@ -2027,6 +2265,7 @@ async function saveDictRowWithoutReload(tr){
       }
 
       setDictRowSnapshot(tr);
+      delete tr.dataset.frontOnly;
       leaveDictEditMode(tr);
 
       return {
@@ -2069,6 +2308,10 @@ async function saveDictRowWithoutReload(tr){
 }
 
 async function batchSaveDict(){
+  if(isDictTableBusy()){
+    return;
+  }
+
   const editingRows = Array.from(document.querySelectorAll('#dictTbody tr.editing'));
 
   if(editingRows.length === 0){
@@ -2101,6 +2344,8 @@ async function batchSaveDict(){
 
   const btn = document.getElementById('batchSaveBtn');
   const originalText = btn ? btn.innerText : '';
+
+  setDictTableMode('saving', '批次儲存中...');
 
   if(btn){
     btn.innerText = '批次儲存中...';
@@ -2146,6 +2391,8 @@ async function batchSaveDict(){
     btn.innerText = originalText;
     btn.disabled = false;
   }
+
+  setDictTableMode(getDictNextIdleMode());
 
   const messages = [];
   if(successCount > 0) messages.push('儲存：' + successCount + ' 筆');
@@ -2216,11 +2463,19 @@ function removeDressingItemFromCache(data){
 }
 
 async function deleteDictRow(btn){
+  if(isDictTableBusy()){
+    return;
+  }
+
   const tr = btn.closest('tr');
+  const isFrontOnlyRow =
+    tr.dataset.frontOnly === '1' ||
+    tr.dataset.isNewRow === '1' ||
+    String(btn.innerText || '').trim() === '不儲存';
 
   // 編輯狀態下，右邊按鈕不是刪除，而是「取消編輯」。
-  // 取消後回到一般畫面；真的要刪除再按一次刪除。
-  if(tr.classList.contains('editing') && tr.dataset.isNewRow !== '1'){
+  // 但前端暫存列的右邊按鈕是「不儲存」，必須只刪前端，不能 reload。
+  if(tr.classList.contains('editing') && !isFrontOnlyRow){
     restoreDictRowSnapshot(tr);
     leaveDictEditMode(tr);
 
@@ -2247,7 +2502,27 @@ async function deleteDictRow(btn){
   const data = getDictRowData(tr);
   const key = data.singleGtin || data.boxGtin || data.hospitalCode;
 
-  async function removeFrontEndRow(message, title){
+  function removeUnsavedFrontEndRow(message, title){
+    /*
+      未儲存的新列只存在前端，按「不儲存」時不能 reload 主檔，
+      也不能改 dressingMasterCache，否則批次新增時其他暫存列可能被誤清。
+      同時清掉該列的掃描記憶，避免下一次掃同 GTIN 又回到已取消的暫存列。
+    */
+    markDictScanCancelledForRow(tr);
+    forgetDictScanMemoryForRow(tr);
+    tr.remove();
+    ensureDictEmptyRow();
+    syncDictTableModeFromRows();
+    updateBatchSaveButtonVisibility();
+
+    showNotice(
+      message || '已移除未儲存的新列，其他新增列已保留',
+      'success',
+      title || '不儲存'
+    );
+  }
+
+  async function removeFrontEndRowAndReload(message, title){
     removeDressingItemFromCache(data);
     tr.remove();
     ensureDictEmptyRow();
@@ -2259,12 +2534,19 @@ async function deleteDictRow(btn){
     );
   }
 
-  // 沒有任何可用 key：一定還沒進後端，直接刪前端列。
-  if(!key){
-    await removeFrontEndRow('此列沒有院內碼/GTIN，已直接移除前端列，掃描記憶已清空', '前端移除');
+  // 前端暫存列尚未進後端：只刪前端列，不 reload，避免批次新增被洗掉。
+  if(isFrontOnlyRow){
+    removeUnsavedFrontEndRow('已移除未儲存的新列，其他新增列已保留', '不儲存');
     return;
   }
 
+  // 沒有任何可用 key：一定還沒進後端，直接刪前端列，不 reload。
+  if(!key){
+    removeUnsavedFrontEndRow('此列沒有院內碼/GTIN，已直接移除前端列，其他新增列已保留', '前端移除');
+    return;
+  }
+
+  setDictTableMode('deleting', '刪除中...');
   btn.disabled = true;
   btn.innerText = '刪除中...';
 
@@ -2278,12 +2560,23 @@ async function deleteDictRow(btn){
     const res = await deleteBarcode(key, data.hospitalCode);
 
     if(res && res.ok && res.deleted){
-      await removeFrontEndRow('後端主檔已刪除，已重新讀取主檔並清空掃描記憶', '刪除完成');
+      if(hasPendingLocalRows(tr)){
+        removeDressingItemFromCache(data);
+        tr.remove();
+        finishDictLocalChange('後端主檔已刪除；因仍有未完成編輯或新增列，暫不重新讀取主檔', '刪除完成', 'success');
+      } else {
+        await removeFrontEndRowAndReload('後端主檔已刪除，已重新讀取主檔並清空掃描記憶', '刪除完成');
+      }
       return;
     }
 
     if(res && res.ok && !res.deleted){
-      await removeFrontEndRow('後端沒有這筆資料，已直接移除前端列並清空掃描記憶', '前端移除');
+      if(hasPendingLocalRows(tr)){
+        tr.remove();
+        finishDictLocalChange('後端沒有這筆資料，已直接移除前端列；其他未完成編輯或新增列已保留', '前端移除', 'success');
+      } else {
+        await removeFrontEndRowAndReload('後端沒有這筆資料，已直接移除前端列並清空掃描記憶', '前端移除');
+      }
       return;
     }
 
@@ -2295,6 +2588,7 @@ async function deleteDictRow(btn){
 
   btn.disabled = false;
   updateDictSecondaryButton(tr);
+  setDictTableMode(getDictNextIdleMode());
 }
 
 function ensureDictEmptyRow(){
@@ -2308,6 +2602,11 @@ function ensureDictEmptyRow(){
 }
 
 function openDictGtinScanner(button){
+  if(isDictTableBusy() || isReorderMode){
+    showNotice('表格處理中，暫時不能掃描', 'warning', '請稍候');
+    return;
+  }
+
   const tr = button ? button.closest('tr') : null;
   const input = button ? button.parentNode.querySelector('input') : null;
 
@@ -2317,10 +2616,11 @@ function openDictGtinScanner(button){
   }
 
   if(!tr.classList.contains('editing')){
-    enterDictEditMode(tr);
-  } else {
-    setDictInputsEnabled(tr, true);
+    showNotice('請先按「編輯」後再掃描此列GTIN', 'warning', '請先編輯');
+    return;
   }
+
+  setDictInputsEnabled(tr, true);
 
   activeDictGtinInput = input;
   scannerMode = 'dictField';
@@ -2329,6 +2629,11 @@ function openDictGtinScanner(button){
 }
 
 function startDictScanner(){
+  if(isDictTableBusy() || isReorderMode){
+    showNotice('表格處理中或排序模式中，暫時不能開啟掃描', 'warning', '請稍候');
+    return;
+  }
+
   if(!dictLoaded || dressingMasterCache === null){
     showNotice('請先等敷料主檔讀取完成，再開啟掃描。', 'warning');
     return;
@@ -2347,6 +2652,11 @@ function manualDictScanForDebug(barcode){
 }
 
 function triggerHydrocleanCavityTest(type){
+  if(isDictTableBusy() || isReorderMode){
+    showNotice('表格處理中或排序模式中，暫時不能測試條碼。', 'warning', '請稍候');
+    return;
+  }
+
   if(!dictLoaded || dressingMasterCache === null){
     showNotice('請先等敷料主檔讀取完成，再測試條碼。', 'warning');
     return;
@@ -2552,6 +2862,7 @@ function rememberDictRowBeforeRemove(tr){
 
 function clearDictScanMemory(){
   dictScanMemory = {};
+  cancelledDictScanKeys = {};
 
   document.querySelectorAll('#dictTbody tr:not(#dictEmptyRow)').forEach(function(tr){
     delete tr.dataset.scannedGtin;
@@ -2560,8 +2871,106 @@ function clearDictScanMemory(){
   });
 }
 
+
+function forgetDictScanMemoryByGtin(gtin){
+  const key = normalizeGtinForCompare(gtin);
+  if(key && dictScanMemory && dictScanMemory[key]){
+    delete dictScanMemory[key];
+  }
+}
+
+function markDictScanCancelledByGtin(gtin){
+  const key = normalizeGtinForCompare(gtin);
+  if(!key){
+    return;
+  }
+
+  if(!cancelledDictScanKeys || typeof cancelledDictScanKeys !== 'object'){
+    cancelledDictScanKeys = {};
+  }
+
+  cancelledDictScanKeys[key] = true;
+}
+
+function markDictScanCancelledForRow(tr){
+  if(!tr){
+    return;
+  }
+
+  markDictScanCancelledByGtin(tr.dataset.scannedGtin || '');
+  markDictScanCancelledByGtin(tr.dataset.rowKey || '');
+  markDictScanCancelledByGtin(getRowInputValue(tr, '.dict-single-gtin'));
+  markDictScanCancelledByGtin(getRowInputValue(tr, '.dict-box-gtin'));
+
+  const map = getRowScannedGtinMap(tr);
+  Object.keys(map || {}).forEach(function(gtin){
+    markDictScanCancelledByGtin(gtin);
+  });
+}
+
+function clearDictScanCancelledByGtin(gtin){
+  const key = normalizeGtinForCompare(gtin);
+  if(key && cancelledDictScanKeys && cancelledDictScanKeys[key]){
+    delete cancelledDictScanKeys[key];
+  }
+}
+
+function isDictScanCancelled(gtin){
+  const key = normalizeGtinForCompare(gtin);
+  return !!(key && cancelledDictScanKeys && cancelledDictScanKeys[key]);
+}
+
+function forgetDictScanMemoryForRow(tr){
+  if(!tr){
+    return;
+  }
+
+  forgetDictScanMemoryByGtin(tr.dataset.scannedGtin || '');
+  forgetDictScanMemoryByGtin(tr.dataset.rowKey || '');
+  forgetDictScanMemoryByGtin(getRowInputValue(tr, '.dict-single-gtin'));
+  forgetDictScanMemoryByGtin(getRowInputValue(tr, '.dict-box-gtin'));
+
+  const map = getRowScannedGtinMap(tr);
+  Object.keys(map || {}).forEach(function(gtin){
+    forgetDictScanMemoryByGtin(gtin);
+  });
+
+  delete tr.dataset.scannedGtin;
+  delete tr.dataset.gtinTarget;
+  delete tr.dataset.scannedGtinMap;
+}
+
+function removePendingDictScanRow(tr, gtin, message, title){
+  /*
+    掃描新增流程中途取消時，這列只存在前端，不能 reload 主檔。
+    同時必須清掉掃描記憶，否則下次掃同一個 GTIN 會回到已取消的舊暫存列。
+  */
+  markDictScanCancelledByGtin(gtin);
+  markDictScanCancelledForRow(tr);
+  forgetDictScanMemoryByGtin(gtin);
+  forgetDictScanMemoryForRow(tr);
+
+  if(tr && tr.parentNode){
+    tr.remove();
+  }
+
+  activeDictGtinInput = null;
+  ensureDictEmptyRow();
+  syncDictTableModeFromRows();
+  updateBatchSaveButtonVisibility();
+
+  if(message !== false){
+    showNotice(
+      message || '已取消本次掃描建檔流程，暫存列已移除',
+      'warning',
+      title || '已取消'
+    );
+  }
+}
+
 async function reloadDictListAfterDataChange(message, title, type){
-  clearDictScanMemory();
+  invalidateDressingMasterCache('data changed');
+  setDictTableMode('refreshing', '資料已變更，重新讀取主檔中...');
   await loadDictList();
 
   if(message){
@@ -2696,10 +3105,25 @@ function rowHasRememberedGtin(tr, gtin){
 }
 
 function findExistingRowByGtin(gtin){
-  return Array.from(document.querySelectorAll('#dictTbody tr:not(#dictEmptyRow)')).find(function(tr){
+  const rows = Array.from(document.querySelectorAll('#dictTbody tr:not(#dictEmptyRow)'));
+
+  const actualRow = rows.find(function(tr){
     return sameGtin(getRowInputValue(tr, '.dict-single-gtin'), gtin) ||
-      sameGtin(getRowInputValue(tr, '.dict-box-gtin'), gtin) ||
-      rowHasRememberedGtin(tr, gtin);
+      sameGtin(getRowInputValue(tr, '.dict-box-gtin'), gtin);
+  });
+
+  if(actualRow){
+    return actualRow;
+  }
+
+  // 如果剛剛使用者對這個掃描碼按過「不儲存」或取消流程，
+  // 下一次掃同碼必須重新開始，不可以靠舊 scannedGtinMap / scan memory 跳回舊列。
+  if(isDictScanCancelled(gtin)){
+    return null;
+  }
+
+  return rows.find(function(tr){
+    return rowHasRememberedGtin(tr, gtin);
   });
 }
 function describeDressingItem(item){
@@ -2882,6 +3306,26 @@ async function guideDictRowAfterScan(tr, forcedTarget){
     if(existingRow){
       const originalBeforePatch = getDictRowData(existingRow);
       const hadOriginalData = !!existingRow.dataset.originalData;
+      const wasEditingBeforeScan = existingRow.classList.contains('editing');
+
+      function rollbackExistingRowAfterCanceledScan(){
+        applyDressingItemToDictRow(existingRow, originalBeforePatch);
+        forgetDictScanMemoryByGtin(scannedGtin);
+        delete existingRow.dataset.scannedGtin;
+        delete existingRow.dataset.gtinTarget;
+        delete existingRow.dataset.scannedGtinMap;
+
+        if(!hadOriginalData){
+          delete existingRow.dataset.originalData;
+        }
+
+        if(!wasEditingBeforeScan){
+          leaveDictEditMode(existingRow);
+        } else {
+          updateDictMainButton(existingRow);
+          syncDictTableModeFromRows();
+        }
+      }
 
       existingRow.classList.add('editing');
       setDictInputsEnabled(existingRow, true);
@@ -2925,7 +3369,7 @@ async function guideDictRowAfterScan(tr, forcedTarget){
       );
 
       if(hospitalCode === null){
-        updateDictMainButton(existingRow);
+        rollbackExistingRowAfterCanceledScan();
         return false;
       }
 
@@ -2945,6 +3389,7 @@ async function guideDictRowAfterScan(tr, forcedTarget){
       );
 
       if(qty === null){
+        rollbackExistingRowAfterCanceledScan();
         return false;
       }
 
@@ -2957,6 +3402,7 @@ async function guideDictRowAfterScan(tr, forcedTarget){
       );
 
       if(price === null){
+        rollbackExistingRowAfterCanceledScan();
         return false;
       }
 
@@ -3202,6 +3648,9 @@ async function addDictRow(barcode, parsed){
     return;
   }
 
+  // 走到這裡代表要重新建立一列；清掉取消標記，讓這一輪新的暫存列可以正常記憶。
+  clearDictScanCancelledByGtin(scannedGtin);
+
   const scanMeta =
     `<div class="scanMeta">掃描GTIN：${escapeHtml(scannedGtin)}${parsed && parsed.lot ? '<br>批號：' + escapeHtml(parsed.lot) : ''}${parsed && parsed.exp ? '<br>效期：' + escapeHtml(parsed.exp) : ''}</div>`;
 
@@ -3230,13 +3679,26 @@ async function addDictRow(barcode, parsed){
 
   const completed = await guideDictRowAfterScan(tr);
   if(completed === false){
-    tr.remove();
-    ensureDictEmptyRow();
+    removePendingDictScanRow(
+      tr,
+      scannedGtin,
+      '已取消本次掃描建檔流程，其他未儲存列已保留',
+      '掃描取消'
+    );
   }
 }
 
 /* 排序 */
 function toggleReorderMode(){
+  if(isDictTableBusy()){
+    return;
+  }
+
+  if(hasDictEditingRows()){
+    showNotice('請先儲存、返回或取消編輯，再更改排序', 'warning', '尚有未儲存變更');
+    return;
+  }
+
   if(isReorderMode){
     cancelReorderMode();
     return;
@@ -3246,12 +3708,15 @@ function toggleReorderMode(){
   if(rows.length === 0) return;
 
   isReorderMode = true;
+  setDictTableMode('reordering', '排序模式中；拖曳完成後按儲存排序');
   initialOrder = Array.from(rows).map(r => getDictRowKey(r));
 
   document.getElementById('dictTable').classList.add('reorder-mode');
   document.getElementById('reorderBtn').innerText = '返回';
   document.getElementById('saveOrderBtn').style.display = 'none';
   document.getElementById('batchSaveBtn').style.display = 'none';
+
+  renderDictTableControls();
 
   rows.forEach(row => {
     row.setAttribute('draggable','true');
@@ -3288,6 +3753,7 @@ function cancelReorderMode(){
 
   rows.sort((a,b) => initialOrder.indexOf(getDictRowKey(a)) - initialOrder.indexOf(getDictRowKey(b)));
   rows.forEach(r => tbody.appendChild(r));
+  syncDictTableModeFromRows();
 }
 
 function checkOrderChanged(){
@@ -3295,6 +3761,7 @@ function checkOrderChanged(){
   const currentOrder = Array.from(rows).map(r => getDictRowKey(r));
   const changed = JSON.stringify(currentOrder) !== JSON.stringify(initialOrder);
   document.getElementById('saveOrderBtn').style.display = changed ? 'inline-block' : 'none';
+  renderDictTableControls();
 }
 
 function handleDragStart(e){
@@ -3378,11 +3845,16 @@ function handleTouchEnd(){
 }
 
 async function saveDictOrder(){
+  if(isDictTableBusy()){
+    return;
+  }
+
   const rows = document.querySelectorAll('#dictTbody tr:not(#dictEmptyRow)');
   const barcodes = Array.from(rows).map(tr => getDictRowKey(tr)).filter(Boolean);
   if(barcodes.length === 0) return;
 
   const btn = document.getElementById('saveOrderBtn');
+  setDictTableMode('saving', '排序儲存中...');
   btn.innerText = '儲存中...';
   btn.disabled = true;
 
@@ -3394,6 +3866,7 @@ async function saveDictOrder(){
       document.getElementById('reorderBtn').innerText = '更改排序';
       updateBatchSaveButtonVisibility();
       document.getElementById('dictTable').classList.remove('reorder-mode');
+      invalidateDressingMasterCache('order saved');
       await loadDictList();
     } else {
       showNotice('排序儲存失敗', 'error');
@@ -3404,10 +3877,27 @@ async function saveDictOrder(){
 
   btn.innerText = '儲存排序';
   btn.disabled = false;
+  setDictTableMode(getDictNextIdleMode());
 }
 
+window.addEventListener('beforeunload', function(event){
+  if(!hasPendingDictWork()){
+    return;
+  }
+
+  event.preventDefault();
+  event.returnValue = '';
+  return '';
+});
+
 /* 領用區 */
-function startUse(){
+async function startUse(){
+  const ok = await confirmLeaveDictWork('開始領用');
+  if(!ok){
+    showNotice('已停留在敷料建檔畫面，未切換到領用流程', 'warning', '已取消');
+    return;
+  }
+
   document.getElementById('formArea').style.display = 'block';
   document.getElementById('dictArea').style.display = 'none';
 
@@ -3957,7 +4447,7 @@ if (window.location.hostname.includes('github.io')) {
   ghFooter.innerHTML = `
     <div style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">
       <span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>
-      <span>v.2.15.16-202605292153</span>
+      <span>v.2.16.9-202605292314</span>
     </div>
   `;
   document.body.appendChild(ghFooter);
