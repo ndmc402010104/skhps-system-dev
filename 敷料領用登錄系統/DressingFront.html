@@ -1292,6 +1292,7 @@ function createDictRow(item, isNew){
   if(isNew){
     tr.classList.add('editing');
     tr.dataset.isNewRow = '1';
+    tr.dataset.frontOnly = '1';
   }
 
   tr.innerHTML = `
@@ -1993,6 +1994,7 @@ async function saveDictRow(btn){
         applyDressingItemToDictRow(existingTargetRow, mergedItem);
         updateDressingMasterCacheItem(mergedItem);
         setDictRowSnapshot(existingTargetRow);
+        delete existingTargetRow.dataset.frontOnly;
         leaveDictEditMode(existingTargetRow);
 
         const targetStatusEl = existingTargetRow.querySelector('.dictStatus');
@@ -2022,6 +2024,7 @@ async function saveDictRow(btn){
       statusEl.className = 'dictStatus saved';
 
       setDictRowSnapshot(tr);
+      delete tr.dataset.frontOnly;
       leaveDictEditMode(tr);
 
       await reloadDictListAfterDataChange(
@@ -2149,6 +2152,7 @@ async function saveDictRowWithoutReload(tr){
       }
 
       setDictRowSnapshot(tr);
+      delete tr.dataset.frontOnly;
       leaveDictEditMode(tr);
 
       return {
@@ -2351,10 +2355,14 @@ async function deleteDictRow(btn){
   }
 
   const tr = btn.closest('tr');
+  const isFrontOnlyRow =
+    tr.dataset.frontOnly === '1' ||
+    tr.dataset.isNewRow === '1' ||
+    String(btn.innerText || '').trim() === '不儲存';
 
   // 編輯狀態下，右邊按鈕不是刪除，而是「取消編輯」。
-  // 取消後回到一般畫面；真的要刪除再按一次刪除。
-  if(tr.classList.contains('editing') && tr.dataset.isNewRow !== '1'){
+  // 但前端暫存列的右邊按鈕是「不儲存」，必須只刪前端，不能 reload。
+  if(tr.classList.contains('editing') && !isFrontOnlyRow){
     restoreDictRowSnapshot(tr);
     leaveDictEditMode(tr);
 
@@ -2381,7 +2389,24 @@ async function deleteDictRow(btn){
   const data = getDictRowData(tr);
   const key = data.singleGtin || data.boxGtin || data.hospitalCode;
 
-  async function removeFrontEndRow(message, title){
+  function removeUnsavedFrontEndRow(message, title){
+    /*
+      未儲存的新列只存在前端，按「不儲存」時不能 reload 主檔，
+      也不能改 dressingMasterCache，否則批次新增時其他暫存列可能被誤清。
+    */
+    tr.remove();
+    ensureDictEmptyRow();
+    syncDictTableModeFromRows();
+    updateBatchSaveButtonVisibility();
+
+    showNotice(
+      message || '已移除未儲存的新列，其他新增列已保留',
+      'success',
+      title || '不儲存'
+    );
+  }
+
+  async function removeFrontEndRowAndReload(message, title){
     removeDressingItemFromCache(data);
     tr.remove();
     ensureDictEmptyRow();
@@ -2393,9 +2418,15 @@ async function deleteDictRow(btn){
     );
   }
 
-  // 沒有任何可用 key：一定還沒進後端，直接刪前端列。
+  // 前端暫存列尚未進後端：只刪前端列，不 reload，避免批次新增被洗掉。
+  if(isFrontOnlyRow){
+    removeUnsavedFrontEndRow('已移除未儲存的新列，其他新增列已保留', '不儲存');
+    return;
+  }
+
+  // 沒有任何可用 key：一定還沒進後端，直接刪前端列，不 reload。
   if(!key){
-    await removeFrontEndRow('此列沒有院內碼/GTIN，已直接移除前端列，掃描記憶已清空', '前端移除');
+    removeUnsavedFrontEndRow('此列沒有院內碼/GTIN，已直接移除前端列，其他新增列已保留', '前端移除');
     return;
   }
 
@@ -2413,12 +2444,12 @@ async function deleteDictRow(btn){
     const res = await deleteBarcode(key, data.hospitalCode);
 
     if(res && res.ok && res.deleted){
-      await removeFrontEndRow('後端主檔已刪除，已重新讀取主檔並清空掃描記憶', '刪除完成');
+      await removeFrontEndRowAndReload('後端主檔已刪除，已重新讀取主檔並清空掃描記憶', '刪除完成');
       return;
     }
 
     if(res && res.ok && !res.deleted){
-      await removeFrontEndRow('後端沒有這筆資料，已直接移除前端列並清空掃描記憶', '前端移除');
+      await removeFrontEndRowAndReload('後端沒有這筆資料，已直接移除前端列並清空掃描記憶', '前端移除');
       return;
     }
 
@@ -4130,7 +4161,7 @@ if (window.location.hostname.includes('github.io')) {
   ghFooter.innerHTML = `
     <div style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">
       <span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>
-      <span>v.2.16.2-202605292225</span>
+      <span>v.2.16.2-202605292230</span>
     </div>
   `;
   document.body.appendChild(ghFooter);
@@ -4147,4 +4178,3 @@ function normalizeTextForCompare(value){
 
 </body>
 </html>
-
