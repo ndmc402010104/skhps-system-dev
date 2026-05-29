@@ -1999,6 +1999,16 @@ async function deleteDictRow(btn){
     return;
   }
 
+  const confirmDelete = await showConfirmDialog(
+    '確定要刪除這一列嗎？\n\n若後端已有資料，會同步刪除主檔；若尚未儲存，只會移除前端這一列。',
+    '刪除確認'
+  );
+
+  if(!confirmDelete){
+    showNotice('已取消刪除', 'warning', '刪除取消');
+    return;
+  }
+
   const data = getDictRowData(tr);
   const key = data.singleGtin || data.boxGtin || data.hospitalCode;
 
@@ -3543,7 +3553,7 @@ if (window.location.hostname.includes('github.io')) {
   ghFooter.innerHTML = `
     <div style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">
       <span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>
-      <span>v.2.15.15-202605292117</span>
+      <span>v.2.15.15-202605292120</span>
     </div>
   `;
   document.body.appendChild(ghFooter);
