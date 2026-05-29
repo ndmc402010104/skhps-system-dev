@@ -849,7 +849,7 @@ function goHome(){
       <div id="dictLoadStatus" class="dictLoadStatus">尚未讀取敷料主檔</div>
     </div>
     <div class="dictToolbar">
-      <button type="button" id="batchSaveBtn" onclick="batchSaveDict()">批次儲存</button>
+      <button type="button" id="batchSaveBtn" onclick="batchSaveDict()" style="display:none;">批次儲存</button>
       <button type="button" id="reorderBtn" onclick="toggleReorderMode()">更改排序</button>
       <button type="button" id="saveOrderBtn" class="primary" style="display:none;" onclick="saveDictOrder()">儲存排序</button>
       <button type="button" id="dictScanBtn" class="primary" onclick="startDictScanner()" disabled>開啟相機掃描 📷</button>
@@ -1112,7 +1112,7 @@ async function loadDictList(){
   document.getElementById('dictTable').classList.remove('reorder-mode');
   document.getElementById('reorderBtn').innerText = '更改排序';
   document.getElementById('saveOrderBtn').style.display = 'none';
-  document.getElementById('batchSaveBtn').style.display = 'inline-block';
+  updateBatchSaveButtonVisibility();
 
   setDictLoadState('loading', '正在讀取敷料主檔，讀取完成後才能開啟掃描');
 
@@ -1151,6 +1151,8 @@ async function loadDictList(){
 
     setDictLoadState('error', '敷料主檔讀取失敗，請確認後端 sheet gid 與權限；未讀到資料前不能掃描');
   }
+
+  updateBatchSaveButtonVisibility();
 }
 
 function createDictRow(item, isNew){
@@ -1236,6 +1238,27 @@ function isDictRowDirty(tr){
   }
 
   return original !== JSON.stringify(getDictRowData(tr));
+}
+
+function getDirtyDictRows(){
+  return Array.from(document.querySelectorAll('#dictTbody tr.editing:not(#dictEmptyRow)')).filter(function(tr){
+    return isDictRowDirty(tr);
+  });
+}
+
+function updateBatchSaveButtonVisibility(){
+  const btn = document.getElementById('batchSaveBtn');
+  if(!btn){
+    return;
+  }
+
+  if(isReorderMode){
+    btn.style.display = 'none';
+    return;
+  }
+
+  const dirtyCount = getDirtyDictRows().length;
+  btn.style.display = dirtyCount >= 2 ? 'inline-block' : 'none';
 }
 
 function bindDictRowDirtyWatch(tr){
@@ -1482,6 +1505,7 @@ function updateDictMainButton(tr){
   const btn = tr.querySelector('.edit-main-btn');
   if(!btn){
     updateDictSecondaryButton(tr);
+    updateBatchSaveButtonVisibility();
     return;
   }
 
@@ -1492,6 +1516,7 @@ function updateDictMainButton(tr){
     btn.innerText = '編輯';
     btn.classList.remove('primary');
     updateDictSecondaryButton(tr);
+    updateBatchSaveButtonVisibility();
     return;
   }
 
@@ -1504,6 +1529,7 @@ function updateDictMainButton(tr){
   }
 
   updateDictSecondaryButton(tr);
+  updateBatchSaveButtonVisibility();
 }
 
 function setDictInputsEnabled(tr, enabled){
@@ -2261,6 +2287,8 @@ function ensureDictEmptyRow(){
     tbody.innerHTML =
       '<tr id="dictEmptyRow"><td colspan="9" style="text-align:center; color:#64748b; padding:20px;">尚未掃描任何條碼，請點擊上方開啟掃描</td></tr>';
   }
+
+  updateBatchSaveButtonVisibility();
 }
 
 function openDictGtinScanner(button){
@@ -3226,7 +3254,7 @@ function cancelReorderMode(){
   document.getElementById('dictTable').classList.remove('reorder-mode');
   document.getElementById('reorderBtn').innerText = '更改排序';
   document.getElementById('saveOrderBtn').style.display = 'none';
-  document.getElementById('batchSaveBtn').style.display = 'inline-block';
+  updateBatchSaveButtonVisibility();
 
   const tbody = document.getElementById('dictTbody');
   const rows = Array.from(tbody.querySelectorAll('tr:not(#dictEmptyRow)'));
@@ -3348,7 +3376,7 @@ async function saveDictOrder(){
       isReorderMode = false;
       btn.style.display = 'none';
       document.getElementById('reorderBtn').innerText = '更改排序';
-      document.getElementById('batchSaveBtn').style.display = 'inline-block';
+      updateBatchSaveButtonVisibility();
       document.getElementById('dictTable').classList.remove('reorder-mode');
       await loadDictList();
     } else {
@@ -3913,7 +3941,7 @@ if (window.location.hostname.includes('github.io')) {
   ghFooter.innerHTML = `
     <div style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">
       <span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>
-      <span>v.2.15.15-202605292143</span>
+      <span>v.2.15.16-202605292150</span>
     </div>
   `;
   document.body.appendChild(ghFooter);
