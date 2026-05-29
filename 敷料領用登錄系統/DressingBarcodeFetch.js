@@ -356,11 +356,17 @@ function findDressingPairCandidates_(data){
 function saveDressingBarcode_(data){
   const table = getDressingTable_();
 
+  const originalGtin = normalizeDressingCode_(data.originalGtin);
+  const originalBoxGtin = normalizeDressingCode_(data.originalBoxGtin);
+
   const gtin =
     normalizeDressingCode_(data.gtin || data.singleGtin);
 
   const boxGtin =
     normalizeDressingCode_(data.boxGtin);
+
+  const hospitalCode = String(data.hospitalCode || '').trim();
+  const hospitalCodeCol = table.headers.indexOf(DRESSING_KEY_TO_DISPLAY_MAP.hospitalCode);
 
   if(!gtin && !boxGtin){
     return {
@@ -380,22 +386,43 @@ function saveDressingBarcode_(data){
   let targetRow = -1;
   let targetReason = '';
 
-  for(let i = 1; i < table.values.length; i++){
-    const rowSingle =
-      normalizeDressingCode_(table.values[i][table.gtinCol]);
+  if(originalGtin || originalBoxGtin){
+    for(let i = 1; i < table.values.length; i++){
+      const rowSingle = normalizeDressingCode_(table.values[i][table.gtinCol]);
+      const rowBox = table.boxGtinCol >= 0 ? normalizeDressingCode_(table.values[i][table.boxGtinCol]) : '';
 
-    const rowBox =
-      table.boxGtinCol >= 0
-        ? normalizeDressingCode_(table.values[i][table.boxGtinCol])
-        : '';
+      if((originalGtin && rowSingle === originalGtin) || (originalBoxGtin && rowBox === originalBoxGtin)){
+        targetRow = i + 1;
+        targetReason = 'original_gtin';
+        break;
+      }
+    }
+  }
 
-    if(
-      (gtin && rowSingle === gtin) ||
-      (boxGtin && rowBox === boxGtin)
-    ){
-      targetRow = i + 1;
-      targetReason = 'gtin';
-      break;
+  if(targetRow < 0 && hospitalCode && hospitalCodeCol >= 0){
+    for(let i = 1; i < table.values.length; i++){
+      const rowHospitalCode = String(table.values[i][hospitalCodeCol] || '').trim();
+      if(rowHospitalCode === hospitalCode){
+        targetRow = i + 1;
+        targetReason = 'hospitalCode';
+        break;
+      }
+    }
+  }
+
+  if(targetRow < 0){
+    for(let i = 1; i < table.values.length; i++){
+      const rowSingle = normalizeDressingCode_(table.values[i][table.gtinCol]);
+      const rowBox = table.boxGtinCol >= 0 ? normalizeDressingCode_(table.values[i][table.boxGtinCol]) : '';
+
+      if(
+        (gtin && rowSingle === gtin) ||
+        (boxGtin && rowBox === boxGtin)
+      ){
+        targetRow = i + 1;
+        targetReason = 'gtin';
+        break;
+      }
     }
   }
 
