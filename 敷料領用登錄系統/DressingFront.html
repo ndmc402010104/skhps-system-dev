@@ -1182,13 +1182,7 @@ function createDictRow(item, isNew){
     <td style="white-space:nowrap;">
       <span class="dragHandle">☰</span>
       <button type="button" class="dictActionBtn edit-main-btn" onclick="handleDictMainButton(this)">${isNew ? '儲存' : '編輯'}</button>
-      if(tr.classList.contains('editing') && tr.dataset.isNewRow === '1'){
-        removeDressingItemFromCache(getDictRowData(tr));
-        tr.remove();
-        ensureDictEmptyRow();
-        showNotice('已刪除暫存列，快取已更新', 'success', '刪除完成');
-        return;
-      }
+      <button type="button" class="dictActionBtn danger delete-main-btn" onclick="deleteDictRow(this)">${isNew ? '不儲存' : '刪除'}</button>
       <div class="dictStatus ${isNew ? '' : 'saved'}">${isNew ? '新資料，請確認後儲存' : '已建檔'}</div>
       ${isNew && item.scanMeta ? item.scanMeta : ''}
     </td>
@@ -3195,7 +3189,7 @@ if (window.location.hostname.includes('github.io')) {
   ghFooter.innerHTML = `
     <div style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">
       <span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>
-      <span>v.2.15.13-202605292027</span>
+      <span>v.2.15.13-202605292029</span>
     </div>
   `;
   document.body.appendChild(ghFooter);
