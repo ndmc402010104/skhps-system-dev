@@ -913,6 +913,7 @@ let initialOrder = [];
 let dressingMasterCache = [];
 let dictLoaded = false;
 let draggedRow = null;
+let dictScanMemory = {};
 
 // HydroClean cavity 測試用完整碼：等你拿到完整碼後，只要改這兩行即可。
 const TEST_HYDROCLEAN_CAVITY_SINGLE_CODE = '(01)04052199255484(11)250324(17)280301(10)500113156';
@@ -2012,6 +2013,7 @@ async function deleteDictRow(btn){
   const key = data.singleGtin || data.boxGtin || data.hospitalCode;
 
   function removeFrontEndRow(message, title){
+    rememberDictRowBeforeRemove(tr);
     removeDressingItemFromCache(data);
     tr.remove();
     ensureDictEmptyRow();
@@ -2260,6 +2262,111 @@ function findExistingItemByGtin(gtin){
   });
 }
 
+
+function rememberDictScanForRow(tr, gtin, target){
+  if(!tr || !gtin || (target !== 'single' && target !== 'box')){
+    return;
+  }
+
+  const key = normalizeGtinForCompare(gtin);
+  if(!key){
+    return;
+  }
+
+  if(!dictScanMemory || typeof dictScanMemory !== 'object'){
+    dictScanMemory = {};
+  }
+
+  dictScanMemory[key] = {
+    gtin: gtin,
+    target: target,
+    data: getDictRowData(tr)
+  };
+}
+
+function rememberDictRowBeforeRemove(tr){
+  if(!tr){
+    return;
+  }
+
+  const single = getRowInputValue(tr, '.dict-single-gtin');
+  const box = getRowInputValue(tr, '.dict-box-gtin');
+
+  if(single){
+    rememberDictScanForRow(tr, single, 'single');
+  }
+
+  if(box){
+    rememberDictScanForRow(tr, box, 'box');
+  }
+
+  const map = getRowScannedGtinMap(tr);
+  Object.keys(map || {}).forEach(function(key){
+    const target = map[key];
+    if(target === 'single' || target === 'box'){
+      rememberDictScanForRow(tr, key, target);
+    }
+  });
+}
+
+function getRememberedDictScan(gtin){
+  const key = normalizeGtinForCompare(gtin);
+  if(!key || !dictScanMemory || !dictScanMemory[key]){
+    return null;
+  }
+
+  return dictScanMemory[key];
+}
+
+function recreateRememberedScanRow(gtin, parsed){
+  const memory = getRememberedDictScan(gtin);
+  if(!memory || !memory.data){
+    return null;
+  }
+
+  const data = Object.assign({}, memory.data);
+  const target = memory.target === 'box' ? 'box' : 'single';
+
+  if(target === 'box'){
+    data.boxGtin = gtin;
+  } else {
+    data.singleGtin = gtin;
+    data.gtin = gtin;
+  }
+
+  const emptyRow = document.getElementById('dictEmptyRow');
+  if(emptyRow){
+    emptyRow.remove();
+  }
+
+  const tr = createDictRow(data, true);
+  tr.dataset.scannedGtin = gtin;
+  tr.dataset.rowKey = data.singleGtin || data.boxGtin || data.hospitalCode || gtin;
+  setRowScannedGtinTarget(tr, gtin, target);
+
+  moveDictRowToTop(tr);
+  setDictInputsEnabled(tr, true);
+  bindDictRowDirtyWatch(tr);
+  updateDictMainButton(tr);
+
+  const statusEl = tr.querySelector('.dictStatus');
+  if(statusEl){
+    statusEl.innerText = target === 'box'
+      ? '已從本輪掃描記憶補回盒裝GTIN，請確認後儲存'
+      : '已從本輪掃描記憶補回單包GTIN，請確認後儲存';
+    statusEl.className = 'dictStatus';
+  }
+
+  showNotice(
+    target === 'box' ? '已補回盒裝GTIN' : '已補回單包GTIN',
+    'success',
+    '已補回條碼'
+  );
+
+  flashDictRow(tr);
+  return tr;
+}
+
 function getRowScannedGtinMap(tr){
   if(!tr){
     return {};
@@ -2287,6 +2394,7 @@ function setRowScannedGtinTarget(tr, gtin, target){
   tr.dataset.scannedGtinMap = JSON.stringify(map);
   tr.dataset.scannedGtin = gtin;
   tr.dataset.gtinTarget = target;
+  rememberDictScanForRow(tr, gtin, target);
 }
 
 function getRowRememberedGtinTarget(tr, gtin){
@@ -2306,6 +2414,11 @@ function getRowRememberedGtinTarget(tr, gtin){
     if(target === 'single' || target === 'box'){
       return target;
     }
+  }
+
+  const memory = getRememberedDictScan(gtin);
+  if(memory && (memory.target === 'single' || memory.target === 'box')){
+    return memory.target;
   }
 
   return '';
@@ -2794,8 +2907,19 @@ async function addDictRow(barcode, parsed){
     return;
   }
 
+  const rememberedRow = recreateRememberedScanRow(scannedGtin, parsed);
+  if(rememberedRow){
+    return;
+  }
+
   const localExistingItem = findExistingItemByGtin(scannedGtin);
   if(localExistingItem){
+    const target = sameGtin(localExistingItem.boxGtin || '', scannedGtin) ? 'box' : 'single';
+    const tr = createDictRow(localExistingItem, false);
+    setRowScannedGtinTarget(tr, scannedGtin, target);
+    moveDictRowToTop(tr);
+    enterDictEditMode(tr);
+    reapplyScannedGtinToExistingRow(tr, scannedGtin, parsed);
     showNotice('', 'success', describeDressingItem(localExistingItem));
     return;
   }
@@ -3555,7 +3679,7 @@ if (window.location.hostname.includes('github.io')) {
   ghFooter.innerHTML = `
     <div style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">
       <span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>
-      <span>v.2.15.15-202605292128</span>
+      <span>v.2.15.15-202605292132</span>
     </div>
   `;
   document.body.appendChild(ghFooter);
