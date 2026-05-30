@@ -20,7 +20,9 @@
   --muted:#64748b;
   --primary:#2563eb;
 }
+
 *{ box-sizing:border-box; }
+
 html,body{
   margin:0;
   min-height:100%;
@@ -30,53 +32,90 @@ html,body{
     linear-gradient(180deg,#fbfdff 0%,var(--bg) 100%);
   font-family:Arial,"Noto Sans TC","Microsoft JhengHei",sans-serif;
 }
-body{ padding:118px 24px 82px; overflow-x:hidden; }
-.shell{ width:100%; max-width:1400px; margin:0 auto; }
-.pageMap{ display:flex; align-items:center; gap:8px; margin-bottom:24px; color:var(--muted); font-size:13px; font-weight:700; }
-.pageMapCurrent{ color:var(--text); }
-.eyebrow{ margin:0 0 10px; color:#1d4ed8; font-size:13px; font-weight:800; }
-h1{ margin:0; font-size:clamp(28px,4vw,42px); line-height:1.18; }
-.pageLead{ margin:12px 0 0; color:#475569; font-size:16px; line-height:1.7; }
-.cardGrid{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:18px; margin-top:24px; }
-.navCard{
+
+body{
+  padding:118px 24px 82px;
+  overflow-x:hidden;
+}
+
+.shell{
   width:100%;
-  text-align:left;
-  background:var(--card);
-  padding:26px;
-  border:1px solid var(--line);
-  border-radius:12px;
-  box-shadow:0 8px 24px rgba(15,23,42,.06);
-  cursor:pointer;
+  max-width:1400px;
+  margin:0 auto;
 }
-.navCard:hover{
-  border-color:#93c5fd;
-  box-shadow:0 14px 32px rgba(37,99,235,.12);
-  transform:translateY(-1px);
-}
-.navCard.active{
-  border-color:#2563eb;
-  box-shadow:0 14px 32px rgba(37,99,235,.16);
-}
-.navTitle{ margin:0 0 8px; font-size:22px; font-weight:800; color:var(--text); }
-.navDesc{ margin:0; color:var(--muted); font-size:15px; line-height:1.7; }
-.navAction{
-  margin-top:18px;
-  display:inline-flex;
+
+.pageMap{
+  display:flex;
   align-items:center;
-  justify-content:center;
-  padding:9px 14px;
-  border-radius:8px;
+  gap:8px;
+  margin-bottom:24px;
+  color:var(--muted);
+  font-size:13px;
+  font-weight:700;
+}
+
+.pageMapCurrent{ color:var(--text); }
+
+.eyebrow{
+  margin:0 0 10px;
+  color:#1d4ed8;
+  font-size:13px;
+  font-weight:800;
+}
+
+h1{
+  margin:0;
+  font-size:clamp(28px,4vw,42px);
+  line-height:1.18;
+}
+
+.pageLead{
+  margin:12px 0 0;
+  color:#475569;
+  font-size:16px;
+  line-height:1.7;
+}
+
+.moduleTabs{
+  display:flex;
+  gap:12px;
+  margin-top:24px;
+  margin-bottom:24px;
+  flex-wrap:wrap;
+}
+
+.moduleTab{
+  border:1px solid var(--line);
+  background:#fff;
+  color:#334155;
+  border-radius:10px;
+  padding:12px 24px;
+  font-size:16px;
+  font-weight:800;
+  cursor:pointer;
+  box-shadow:0 6px 16px rgba(15,23,42,.05);
+}
+
+.moduleTab:hover{
+  border-color:#93c5fd;
+  color:#1d4ed8;
+}
+
+.moduleTab.active{
   background:var(--primary);
   color:#fff;
-  font-weight:800;
-  font-size:14px;
+  border-color:var(--primary);
+  box-shadow:0 10px 24px rgba(37,99,235,.18);
 }
+
 .moduleHost{
-  margin-top:24px;
+  margin-top:10px;
 }
+
 .moduleArea{
   display:none;
 }
+
 .placeholderCard{
   width:100%;
   background:var(--card);
@@ -85,22 +124,37 @@ h1{ margin:0; font-size:clamp(28px,4vw,42px); line-height:1.18; }
   border-radius:12px;
   box-shadow:0 8px 24px rgba(15,23,42,.06);
 }
+
 .placeholderTitle{
   margin:0 0 8px;
   font-size:22px;
   font-weight:800;
 }
+
 .placeholderText{
   margin:0;
   color:var(--muted);
   line-height:1.7;
 }
-@media(max-width:960px){
-  .cardGrid{ grid-template-columns:1fr; }
-}
+
 @media(max-width:760px){
-  body{ padding:104px 12px 72px; }
-  .navCard{ padding:20px; }
+  body{
+    padding:104px 12px 72px;
+  }
+
+  .moduleTabs{
+    gap:8px;
+    flex-wrap:nowrap;
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+    padding-bottom:4px;
+  }
+
+  .moduleTab{
+    flex:0 0 auto;
+    padding:10px 16px;
+    font-size:15px;
+  }
 }
 </style>
 
@@ -125,7 +179,7 @@ async function showModule(name){
     el.style.display = 'none';
   });
 
-  document.querySelectorAll('.navCard').forEach(function(btn){
+  document.querySelectorAll('.moduleTab').forEach(function(btn){
     btn.classList.remove('active');
   });
 
@@ -170,28 +224,22 @@ function reloadCurrentModule(){
 <section>
   <p class="eyebrow">敷料作業</p>
   <h1>敷料領用登錄系統</h1>
-  <p class="pageLead">請選擇要進入的功能。這版是 AJAX 單頁切換測試版，不換頁顯示不同模組。</p>
+  <p class="pageLead">敷料領用、庫存管理與敷料建檔整合於同一頁面。</p>
 </section>
 
-<section class="cardGrid" aria-label="敷料系統功能選單">
-  <button type="button" class="navCard" data-module-button="use" onclick="showModule('use')">
-    <h2 class="navTitle">敷料領用</h2>
-    <p class="navDesc">登錄病人敷料領用資料，包含品項、數量、支付類別與主治醫師。</p>
-    <span class="navAction">顯示領用</span>
+<div class="moduleTabs" aria-label="敷料系統功能切換">
+  <button type="button" class="moduleTab" data-module-button="use" onclick="showModule('use')">
+    敷料領用
   </button>
 
-  <button type="button" class="navCard" data-module-button="dict" onclick="showModule('dict')">
-    <h2 class="navTitle">敷料建檔 📷</h2>
-    <p class="navDesc">維護敷料主檔、單包 GTIN、包裝 GTIN、一盒數量、自費價格與啟用狀態。</p>
-    <span class="navAction">顯示建檔</span>
+  <button type="button" class="moduleTab" data-module-button="stock" onclick="showModule('stock')">
+    庫存管理
   </button>
 
-  <button type="button" class="navCard" data-module-button="stock" onclick="showModule('stock')">
-    <h2 class="navTitle">庫存批號</h2>
-    <p class="navDesc">預留庫存、批號、效期與數量管理模組。</p>
-    <span class="navAction">顯示庫存</span>
+  <button type="button" class="moduleTab" data-module-button="dict" onclick="showModule('dict')">
+    敷料建檔
   </button>
-</section>
+</div>
 
 <section id="moduleHost" class="moduleHost">
 
@@ -202,14 +250,14 @@ function reloadCurrentModule(){
     </div>
   </section>
 
-  <?!= include('敷料領用登錄系統/敷料建檔/DressingDict') ?>
-
   <section id="stockArea" class="moduleArea">
     <div class="placeholderCard">
-      <h2 class="placeholderTitle">庫存批號</h2>
-      <p class="placeholderText">庫存批號模組預留區。未來可放批號、效期、庫存數量與異動紀錄。</p>
+      <h2 class="placeholderTitle">庫存管理</h2>
+      <p class="placeholderText">庫存管理模組預留區。未來可放批號、效期、庫存數量與異動紀錄。</p>
     </div>
   </section>
+
+  <?!= include('敷料領用登錄系統/敷料建檔/DressingDict') ?>
 
 </section>
 
