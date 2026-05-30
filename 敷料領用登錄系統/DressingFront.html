@@ -8,6 +8,9 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
+
+<script src="https://unpkg.com/html5-qrcode"></script>
+
 <style>
 :root{
   --bg:#f4f7fb;
@@ -28,13 +31,13 @@ html,body{
   font-family:Arial,"Noto Sans TC","Microsoft JhengHei",sans-serif;
 }
 body{ padding:118px 24px 82px; overflow-x:hidden; }
-.shell{ width:100%; max-width:1100px; margin:0 auto; }
+.shell{ width:100%; max-width:1400px; margin:0 auto; }
 .pageMap{ display:flex; align-items:center; gap:8px; margin-bottom:24px; color:var(--muted); font-size:13px; font-weight:700; }
 .pageMapCurrent{ color:var(--text); }
 .eyebrow{ margin:0 0 10px; color:#1d4ed8; font-size:13px; font-weight:800; }
 h1{ margin:0; font-size:clamp(28px,4vw,42px); line-height:1.18; }
 .pageLead{ margin:12px 0 0; color:#475569; font-size:16px; line-height:1.7; }
-.cardGrid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; margin-top:24px; }
+.cardGrid{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:18px; margin-top:24px; }
 .navCard{
   width:100%;
   text-align:left;
@@ -50,6 +53,10 @@ h1{ margin:0; font-size:clamp(28px,4vw,42px); line-height:1.18; }
   box-shadow:0 14px 32px rgba(37,99,235,.12);
   transform:translateY(-1px);
 }
+.navCard.active{
+  border-color:#2563eb;
+  box-shadow:0 14px 32px rgba(37,99,235,.16);
+}
 .navTitle{ margin:0 0 8px; font-size:22px; font-weight:800; color:var(--text); }
 .navDesc{ margin:0; color:var(--muted); font-size:15px; line-height:1.7; }
 .navAction{
@@ -64,12 +71,39 @@ h1{ margin:0; font-size:clamp(28px,4vw,42px); line-height:1.18; }
   font-weight:800;
   font-size:14px;
 }
+.moduleHost{
+  margin-top:24px;
+}
+.moduleArea{
+  display:none;
+}
+.placeholderCard{
+  width:100%;
+  background:var(--card);
+  padding:28px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  box-shadow:0 8px 24px rgba(15,23,42,.06);
+}
+.placeholderTitle{
+  margin:0 0 8px;
+  font-size:22px;
+  font-weight:800;
+}
+.placeholderText{
+  margin:0;
+  color:var(--muted);
+  line-height:1.7;
+}
+@media(max-width:960px){
+  .cardGrid{ grid-template-columns:1fr; }
+}
 @media(max-width:760px){
   body{ padding:104px 12px 72px; }
-  .cardGrid{ grid-template-columns:1fr; }
   .navCard{ padding:20px; }
 }
 </style>
+
 <script>
 let APP_ENTRY_URL = '<?= appEntryUrl ?>';
 
@@ -77,14 +111,49 @@ if (APP_ENTRY_URL.includes('<' + '?=') || APP_ENTRY_URL.trim() === '') {
   APP_ENTRY_URL = 'https://script.google.com/macros/s/AKfycbwbz8pXfU68j2aFeF_AaDmmG6Vco3JsPSw-PGyYeLu0AF3vCfzaZJQFOjORnwSw8Xp4/exec';
 }
 
+let AJAX_MODULE_STATE = {
+  current:'',
+  dictLoadedOnce:false
+};
+
 function goHome(){
   window.top.location.href = APP_ENTRY_URL;
 }
 
-function goPage(page){
-  const url = new URL(APP_ENTRY_URL);
-  url.searchParams.set('page', page);
-  window.top.location.href = url.toString();
+async function showModule(name){
+  document.querySelectorAll('.moduleArea').forEach(function(el){
+    el.style.display = 'none';
+  });
+
+  document.querySelectorAll('.navCard').forEach(function(btn){
+    btn.classList.remove('active');
+  });
+
+  const target = document.getElementById(name + 'Area');
+  const btn = document.querySelector('[data-module-button="' + name + '"]');
+
+  if(btn){
+    btn.classList.add('active');
+  }
+
+  if(target){
+    target.style.display = 'block';
+  }
+
+  AJAX_MODULE_STATE.current = name;
+
+  if(name === 'dict' && typeof loadDictList === 'function'){
+    if(!AJAX_MODULE_STATE.dictLoadedOnce){
+      AJAX_MODULE_STATE.dictLoadedOnce = true;
+      await loadDictList();
+    }
+  }
+}
+
+function reloadCurrentModule(){
+  if(AJAX_MODULE_STATE.current === 'dict' && typeof loadDictList === 'function'){
+    return loadDictList();
+  }
 }
 </script>
 </head>
@@ -92,7 +161,7 @@ function goPage(page){
 <body>
 <main class="shell">
 
-<?!= include('共用設定檔/AppHeader', { subtitle: '敷料領用登錄系統', onClick: 'goHome()', maxWidth: '1100px' }) ?>
+<?!= include('共用設定檔/AppHeader', { subtitle: '敷料領用登錄系統', onClick: 'goHome()', maxWidth: '1400px' }) ?>
 
 <nav class="pageMap" aria-label="頁面地圖">
   <span class="pageMapCurrent">首頁 / 敷料領用登錄系統</span>
@@ -101,21 +170,47 @@ function goPage(page){
 <section>
   <p class="eyebrow">敷料作業</p>
   <h1>敷料領用登錄系統</h1>
-  <p class="pageLead">請選擇要進入的功能。此頁只負責導向，敷料建檔與敷料領用各自獨立維護。</p>
+  <p class="pageLead">請選擇要進入的功能。這版是 AJAX 單頁切換測試版，不換頁顯示不同模組。</p>
 </section>
 
 <section class="cardGrid" aria-label="敷料系統功能選單">
-  <button type="button" class="navCard" onclick="goPage('dressingUse')">
+  <button type="button" class="navCard" data-module-button="use" onclick="showModule('use')">
     <h2 class="navTitle">敷料領用</h2>
     <p class="navDesc">登錄病人敷料領用資料，包含品項、數量、支付類別與主治醫師。</p>
-    <span class="navAction">進入領用</span>
+    <span class="navAction">顯示領用</span>
   </button>
 
-  <button type="button" class="navCard" onclick="goPage('dressingDict')">
+  <button type="button" class="navCard" data-module-button="dict" onclick="showModule('dict')">
     <h2 class="navTitle">敷料建檔 📷</h2>
     <p class="navDesc">維護敷料主檔、單包 GTIN、包裝 GTIN、一盒數量、自費價格與啟用狀態。</p>
-    <span class="navAction">進入建檔</span>
+    <span class="navAction">顯示建檔</span>
   </button>
+
+  <button type="button" class="navCard" data-module-button="stock" onclick="showModule('stock')">
+    <h2 class="navTitle">庫存批號</h2>
+    <p class="navDesc">預留庫存、批號、效期與數量管理模組。</p>
+    <span class="navAction">顯示庫存</span>
+  </button>
+</section>
+
+<section id="moduleHost" class="moduleHost">
+
+  <section id="useArea" class="moduleArea">
+    <div class="placeholderCard">
+      <h2 class="placeholderTitle">敷料領用</h2>
+      <p class="placeholderText">這裡先預留敷料領用模組。下一步再把 DressingUse 的表單內容搬進來。</p>
+    </div>
+  </section>
+
+  <?!= include('敷料領用登錄系統/敷料建檔/DressingDict_Module') ?>
+
+  <section id="stockArea" class="moduleArea">
+    <div class="placeholderCard">
+      <h2 class="placeholderTitle">庫存批號</h2>
+      <p class="placeholderText">庫存批號模組預留區。未來可放批號、效期、庫存數量與異動紀錄。</p>
+    </div>
+  </section>
+
 </section>
 
 </main>
