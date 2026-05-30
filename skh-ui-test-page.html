@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>SKH UI Test Page</title>
+  <style>
+    :root{
+      --skh-primary:#2563eb;
+      --skh-primary-dark:#1d4ed8;
+      --skh-secondary:#64748b;
+      --skh-success:#16a34a;
+      --skh-danger:#dc2626;
+      --skh-warning:#f59e0b;
+      --skh-camera:#7c3aed;
+
+      --skh-bg:#f8fafc;
+      --skh-card:#ffffff;
+      --skh-text:#0f172a;
+      --skh-muted:#64748b;
+      --skh-border:#e2e8f0;
+
+      --skh-radius:12px;
+      --skh-shadow:0 6px 18px rgba(15,23,42,.08);
+      --skh-font:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",sans-serif;
+    }
+
+    *{box-sizing:border-box}
+
+    body{
+      margin:0;
+      background:var(--skh-bg);
+      color:var(--skh-text);
+      font-family:var(--skh-font);
+      line-height:1.5;
+    }
+
+    .skh-page{
+      max-width:1180px;
+      margin:0 auto;
+      padding:20px;
+    }
+
+    .skh-header{
+      background:linear-gradient(135deg,#1e40af,#2563eb);
+      color:white;
+      padding:18px 20px;
+      border-radius:0 0 18px 18px;
+      box-shadow:var(--skh-shadow);
+      margin-bottom:18px;
+    }
+
+    .skh-header-row{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+
+    .skh-title{
+      font-size:24px;
+      font-weight:800;
+      margin:0;
+    }
+
+    .skh-subtitle{
+      margin:4px 0 0;
+      opacity:.88;
+      font-size:14px;
+    }
+
+    .skh-card{
+      background:var(--skh-card);
+      border:1px solid var(--skh-border);
+      border-radius:var(--skh-radius);
+      box-shadow:var(--skh-shadow);
+      padding:16px;
+      margin-bottom:16px;
+    }
+
+    .skh-section-title{
+      font-size:18px;
+      font-weight:800;
+      margin:0 0 12px;
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+
+    .skh-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+      gap:14px;
+    }
+
+    .skh-row{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+
+    .skh-btn{
+      border:0;
+      border-radius:10px;
+      padding:9px 15px;
+      font-size:14px;
+      font-weight:800;
+      cursor:pointer;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:6px;
+      min-height:38px;
+      transition:.15s ease;
+      box-shadow:0 2px 6px rgba(15,23,42,.12);
+      user-select:none;
+      white-space:nowrap;
+    }
+
+    .skh-btn:hover{
+      transform:translateY(-1px);
+      filter:brightness(1.04);
+      box-shadow:0 4px 12px rgba(15,23,42,.16);
+    }
+
+    .skh-btn:active{
+      transform:translateY(1px);
+      box-shadow:0 1px 3px rgba(15,23,42,.18);
+    }
+
+    .skh-btn:disabled,
+    .skh-btn.is-disabled{
+      opacity:.45;
+      cursor:not-allowed;
+      transform:none;
+      filter:none;
+      box-shadow:none;
+    }
+
+    .skh-btn-primary{background:var(--skh-primary);color:white}
+    .skh-btn-secondary{background:var(--skh-secondary);color:white}
+    .skh-btn-success{background:var(--skh-success);color:white}
+    .skh-btn-danger{background:var(--skh-danger);color:white}
+    .skh-btn-warning{background:var(--skh-warning);color:#111827}
+    .skh-btn-camera{background:var(--skh-camera);color:white}
+    .skh-btn-ghost{background:#f1f5f9;color:#0f172a;border:1px solid var(--skh-border);box-shadow:none}
+
+    .skh-btn-sm{
+      min-height:30px;
+      padding:5px 10px;
+      font-size:13px;
+      border-radius:8px;
+    }
+
+    .skh-btn-lg{
+      min-height:46px;
+      padding:12px 18px;
+      font-size:16px;
+    }
+
+    .skh-spinner{
+      width:14px;
+      height:14px;
+      border:2px solid rgba(255,255,255,.45);
+      border-top-color:white;
+      border-radius:50%;
+      animation:skh-spin .8s linear infinite;
+    }
+
+    .skh-btn-warning .skh-spinner,
+    .skh-btn-ghost .skh-spinner{
+      border-color:rgba(15,23,42,.25);
+      border-top-color:#0f172a;
+    }
+
+    @keyframes skh-spin{to{transform:rotate(360deg)}}
+
+    .skh-badge{
+      display:inline-flex;
+      align-items:center;
+      border-radius:999px;
+      padding:3px 9px;
+      font-size:12px;
+      font-weight:800;
+      background:#e0f2fe;
+      color:#0369a1;
+    }
+
+    .skh-badge-success{background:#dcfce7;color:#166534}
+    .skh-badge-danger{background:#fee2e2;color:#991b1b}
+    .skh-badge-warning{background:#fef3c7;color:#92400e}
+
+    .skh-alert{
+      border-radius:12px;
+      padding:12px 14px;
+      border:1px solid;
+      margin:10px 0;
+      font-weight:700;
+    }
+
+    .skh-alert-info{background:#eff6ff;border-color:#bfdbfe;color:#1e40af}
+    .skh-alert-success{background:#f0fdf4;border-color:#bbf7d0;color:#166534}
+    .skh-alert-warning{background:#fffbeb;border-color:#fde68a;color:#92400e}
+    .skh-alert-danger{background:#fef2f2;border-color:#fecaca;color:#991b1b}
+
+    .skh-field{
+      display:flex;
+      flex-direction:column;
+      gap:5px;
+      margin-bottom:12px;
+    }
+
+    .skh-label{
+      font-size:13px;
+      color:var(--skh-muted);
+      font-weight:800;
+    }
+
+    .skh-input,
+    .skh-select,
+    .skh-textarea{
+      width:100%;
+      border:1px solid var(--skh-border);
+      border-radius:10px;
+      padding:9px 10px;
+      font-size:15px;
+      font-family:var(--skh-font);
+      background:white;
+      color:var(--skh-text);
+    }
+
+    .skh-input:focus,
+    .skh-select:focus,
+    .skh-textarea:focus{
+      outline:2px solid rgba(37,99,235,.22);
+      border-color:var(--skh-primary);
+    }
+
+    .skh-radio-group{
+      display:flex;
+      gap:14px;
+      flex-wrap:wrap;
+    }
+
+    .skh-radio{
+      display:inline-flex;
+      gap:6px;
+      align-items:center;
+      font-weight:700;
+    }
+
+    .skh-table-wrap{
+      overflow:auto;
+      border:1px solid var(--skh-border);
+      border-radius:12px;
+    }
+
+    .skh-table{
+      width:100%;
+      border-collapse:collapse;
+      min-width:720px;
+      background:white;
+    }
+
+    .skh-table th,
+    .skh-table td{
+      padding:10px;
+      border-bottom:1px solid var(--skh-border);
+      text-align:left;
+      vertical-align:middle;
+      font-size:14px;
+    }
+
+    .skh-table th{
+      background:#f1f5f9;
+      font-weight:900;
+      color:#334155;
+      position:sticky;
+      top:0;
+    }
+
+    .skh-table tr:hover td{
+      background:#f8fafc;
+    }
+
+    .skh-list{
+      margin:0;
+      padding-left:20px;
+    }
+
+    .skh-list li{
+      margin:6px 0;
+    }
+
+    .skh-toolbar{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      justify-content:space-between;
+      align-items:center;
+      margin-bottom:12px;
+    }
+
+    .skh-modal-mask{
+      position:fixed;
+      inset:0;
+      background:rgba(15,23,42,.45);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:16px;
+      z-index:999;
+    }
+
+    .skh-modal-mask.is-open{display:flex}
+
+    .skh-modal{
+      width:min(460px,100%);
+      background:white;
+      border-radius:16px;
+      box-shadow:0 18px 48px rgba(15,23,42,.28);
+      padding:18px;
+    }
+
+    .skh-modal-title{
+      font-size:18px;
+      font-weight:900;
+      margin:0 0 8px;
+    }
+
+    .skh-overlay{
+      position:fixed;
+      right:16px;
+      bottom:16px;
+      background:#0f172a;
+      color:white;
+      padding:12px 14px;
+      border-radius:12px;
+      box-shadow:var(--skh-shadow);
+      display:none;
+      font-weight:800;
+      z-index:1000;
+    }
+
+    .skh-overlay.is-show{display:flex;gap:8px;align-items:center}
+
+    @media(max-width:640px){
+      .skh-page{padding:12px}
+      .skh-header{padding:14px}
+      .skh-title{font-size:20px}
+      .skh-btn{width:100%}
+      .skh-row .skh-btn-sm{width:auto}
+      .skh-toolbar{align-items:stretch}
+    }
+  </style>
+</head>
+<body>
+  <header class="skh-header">
+    <div class="skh-header-row">
+      <div>
+        <h1 class="skh-title">SKH UI Test Page</h1>
+        <p class="skh-subtitle">Button / Text / Form / List / Table / Alert / Modal / Loading 測試頁</p>
+      </div>
+      <button class="skh-btn skh-btn-camera" onclick="showToast()">📷 開啟相機掃描</button>
+    </div>
+  </header>
+
+  <main class="skh-page">
+
+    <section class="skh-card">
+      <h2 class="skh-section-title">1. Buttons：正常狀態</h2>
+      <div class="skh-row">
+        <button class="skh-btn skh-btn-primary">儲存</button>
+        <button class="skh-btn skh-btn-secondary">取消</button>
+        <button class="skh-btn skh-btn-success">新增</button>
+        <button class="skh-btn skh-btn-danger">刪除</button>
+        <button class="skh-btn skh-btn-warning">重新整理</button>
+        <button class="skh-btn skh-btn-camera">📷 掃描</button>
+        <button class="skh-btn skh-btn-ghost">返回</button>
+      </div>
+    </section>
+
+    <section class="skh-card">
+      <h2 class="skh-section-title">2. Buttons：尺寸 / Disabled / Loading</h2>
+      <div class="skh-row" style="margin-bottom:10px">
+        <button class="skh-btn skh-btn-primary skh-btn-sm">小按鈕</button>
+        <button class="skh-btn skh-btn-primary">標準按鈕</button>
+        <button class="skh-btn skh-btn-primary skh-btn-lg">大型按鈕</button>
+      </div>
+      <div class="skh-row">
+        <button class="skh-btn skh-btn-primary" disabled>Disabled</button>
+        <button class="skh-btn skh-btn-success" disabled>新增中不可按</button>
+        <button class="skh-btn skh-btn-danger" disabled>刪除鎖定</button>
+        <button class="skh-btn skh-btn-primary"><span class="skh-spinner"></span>儲存中...</button>
+        <button class="skh-btn skh-btn-camera"><span class="skh-spinner"></span>掃描中...</button>
+      </div>
+    </section>
+
+    <section class="skh-card">
+      <h2 class="skh-section-title">3. Text / Badge / Alert</h2>
+      <p>這是一段一般文字。用來測試字體、行高、閱讀感，以及醫院電腦上是否清楚。</p>
+      <p style="color:var(--skh-muted)">這是一段輔助文字，通常用在說明、版本號、欄位提示。</p>
+      <div class="skh-row">
+        <span class="skh-badge">一般</span>
+        <span class="skh-badge skh-badge-success">成功</span>
+        <span class="skh-badge skh-badge-warning">警告</span>
+        <span class="skh-badge skh-badge-danger">錯誤</span>
+      </div>
+      <div class="skh-alert skh-alert-info">查詢中：正在比對本機快取與後端資料。</div>
+      <div class="skh-alert skh-alert-success">儲存成功：資料已寫入。</div>
+      <div class="skh-alert skh-alert-warning">注意：尚有未儲存變更。</div>
+      <div class="skh-alert skh-alert-danger">錯誤：找不到對應敷料主檔。</div>
+    </section>
+
+    <section class="skh-card">
+      <h2 class="skh-section-title">4. Form 元件</h2>
+      <div class="skh-grid">
+        <div class="skh-field">
+          <label class="skh-label">病歷號</label>
+          <input class="skh-input" placeholder="例如 12345678">
+        </div>
+        <div class="skh-field">
+          <label class="skh-label">敷料名稱</label>
+          <input class="skh-input" value="Aquacel Ag+">
+        </div>
+        <div class="skh-field">
+          <label class="skh-label">支付類別</label>
+          <select class="skh-select">
+            <option>健保</option>
+            <option>自費</option>
+          </select>
+        </div>
+        <div class="skh-field">
+          <label class="skh-label">計價狀態</label>
+          <div class="skh-radio-group">
+            <label class="skh-radio"><input type="radio" name="charge" checked> 未計價</label>
+            <label class="skh-radio"><input type="radio" name="charge"> 已計價</label>
+          </div>
+        </div>
+      </div>
+      <div class="skh-field">
+        <label class="skh-label">備註</label>
+        <textarea class="skh-textarea" rows="3" placeholder="輸入備註"></textarea>
+      </div>
+    </section>
+
+    <section class="skh-card">
+      <h2 class="skh-section-title">5. List / Checklist</h2>
+      <ul class="skh-list">
+        <li>Primary：儲存、送出、查詢</li>
+        <li>Secondary：返回、取消</li>
+        <li>Success：新增病人、新增列</li>
+        <li>Danger：刪除、移除</li>
+        <li>Camera：開啟相機掃描、重新掃描</li>
+        <li>Loading：AJAX 執行中，避免重複點擊</li>
+      </ul>
+    </section>
+
+    <section class="skh-card">
+      <div class="skh-toolbar">
+        <h2 class="skh-section-title" style="margin:0">6. Table 測試</h2>
+        <div class="skh-row">
+          <button class="skh-btn skh-btn-success skh-btn-sm">＋新增列</button>
+          <button class="skh-btn skh-btn-primary skh-btn-sm">批次儲存</button>
+          <button class="skh-btn skh-btn-secondary skh-btn-sm">重新整理</button>
+        </div>
+      </div>
+      <div class="skh-table-wrap">
+        <table class="skh-table">
+          <thead>
+            <tr>
+              <th>操作</th>
+              <th>計價狀態</th>
+              <th>敷料名稱</th>
+              <th>數量</th>
+              <th>支付類別</th>
+              <th>主治醫師</th>
+              <th>狀態</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><button class="skh-btn skh-btn-danger skh-btn-sm">刪除</button></td>
+              <td><span class="skh-badge skh-badge-warning">未計價</span></td>
+              <td>Aquacel Ag+ 15*15</td>
+              <td>1</td>
+              <td>健保</td>
+              <td>林醫師</td>
+              <td><span class="skh-badge skh-badge-success">可儲存</span></td>
+            </tr>
+            <tr>
+              <td><button class="skh-btn skh-btn-danger skh-btn-sm" disabled>刪除</button></td>
+              <td><span class="skh-badge">已計價</span></td>
+              <td>Mepilex Ag 17.5*17.5</td>
+              <td>2</td>
+              <td>自費</td>
+              <td>陳醫師</td>
+              <td><span class="skh-badge">已鎖定</span></td>
+            </tr>
+            <tr>
+              <td><button class="skh-btn skh-btn-camera skh-btn-sm">掃描</button></td>
+              <td><span class="skh-badge skh-badge-danger">錯誤</span></td>
+              <td>未知條碼</td>
+              <td>1</td>
+              <td>健保</td>
+              <td>王醫師</td>
+              <td><span class="skh-badge skh-badge-danger">待建檔</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="skh-card">
+      <h2 class="skh-section-title">7. Modal / Toast 測試</h2>
+      <div class="skh-row">
+        <button class="skh-btn skh-btn-primary" onclick="openModal()">開啟 Modal</button>
+        <button class="skh-btn skh-btn-success" onclick="showToast()">顯示 Toast</button>
+      </div>
+    </section>
+
+  </main>
+
+  <div id="testModal" class="skh-modal-mask">
+    <div class="skh-modal">
+      <h3 class="skh-modal-title">自訂確認視窗</h3>
+      <p>這裡可以取代原本 alert / confirm，用來測試刪除、覆蓋、儲存確認。</p>
+      <div class="skh-row" style="justify-content:flex-end">
+        <button class="skh-btn skh-btn-secondary" onclick="closeModal()">取消</button>
+        <button class="skh-btn skh-btn-danger" onclick="closeModal()">確認刪除</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="skh-overlay">
+    <span class="skh-spinner"></span>
+    <span>測試訊息：AJAX 執行中...</span>
+  </div>
+
+  <script>
+    function openModal(){
+      document.getElementById('testModal').classList.add('is-open');
+    }
+
+    function closeModal(){
+      document.getElementById('testModal').classList.remove('is-open');
+    }
+
+    function showToast(){
+      const toast = document.getElementById('toast');
+      toast.classList.add('is-show');
+      setTimeout(() => toast.classList.remove('is-show'), 1800);
+    }
+
+    document.getElementById('testModal').addEventListener('click', function(e){
+      if(e.target === this) closeModal();
+    });
+  </script>
+</body>
+</html>

@@ -119,6 +119,12 @@ function doGet(e){
     return showAdminMeetingPage();
   }
 
+  //CSS模組化分支多出來的按鈕
+  if (page === 'uitest') {
+    return HtmlService.createTemplateFromFile('skh-ui-test-page')
+      .evaluate()
+      .setTitle('SKH UI 測試中心');
+  }
 
   /*
   ========================================

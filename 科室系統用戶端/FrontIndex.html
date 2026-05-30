@@ -266,6 +266,14 @@ function goDressingFront(){
 
 }
 
+function goUiTest(){
+
+  goPage(
+    'uitest'
+  );
+
+}
+
 </script>
 
 </head>
@@ -336,6 +344,18 @@ onclick="goDressingFront()"
     <span class="entryDesc">開啟敷料領用登錄系統，支援相機掃描條碼功能。</span>
   </span>
   <span class="arrow">↗</span>
+</button>
+
+<button
+class="entryButton github"
+onclick="goUiTest()"
+>
+  <span class="entryIcon">UI</span>
+  <span>
+    <span class="entryTitle">SKH UI 測試中心</span>
+    <span class="entryDesc">在 Apps Script 測試 Button、Alert、Table、Form、Modal、Loading 等共用樣式元件。</span>
+  </span>
+  <span class="arrow">›</span>
 </button>
 
 </div>
