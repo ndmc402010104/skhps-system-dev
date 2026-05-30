@@ -368,6 +368,85 @@ function Push-GitHubIfRequested {
 
 Save-AllOpenFiles
 
+Write-Host ""
+Write-Host "==========================" -ForegroundColor Cyan
+Write-Host "目前版本狀態" -ForegroundColor Cyan
+Write-Host "==========================" -ForegroundColor Cyan
+
+try {
+  $currentVersionBeforePush =
+    Get-CurrentAppVersion -RootPath $rootPath
+
+  Write-Host ""
+  Write-Host "開發版(APP_VERSION)" -ForegroundColor Yellow
+  Write-Host "  v$currentVersionBeforePush" -ForegroundColor Green
+}
+catch {
+  Write-Host ""
+  Write-Host "開發版(APP_VERSION)" -ForegroundColor Yellow
+  Write-Host "  讀取失敗：$($_.Exception.Message)" -ForegroundColor Red
+}
+
+try {
+  $previewReadmePath =
+    Join-Path $rootPath 'README.md'
+
+  if (Test-Path -LiteralPath $previewReadmePath) {
+    $previewReadme =
+      Get-Content `
+        -Path $previewReadmePath `
+        -Raw `
+        -Encoding UTF8
+
+    $previewProdVersion =
+      ([regex]::Match(
+        $previewReadme,
+        '(?m)^正式版\s*[:：]\s*(.+)$'
+      )).Groups[1].Value.Trim()
+
+    $previewTestVersion =
+      ([regex]::Match(
+        $previewReadme,
+        '(?m)^測試版\s*[:：]\s*(.+)$'
+      )).Groups[1].Value.Trim()
+
+    $previewGitHubVersion =
+      ([regex]::Match(
+        $previewReadme,
+        '(?m)^Github\s*[:：]\s*(.+)$'
+      )).Groups[1].Value.Trim()
+
+    if ([string]::IsNullOrWhiteSpace($previewProdVersion)) {
+      $previewProdVersion = 'README 未填'
+    }
+
+    if ([string]::IsNullOrWhiteSpace($previewTestVersion)) {
+      $previewTestVersion = 'README 未填'
+    }
+
+    if ([string]::IsNullOrWhiteSpace($previewGitHubVersion)) {
+      $previewGitHubVersion = 'README 未填'
+    }
+
+    Write-Host ""
+    Write-Host "README紀錄版本" -ForegroundColor Yellow
+    Write-Host "  正式版 : $previewProdVersion" -ForegroundColor Cyan
+    Write-Host "  測試版 : $previewTestVersion" -ForegroundColor Cyan
+    Write-Host "  GitHub : $previewGitHubVersion" -ForegroundColor Cyan
+  }
+  else {
+    Write-Host ""
+    Write-Host "README紀錄版本" -ForegroundColor Yellow
+    Write-Host "  找不到 README.md" -ForegroundColor Red
+  }
+}
+catch {
+  Write-Host ""
+  Write-Host "README版本讀取失敗：$($_.Exception.Message)" -ForegroundColor Red
+}
+
+Write-Host ""
+
 if ($env:APP_VERSION_BUMP) {
   $Bump = $env:APP_VERSION_BUMP
 }
