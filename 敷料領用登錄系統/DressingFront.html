@@ -8,6 +8,9 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
+
+<script src="https://unpkg.com/html5-qrcode"></script>
+
 <style>
 :root{
   --bg:#f4f7fb;
@@ -17,7 +20,9 @@
   --muted:#64748b;
   --primary:#2563eb;
 }
+
 *{ box-sizing:border-box; }
+
 html,body{
   margin:0;
   min-height:100%;
@@ -27,49 +32,132 @@ html,body{
     linear-gradient(180deg,#fbfdff 0%,var(--bg) 100%);
   font-family:Arial,"Noto Sans TC","Microsoft JhengHei",sans-serif;
 }
-body{ padding:118px 24px 82px; overflow-x:hidden; }
-.shell{ width:100%; max-width:1100px; margin:0 auto; }
-.pageMap{ display:flex; align-items:center; gap:8px; margin-bottom:24px; color:var(--muted); font-size:13px; font-weight:700; }
-.pageMapCurrent{ color:var(--text); }
-.eyebrow{ margin:0 0 10px; color:#1d4ed8; font-size:13px; font-weight:800; }
-h1{ margin:0; font-size:clamp(28px,4vw,42px); line-height:1.18; }
-.pageLead{ margin:12px 0 0; color:#475569; font-size:16px; line-height:1.7; }
-.cardGrid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; margin-top:24px; }
-.navCard{
+
+body{
+  padding:118px 24px 82px;
+  overflow-x:hidden;
+}
+
+.shell{
   width:100%;
-  text-align:left;
+  max-width:1400px;
+  margin:0 auto;
+}
+
+.pageMap{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin-bottom:24px;
+  color:var(--muted);
+  font-size:13px;
+  font-weight:700;
+}
+
+.pageMapCurrent{ color:var(--text); }
+
+.eyebrow{
+  margin:0 0 10px;
+  color:#1d4ed8;
+  font-size:13px;
+  font-weight:800;
+}
+
+h1{
+  margin:0;
+  font-size:clamp(28px,4vw,42px);
+  line-height:1.18;
+}
+
+.pageLead{
+  margin:12px 0 0;
+  color:#475569;
+  font-size:16px;
+  line-height:1.7;
+}
+
+.moduleTabs{
+  display:flex;
+  gap:12px;
+  margin-top:24px;
+  margin-bottom:24px;
+  flex-wrap:wrap;
+}
+
+.moduleTab{
+  border:1px solid var(--line);
+  background:#fff;
+  color:#334155;
+  border-radius:10px;
+  padding:12px 24px;
+  font-size:16px;
+  font-weight:800;
+  cursor:pointer;
+  box-shadow:0 6px 16px rgba(15,23,42,.05);
+}
+
+.moduleTab:hover{
+  border-color:#93c5fd;
+  color:#1d4ed8;
+}
+
+.moduleTab.active{
+  background:var(--primary);
+  color:#fff;
+  border-color:var(--primary);
+  box-shadow:0 10px 24px rgba(37,99,235,.18);
+}
+
+.moduleHost{
+  margin-top:10px;
+}
+
+.moduleArea{
+  display:none;
+}
+
+.placeholderCard{
+  width:100%;
   background:var(--card);
-  padding:26px;
+  padding:28px;
   border:1px solid var(--line);
   border-radius:12px;
   box-shadow:0 8px 24px rgba(15,23,42,.06);
-  cursor:pointer;
 }
-.navCard:hover{
-  border-color:#93c5fd;
-  box-shadow:0 14px 32px rgba(37,99,235,.12);
-  transform:translateY(-1px);
-}
-.navTitle{ margin:0 0 8px; font-size:22px; font-weight:800; color:var(--text); }
-.navDesc{ margin:0; color:var(--muted); font-size:15px; line-height:1.7; }
-.navAction{
-  margin-top:18px;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  padding:9px 14px;
-  border-radius:8px;
-  background:var(--primary);
-  color:#fff;
+
+.placeholderTitle{
+  margin:0 0 8px;
+  font-size:22px;
   font-weight:800;
-  font-size:14px;
 }
+
+.placeholderText{
+  margin:0;
+  color:var(--muted);
+  line-height:1.7;
+}
+
 @media(max-width:760px){
-  body{ padding:104px 12px 72px; }
-  .cardGrid{ grid-template-columns:1fr; }
-  .navCard{ padding:20px; }
+  body{
+    padding:104px 12px 72px;
+  }
+
+  .moduleTabs{
+    gap:8px;
+    flex-wrap:nowrap;
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+    padding-bottom:4px;
+  }
+
+  .moduleTab{
+    flex:0 0 auto;
+    padding:10px 16px;
+    font-size:15px;
+  }
 }
 </style>
+
 <script>
 let APP_ENTRY_URL = '<?= appEntryUrl ?>';
 
@@ -77,14 +165,49 @@ if (APP_ENTRY_URL.includes('<' + '?=') || APP_ENTRY_URL.trim() === '') {
   APP_ENTRY_URL = 'https://script.google.com/macros/s/AKfycbwbz8pXfU68j2aFeF_AaDmmG6Vco3JsPSw-PGyYeLu0AF3vCfzaZJQFOjORnwSw8Xp4/exec';
 }
 
+let AJAX_MODULE_STATE = {
+  current:'',
+  dictLoadedOnce:false
+};
+
 function goHome(){
   window.top.location.href = APP_ENTRY_URL;
 }
 
-function goPage(page){
-  const url = new URL(APP_ENTRY_URL);
-  url.searchParams.set('page', page);
-  window.top.location.href = url.toString();
+async function showModule(name){
+  document.querySelectorAll('.moduleArea').forEach(function(el){
+    el.style.display = 'none';
+  });
+
+  document.querySelectorAll('.moduleTab').forEach(function(btn){
+    btn.classList.remove('active');
+  });
+
+  const target = document.getElementById(name + 'Area');
+  const btn = document.querySelector('[data-module-button="' + name + '"]');
+
+  if(btn){
+    btn.classList.add('active');
+  }
+
+  if(target){
+    target.style.display = 'block';
+  }
+
+  AJAX_MODULE_STATE.current = name;
+
+  if(name === 'dict' && typeof loadDictList === 'function'){
+    if(!AJAX_MODULE_STATE.dictLoadedOnce){
+      AJAX_MODULE_STATE.dictLoadedOnce = true;
+      await loadDictList();
+    }
+  }
+}
+
+function reloadCurrentModule(){
+  if(AJAX_MODULE_STATE.current === 'dict' && typeof loadDictList === 'function'){
+    return loadDictList();
+  }
 }
 </script>
 </head>
@@ -92,7 +215,7 @@ function goPage(page){
 <body>
 <main class="shell">
 
-<?!= include('共用設定檔/AppHeader', { subtitle: '敷料領用登錄系統', onClick: 'goHome()', maxWidth: '1100px' }) ?>
+<?!= include('共用設定檔/AppHeader', { subtitle: '敷料領用登錄系統', onClick: 'goHome()', maxWidth: '1400px' }) ?>
 
 <nav class="pageMap" aria-label="頁面地圖">
   <span class="pageMapCurrent">首頁 / 敷料領用登錄系統</span>
@@ -101,21 +224,41 @@ function goPage(page){
 <section>
   <p class="eyebrow">敷料作業</p>
   <h1>敷料領用登錄系統</h1>
-  <p class="pageLead">請選擇要進入的功能。此頁只負責導向，敷料建檔與敷料領用各自獨立維護。</p>
+  <p class="pageLead">敷料領用、庫存管理與敷料建檔整合於同一頁面。</p>
 </section>
 
-<section class="cardGrid" aria-label="敷料系統功能選單">
-  <button type="button" class="navCard" onclick="goPage('dressingUse')">
-    <h2 class="navTitle">敷料領用</h2>
-    <p class="navDesc">登錄病人敷料領用資料，包含品項、數量、支付類別與主治醫師。</p>
-    <span class="navAction">進入領用</span>
+<div class="moduleTabs" aria-label="敷料系統功能切換">
+  <button type="button" class="moduleTab" data-module-button="use" onclick="showModule('use')">
+    敷料領用
   </button>
 
-  <button type="button" class="navCard" onclick="goPage('dressingDict')">
-    <h2 class="navTitle">敷料建檔 📷</h2>
-    <p class="navDesc">維護敷料主檔、單包 GTIN、包裝 GTIN、一盒數量、自費價格與啟用狀態。</p>
-    <span class="navAction">進入建檔</span>
+  <button type="button" class="moduleTab" data-module-button="stock" onclick="showModule('stock')">
+    庫存管理
   </button>
+
+  <button type="button" class="moduleTab" data-module-button="dict" onclick="showModule('dict')">
+    敷料建檔
+  </button>
+</div>
+
+<section id="moduleHost" class="moduleHost">
+
+  <section id="useArea" class="moduleArea">
+    <div class="placeholderCard">
+      <h2 class="placeholderTitle">敷料領用</h2>
+      <p class="placeholderText">這裡先預留敷料領用模組。下一步再把 DressingUse 的表單內容搬進來。</p>
+    </div>
+  </section>
+
+  <section id="stockArea" class="moduleArea">
+    <div class="placeholderCard">
+      <h2 class="placeholderTitle">庫存管理</h2>
+      <p class="placeholderText">庫存管理模組預留區。未來可放批號、效期、庫存數量與異動紀錄。</p>
+    </div>
+  </section>
+
+  <?!= include('敷料領用登錄系統/敷料建檔/DressingDict') ?>
+
 </section>
 
 </main>

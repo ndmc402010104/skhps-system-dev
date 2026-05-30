@@ -1,18 +1,12 @@
-<!DOCTYPE html>
-<html>
-<head>
-<base target="_top">
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>敷料建檔</title>
-
-<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<meta http-equiv="Pragma" content="no-cache">
-<meta http-equiv="Expires" content="0">
-
-<script src="https://unpkg.com/html5-qrcode"></script>
+<!--
+========================================
+敷料建檔 AJAX Module
+放在 DressingFront.html 內 include 使用
+========================================
+-->
 
 <style>
+
 :root{
   --bg:#f4f7fb;
   --card:#ffffff;
@@ -568,11 +562,12 @@ tr.editing .dictGtinScanBtn{
   border:1px solid var(--line);
   border-radius:8px;
   background:#fff;
+  position:relative;
 }
 
 .dictTable{
-  width:100%;
-  min-width:1220px;
+  min-width:1280px;
+  width:max-content;
   border-collapse:collapse;
   table-layout:fixed;
 }
@@ -782,72 +777,14 @@ tr.editing select:not(.readonly):focus{
     margin:24px auto;
   }
 }
+
 </style>
-
-<script>
-let APP_ENTRY_URL = '<?= appEntryUrl ?>';
-
-if (APP_ENTRY_URL.includes('<' + '?=') || APP_ENTRY_URL.trim() === '') {
-  APP_ENTRY_URL = 'https://script.google.com/macros/s/AKfycbwbz8pXfU68j2aFeF_AaDmmG6Vco3JsPSw-PGyYeLu0AF3vCfzaZJQFOjORnwSw8Xp4/exec'; 
-}
-
-function goHome(){
-  window.top.location.href = APP_ENTRY_URL;
-}
-</script>
-</head>
-
-<body>
-<main class="shell">
-
-<?!= include('共用設定檔/AppHeader', { subtitle: '敷料建檔', onClick: 'goHome()', maxWidth: '1400px' }) ?>
 
 <div class="headerNoticeWrap">
   <div id="noticeStack" class="noticeStack" aria-live="polite"></div>
 </div>
 
-<nav class="pageMap" aria-label="頁面地圖">
-  <button class="pageMapLink" onclick="goHome()">首頁</button>
-  <span class="pageMapSep">/</span>
-  <span class="pageMapCurrent">敷料建檔</span>
-</nav>
-
-<section class="pageHero">
-  <p class="eyebrow">敷料作業</p>
-  <h1>敷料建檔</h1>
-  <p class="pageLead">維護敷料主檔、單包 GTIN、包裝 GTIN、一盒數量、自費價格與啟用狀態。</p>
-</section>
-
-<div class="card">
-  <button type="button" onclick="goHome()">回導向頁</button>
-  <button type="button" class="primary" onclick="loadDictList()" style="margin-left:10px;">重新讀取主檔</button>
-</div>
-
-<div id="formArea">
-  <div class="infoRow">
-    <label>領用日期與時間：</label>
-    <input id="useDateTime" readonly>
-  </div>
-
-  <div class="infoRow">
-    <label>領用人：</label>
-    <input id="userName">
-  </div>
-
-  <div class="infoRow">
-    <label>領用單位：</label>
-    <input id="unitName">
-  </div>
-
-  <div id="patientArea"></div>
-
-  <div class="actions">
-    <button type="button" onclick="addPatientBlock()">下一個病人</button>
-    <button type="button" class="primary" onclick="submitUse()">送出</button>
-  </div>
-</div>
-
-<div id="dictArea" class="dictArea" style="display:block;">
+<section id="dictArea" class="moduleArea dictArea" style="display:none;">
   <div class="dictHeader">
     <div>
       <h2>敷料條碼建檔清單</h2>
@@ -883,7 +820,7 @@ function goHome(){
       </tbody>
     </table>
   </div>
-</div>
+</section>
 
 <div id="scannerOverlay" class="scannerOverlay">
   <div class="scannerBox">
@@ -894,7 +831,7 @@ function goHome(){
       <button type="button" onclick="closeDressingScanner()">關閉</button>
     </div>
   </div>
-</div>
+
 <div id="appDialogOverlay" class="appDialogOverlay">
   <div class="appDialog" role="dialog" aria-modal="true" aria-labelledby="appDialogTitle">
     <h3 id="appDialogTitle" class="appDialogTitle"></h3>
@@ -908,6 +845,7 @@ function goHome(){
 </div>
 
 <script>
+
 let patientCount = 0;
 let dressingScanner = null;
 let activeDressingInput = null;
@@ -4410,12 +4348,11 @@ function refreshPatientTitle(){
 function submitUse(){
   showNotice('下一步接 Sheet', 'info');
 }
-</script>
-</main>
 
-<?!= getVersionBadgeHtml() ?>
+</script>
 
 <script>
+
 if (window.location.hostname.includes('github.io')) {
   document.body.style.padding = '0';
   document.body.style.display = 'flex';
@@ -4460,26 +4397,5 @@ function normalizeTextForCompare(value){
     .replace(/[×Xx＊]/g, '*')
     .toLowerCase();
 }
+
 </script>
-
-<script>
-document.addEventListener('DOMContentLoaded', function(){
-  if(document.getElementById('dictArea')){
-    loadDictList();
-  }
-});
-</script>
-
-</body>
-</html>
-
-
-
-
-
-
-
-
-
-
-
