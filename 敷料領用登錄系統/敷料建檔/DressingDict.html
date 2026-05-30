@@ -1,0 +1,4485 @@
+<!DOCTYPE html>
+<html>
+<head>
+<base target="_top">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>敷料建檔</title>
+
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+
+<script src="https://unpkg.com/html5-qrcode"></script>
+
+<style>
+:root{
+  --bg:#f4f7fb;
+  --card:#ffffff;
+  --line:#dbe4ef;
+  --text:#172033;
+  --muted:#64748b;
+  --primary:#2563eb;
+  --danger-bg:#fee2e2;
+  --danger:#991b1b;
+}
+
+*{ box-sizing:border-box; }
+
+html,body{
+  margin:0;
+  min-height:100%;
+  color:var(--text);
+  background:
+    radial-gradient(circle at top left,rgba(37,99,235,.1),transparent 30rem),
+    linear-gradient(180deg,#fbfdff 0%,var(--bg) 100%);
+  font-family:Arial,"Noto Sans TC","Microsoft JhengHei",sans-serif;
+}
+
+body{
+  padding:118px 24px 82px;
+  overflow-x:hidden;
+}
+
+.shell{
+  width:100%;
+  max-width:1400px;
+  margin:0 auto;
+}
+
+.pageHero{ margin-bottom:24px; }
+
+.pageMap{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin-bottom:24px;
+  color:var(--muted);
+  font-size:13px;
+  font-weight:700;
+}
+
+.pageMapLink{
+  border:0;
+  padding:0;
+  background:transparent;
+  color:var(--primary);
+  font:inherit;
+  cursor:pointer;
+}
+
+.pageMapCurrent{ color:var(--text); }
+.pageMapSep{ color:#94a3b8; }
+
+.eyebrow{
+  margin:0 0 10px;
+  color:#1d4ed8;
+  font-size:13px;
+  font-weight:800;
+}
+
+h1{
+  margin:0;
+  font-size:clamp(28px,4vw,42px);
+  line-height:1.18;
+}
+
+.pageLead{
+  margin:12px 0 0;
+  color:#475569;
+  font-size:16px;
+  line-height:1.7;
+}
+
+.card{
+  width:100%;
+  background:var(--card);
+  padding:28px;
+  border:1px solid var(--line);
+  border-radius:8px;
+  box-shadow:0 8px 24px rgba(15,23,42,.06);
+  overflow:visible;
+}
+
+button{
+  padding:8px 14px;
+  font-size:15px;
+  cursor:pointer;
+  border-radius:8px;
+  border:1px solid #d6dde7;
+  background:#ffffff;
+  color:#334155;
+  white-space:nowrap;
+}
+
+button:disabled{
+  opacity:.55;
+  cursor:not-allowed;
+}
+
+.primary{
+  background:var(--primary);
+  color:white;
+  border:none;
+}
+
+.danger{
+  background:var(--danger-bg);
+  color:var(--danger);
+}
+
+#formArea{
+  display:none;
+  margin-top:20px;
+}
+
+.infoRow{ margin-bottom:12px; }
+
+.infoRow label{
+  display:inline-block;
+  width:130px;
+  font-weight:bold;
+}
+
+input,select{
+  padding:7px;
+  border:1px solid #cbd5e1;
+  border-radius:8px;
+  box-sizing:border-box;
+  font-size:16px;
+}
+
+input:disabled,
+select:disabled{
+  background:#f1f5f9 !important;
+  color:#64748b !important;
+}
+
+.patientBlock{
+  margin-top:20px;
+  padding:18px;
+  background:#f8fafc;
+  border:1px solid var(--line);
+  border-radius:8px;
+}
+
+.patientTitle{
+  font-size:20px;
+  font-weight:bold;
+  margin-bottom:14px;
+}
+
+/* 領用表：獨立控制，不再用全域 nth-child */
+.useTableWrap{
+  width:100%;
+  overflow-x:auto;
+  -webkit-overflow-scrolling:touch;
+  margin-top:14px;
+  border:1px solid var(--line);
+  border-radius:8px;
+  background:#fff;
+}
+
+.useTable{
+  width:100%;
+  min-width:1020px;
+  border-collapse:collapse;
+  table-layout:fixed;
+}
+
+.useTable th,
+.useTable td{
+  border-bottom:1px solid var(--line);
+  border-right:1px solid var(--line);
+  padding:10px;
+  vertical-align:middle;
+}
+
+.useTable th{
+  background:#f1f5f9;
+  text-align:left;
+}
+
+.useTable th:last-child,
+.useTable td:last-child{
+  border-right:0;
+}
+
+.useTable tr:last-child td{
+  border-bottom:0;
+}
+
+.useTable .col-action{ width:80px; text-align:center; }
+.useTable .col-charge{ width:170px; }
+.useTable .col-dressing{ width:360px; }
+.useTable .col-qty{ width:100px; }
+.useTable .col-pay{ width:180px; }
+.useTable .col-doctor{ width:220px; }
+
+input:not([type="radio"]){ width:100%; }
+
+.radioGroup{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  padding-left:6px;
+}
+
+.radioGroup label{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  margin:0;
+  white-space:nowrap;
+}
+
+.radioGroup input{ margin:0; }
+
+.dressingInputGroup{
+  display:flex;
+  gap:8px;
+  align-items:center;
+}
+
+.dressingInputGroup .dressingName{ flex:1; }
+
+.dictGtinInputGroup{
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+
+.dictGtinInputGroup input{
+  flex:1 1 auto;
+  min-width:0;
+}
+
+.dictGtinScanBtn{
+  display:none;
+  flex:0 0 auto;
+  padding:7px 9px;
+  font-size:13px;
+}
+
+tr.editing .dictGtinScanBtn{
+  display:inline-block;
+}
+
+.cameraBtn{
+  white-space:nowrap;
+  padding:7px 10px;
+}
+
+.actions{
+  margin-top:14px;
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+
+
+/* 畫面提示與自訂對話框：取代 alert / confirm / prompt */
+.headerNoticeWrap{
+  position:fixed;
+  top:10px;
+  right:72px;
+  z-index:1400;
+  width:auto;
+  max-width:280px;
+  pointer-events:none;
+}
+
+.noticeStack{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  width:auto;
+}
+
+.noticeCard{
+  position:relative;
+  height:44px;
+  width:auto;
+  min-width:0;
+  max-width:280px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:0 34px 0 12px;
+  border-radius:12px;
+  background:rgba(255,255,255,.96);
+  border:1px solid #dbe4ef;
+  border-left:4px solid #22c55e;
+  box-shadow:0 4px 12px rgba(15,23,42,.08);
+  backdrop-filter:blur(10px);
+  overflow:hidden;
+  pointer-events:auto;
+}
+
+.noticeCard::before{
+  content:'';
+  position:absolute;
+  top:50%;
+  right:-7px;
+  width:10px;
+  height:10px;
+  background:rgba(255,255,255,.96);
+  border-top:1px solid #dbe4ef;
+  border-right:1px solid #dbe4ef;
+  transform:translateY(-50%) rotate(45deg);
+}
+
+.noticeCard.success{ border-left-color:#22c55e; }
+.noticeCard.error{ border-left-color:#dc2626; }
+.noticeCard.warning{ border-left-color:#f59e0b; }
+
+.noticeTitle{
+  margin:0;
+  font-size:14px;
+  font-weight:700;
+  white-space:nowrap;
+  flex:0 1 auto;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  min-width:0;
+}
+
+.noticeMessage{
+  min-width:0;
+  flex:1 1 auto;
+  max-width:170px;
+  font-size:13px;
+  color:#64748b;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.noticeClose{
+  position:absolute;
+  top:10px;
+  right:12px;
+  border:0;
+  background:transparent;
+  color:#64748b;
+  font-size:22px;
+  line-height:1;
+  padding:0;
+  cursor:pointer;
+}
+
+@keyframes noticeIn{
+  from{
+    opacity:0;
+    transform:translateY(-8px) scale(.96);
+  }
+
+  to{
+    opacity:1;
+    transform:translateY(0) scale(1);
+  }
+}
+
+@media(max-width:960px){
+  .headerNoticeWrap{
+    top:12px;
+    right:58px;
+    left:auto;
+    width:auto;
+    max-width:220px;
+  }
+
+  .noticeCard{
+    min-width:0;
+    max-width:none;
+    width:100%;
+    padding:10px 40px 10px 12px;
+    border-radius:14px;
+  }
+
+  .noticeTitle{
+    font-size:15px;
+  }
+
+  .noticeMessage{
+    font-size:13px;
+  }
+}
+
+
+.appDialogOverlay{
+  display:none;
+  position:fixed;
+  inset:0;
+  z-index:1300;
+  align-items:center;
+  justify-content:center;
+  padding:18px;
+  background:rgba(15,23,42,.48);
+}
+
+.appDialog{
+  width:min(520px,100%);
+  border-radius:12px;
+  background:#ffffff;
+  border:1px solid var(--line);
+  box-shadow:0 18px 50px rgba(15,23,42,.26);
+  padding:18px;
+}
+
+.appDialogTitle{
+  margin:0 0 10px;
+  font-size:18px;
+  font-weight:800;
+}
+
+.appDialogMessage{
+  margin:0 0 12px;
+  color:#334155;
+  line-height:1.65;
+  white-space:pre-line;
+}
+
+.appDialogInput{
+  width:100%;
+  margin-top:4px;
+}
+
+.appDialogActions{
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+  margin-top:16px;
+}
+
+.appDialogChoices{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  margin-top:12px;
+  max-height:55vh;
+  overflow-y:auto;
+  padding-right:4px;
+}
+
+.appDialogChoiceBtn{
+  width:100%;
+  text-align:left;
+  padding:12px 16px;
+  border:1px solid #cbd5e1;
+  background:#f8fafc;
+  color:#1e293b;
+  font-size:15px;
+  font-weight:bold;
+  border-radius:8px;
+  cursor:pointer;
+  transition:all 0.2s;
+}
+
+.appDialogChoiceBtn:hover{
+  background:#e2e8f0;
+  border-color:#94a3b8;
+}
+
+/* 掃描視窗 */
+.scannerOverlay{
+  display:none;
+  position:fixed;
+  inset:0;
+  z-index:999;
+  background:rgba(15,23,42,.72);
+  padding:24px;
+}
+
+.scannerBox{
+  max-width:520px;
+  margin:60px auto;
+  background:white;
+  border-radius:12px;
+  padding:18px;
+  box-shadow:0 16px 40px rgba(15,23,42,.25);
+}
+
+.scannerTitle{
+  margin:0 0 12px;
+  font-size:20px;
+  font-weight:800;
+}
+
+.scannerHint{
+  margin:0 0 12px;
+  color:var(--muted);
+  font-size:14px;
+  line-height:1.6;
+}
+
+#scannerReader{ width:100%; }
+
+.scannerActions{
+  margin-top:12px;
+  display:flex;
+  justify-content:flex-end;
+}
+
+/* 建檔區 */
+.dictArea{
+  display:none;
+  margin-top:24px;
+  padding-top:24px;
+  border-top:1px solid var(--line);
+}
+
+.dictHeader{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:16px;
+  margin-bottom:14px;
+  flex-wrap:wrap;
+}
+
+.dictHeader h2{
+  margin:0;
+  font-size:20px;
+}
+
+.dictToolbar{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+}
+
+.dictLoadStatus{
+  font-size:13px;
+  color:var(--muted);
+  font-weight:700;
+  margin:8px 0 0;
+}
+
+/* 建檔表：專屬 wrapper，永遠不裁切左側 */
+.dictTableWrap{
+  width:100%;
+  max-width:100%;
+  overflow-x:auto;
+  overflow-y:visible;
+  -webkit-overflow-scrolling:touch;
+  border:1px solid var(--line);
+  border-radius:8px;
+  background:#fff;
+}
+
+.dictTable{
+  width:100%;
+  min-width:1220px;
+  border-collapse:collapse;
+  table-layout:fixed;
+}
+
+.dictTable th,
+.dictTable td{
+  border-bottom:1px solid var(--line);
+  border-right:1px solid var(--line);
+  padding:10px;
+  text-align:left;
+  vertical-align:middle;
+}
+
+.dictTable th{
+  background:#f1f5f9;
+  font-weight:800;
+}
+
+.dictTable th:last-child,
+.dictTable td:last-child{
+  border-right:0;
+}
+
+.dictTable tr:last-child td{
+  border-bottom:0;
+}
+
+.dictTable input,
+.dictTable select{
+  width:100%;
+  padding:8px;
+  border:1px solid transparent;
+  background:transparent;
+  font-size:15px;
+  color:var(--text);
+  border-radius:6px;
+  text-overflow:ellipsis;
+  pointer-events:none;
+}
+
+tr.editing input:not(.readonly),
+tr.editing select:not(.readonly){
+  border-color:#cbd5e1;
+  background:#fff;
+  pointer-events:auto;
+}
+
+tr.editing input:not(.readonly):focus,
+tr.editing select:not(.readonly):focus{
+  border-color:var(--primary);
+  outline:none;
+  box-shadow:0 0 0 3px rgba(37,99,235,.15);
+}
+
+.dictTable .col-code{ width:110px; }
+.dictTable .col-name{ width:220px; }
+.dictTable .col-size{ width:130px; }
+.dictTable .col-single{ width:170px; }
+.dictTable .col-box{ width:170px; }
+.dictTable .col-boxqty{ width:100px; }
+.dictTable .col-category{ width:140px; }
+.dictTable .col-status{ width:120px; }
+.dictTable .col-actions{ width:160px; }
+
+.dictStatus{
+  font-size:12px;
+  font-weight:bold;
+  color:var(--muted);
+  margin-top:4px;
+  line-height:1.4;
+  white-space:normal;
+}
+
+.dictStatus.saved{ color:#15803d; }
+.dictStatus.error{ color:#dc2626; }
+
+.dictActionBtn{
+  padding:6px 10px;
+  font-size:13px;
+  margin-right:2px;
+  margin-bottom:4px;
+}
+
+.scanMeta{
+  font-size:12px;
+  color:var(--muted);
+  margin-top:4px;
+  line-height:1.4;
+  white-space:normal;
+}
+
+.dictTable.reorder-mode tr{ 
+  cursor:grab; 
+  transition:all .2s ease;
+}
+
+.dictTable.reorder-mode tr:hover{ background-color:#f8fafc; }
+.dictTable.reorder-mode tr:active{ cursor:grabbing; }
+
+.dictTable tr.dragging{
+  opacity:.95;
+  background:#ffffff !important;
+  box-shadow:0 10px 25px rgba(37,99,235,.15);
+  transform:scale(1.01);
+  position:relative;
+  z-index:10;
+}
+
+.dictTable tr.drag-over{ box-shadow:inset 0 3px 0 var(--primary); }
+.dictTable tr.drag-over-bottom{ box-shadow:inset 0 -3px 0 var(--primary); }
+
+@keyframes rowHighlightFlash {
+  0% { background-color: rgba(250, 204, 21, 0.4); }
+  100% { background-color: transparent; }
+}
+.dictTable tr.highlight-flash {
+  animation: rowHighlightFlash 2.5s ease-out;
+}
+
+.dragHandle{
+  display:none;
+  cursor:grab;
+  font-size:20px;
+  color:#cbd5e1;
+  margin-right:12px;
+  vertical-align:middle;
+}
+
+.reorder-mode .dragHandle{ display:inline-block; }
+.reorder-mode tr:hover .dragHandle{ color:#64748b; }
+.reorder-mode .dictActionBtn{ display:none !important; }
+
+#reorderBtn{
+  background:#f8fafc;
+  color:#475569;
+  border:1px solid #cbd5e1;
+}
+
+#reorderBtn:hover{
+  background:#f1f5f9;
+  color:#1e293b;
+}
+
+
+@media(max-width:960px){
+  body{
+    padding:104px 8px 72px;
+  }
+
+  .shell{
+    max-width:none;
+    width:100%;
+  }
+
+  .card{
+    padding:12px;
+    border-radius:8px;
+  }
+
+  .dictHeader{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+
+
+  .dictToolbar{
+    width:100%;
+    display:flex;
+    flex-wrap:nowrap;
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+    gap:8px;
+    padding-bottom:2px;
+  }
+
+  .dictToolbar button{
+    flex:0 0 auto;
+    font-size:13px;
+    padding:7px 10px;
+  }
+
+  #dictScanBtn{
+    min-width:128px;
+  }
+
+  #testHydrocleanSingleBtn,
+  #testHydrocleanBoxBtn{
+    min-width:96px;
+  }
+
+  .useTable th,
+  .useTable td,
+  .dictTable th,
+  .dictTable td{
+    padding:8px;
+  }
+
+  .dictTable{
+    min-width:1220px;
+  }
+
+  .useTable{
+    min-width:1020px;
+  }
+
+  .scannerBox{
+    margin:24px auto;
+  }
+}
+</style>
+
+<script>
+let APP_ENTRY_URL = '<?= appEntryUrl ?>';
+
+if (APP_ENTRY_URL.includes('<' + '?=') || APP_ENTRY_URL.trim() === '') {
+  APP_ENTRY_URL = 'https://script.google.com/macros/s/AKfycbwbz8pXfU68j2aFeF_AaDmmG6Vco3JsPSw-PGyYeLu0AF3vCfzaZJQFOjORnwSw8Xp4/exec'; 
+}
+
+function goHome(){
+  window.top.location.href = APP_ENTRY_URL;
+}
+</script>
+</head>
+
+<body>
+<main class="shell">
+
+<?!= include('共用設定檔/AppHeader', { subtitle: '敷料建檔', onClick: 'goHome()', maxWidth: '1400px' }) ?>
+
+<div class="headerNoticeWrap">
+  <div id="noticeStack" class="noticeStack" aria-live="polite"></div>
+</div>
+
+<nav class="pageMap" aria-label="頁面地圖">
+  <button class="pageMapLink" onclick="goHome()">首頁</button>
+  <span class="pageMapSep">/</span>
+  <span class="pageMapCurrent">敷料建檔</span>
+</nav>
+
+<section class="pageHero">
+  <p class="eyebrow">敷料作業</p>
+  <h1>敷料建檔</h1>
+  <p class="pageLead">維護敷料主檔、單包 GTIN、包裝 GTIN、一盒數量、自費價格與啟用狀態。</p>
+</section>
+
+<div class="card">
+  <button type="button" onclick="goHome()">回導向頁</button>
+  <button type="button" class="primary" onclick="loadDictList()" style="margin-left:10px;">重新讀取主檔</button>
+</div>
+
+<div id="formArea">
+  <div class="infoRow">
+    <label>領用日期與時間：</label>
+    <input id="useDateTime" readonly>
+  </div>
+
+  <div class="infoRow">
+    <label>領用人：</label>
+    <input id="userName">
+  </div>
+
+  <div class="infoRow">
+    <label>領用單位：</label>
+    <input id="unitName">
+  </div>
+
+  <div id="patientArea"></div>
+
+  <div class="actions">
+    <button type="button" onclick="addPatientBlock()">下一個病人</button>
+    <button type="button" class="primary" onclick="submitUse()">送出</button>
+  </div>
+</div>
+
+<div id="dictArea" class="dictArea" style="display:block;">
+  <div class="dictHeader">
+    <div>
+      <h2>敷料條碼建檔清單</h2>
+      <div id="dictLoadStatus" class="dictLoadStatus">尚未讀取敷料主檔</div>
+    </div>
+    <div class="dictToolbar">
+      <button type="button" id="batchSaveBtn" onclick="batchSaveDict()" style="display:none;">批次儲存</button>
+      <button type="button" id="reorderBtn" onclick="toggleReorderMode()">更改排序</button>
+      <button type="button" id="saveOrderBtn" class="primary" style="display:none;" onclick="saveDictOrder()">儲存排序</button>
+      <button type="button" id="dictScanBtn" class="primary" onclick="startDictScanner()" disabled>開啟相機掃描 📷</button>
+      <button type="button" id="testHydrocleanSingleBtn" class="primary" onclick="triggerHydrocleanCavityTest('single')" disabled>測試單包碼</button>
+      <button type="button" id="testHydrocleanBoxBtn" class="primary" onclick="triggerHydrocleanCavityTest('box')" disabled>測試盒裝碼</button>
+    </div>
+</div>
+
+  <div class="dictTableWrap">
+    <table class="dictTable" id="dictTable">
+      <thead>
+        <tr>
+          <th class="col-code">院內碼</th>
+          <th class="col-name">敷料名稱</th>
+          <th class="col-size">規格描述</th>
+          <th class="col-single">單包GTIN</th>
+          <th class="col-box">包裝GTIN</th>
+          <th class="col-boxqty">一盒數量</th>
+          <th class="col-category">自費價格</th>
+          <th class="col-status">狀態</th>
+          <th class="col-actions">操作</th>
+        </tr>
+      </thead>
+      <tbody id="dictTbody">
+        <tr id="dictEmptyRow"><td colspan="9" style="text-align:center; color:#64748b; padding:20px;">尚未讀取敷料主檔</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div id="scannerOverlay" class="scannerOverlay">
+  <div class="scannerBox">
+    <h3 class="scannerTitle">掃描 QR code / 條碼</h3>
+    <p class="scannerHint">請將 QR code 或傳統條碼對準畫面。掃描成功後會自動解析 GTIN、批號與效期。</p>
+    <div id="scannerReader"></div>
+    <div class="scannerActions">
+      <button type="button" onclick="closeDressingScanner()">關閉</button>
+    </div>
+  </div>
+</div>
+<div id="appDialogOverlay" class="appDialogOverlay">
+  <div class="appDialog" role="dialog" aria-modal="true" aria-labelledby="appDialogTitle">
+    <h3 id="appDialogTitle" class="appDialogTitle"></h3>
+    <p id="appDialogMessage" class="appDialogMessage"></p>
+    <input id="appDialogInput" class="appDialogInput">
+    <div class="appDialogActions">
+      <button type="button" id="appDialogCancelBtn">取消</button>
+      <button type="button" id="appDialogOkBtn" class="primary">確定</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let patientCount = 0;
+let dressingScanner = null;
+let activeDressingInput = null;
+let activeDictGtinInput = null;
+let scannerMode = '';
+let isReorderMode = false;
+let initialOrder = [];
+let dressingMasterCache = [];
+let dictLoaded = false;
+let draggedRow = null;
+let dictScanMemory = {};
+let cancelledDictScanKeys = {};
+
+const DICT_TABLE_STATE = {
+  mode:'closed', // closed | loading | clean | editing | adding | saving | deleting | refreshing | reordering | error
+  cacheUpdatedAt:0,
+  lastMessage:''
+};
+
+function isDictTableBusy(){
+  return ['loading','saving','deleting','refreshing'].indexOf(DICT_TABLE_STATE.mode) >= 0;
+}
+
+function setDictTableMode(mode, message){
+  DICT_TABLE_STATE.mode = mode || 'clean';
+  DICT_TABLE_STATE.lastMessage = message || '';
+  renderDictTableControls();
+}
+
+function invalidateDressingMasterCache(reason){
+  dressingMasterCache = [];
+  DICT_TABLE_STATE.cacheUpdatedAt = 0;
+  clearDictScanMemory();
+  if(reason){
+    console.log('invalidate dressing cache:', reason);
+  }
+}
+
+function getDictDirtyCount(){
+  try{
+    return getDirtyDictRows().length;
+  } catch(error){
+    return 0;
+  }
+}
+
+function getDictEditingCount(){
+  try{
+    return document.querySelectorAll('#dictTbody tr.editing:not(#dictEmptyRow)').length;
+  } catch(error){
+    return 0;
+  }
+}
+
+function hasDictEditingRows(){
+  return getDictEditingCount() > 0;
+}
+
+function getDictNextIdleMode(){
+  if(isReorderMode){
+    return 'reordering';
+  }
+
+  const rows = Array.from(document.querySelectorAll('#dictTbody tr:not(#dictEmptyRow)'));
+  const hasNewRow = rows.some(function(tr){ return tr.dataset.isNewRow === '1'; });
+  if(hasNewRow){
+    return 'adding';
+  }
+
+  if(hasDictEditingRows()){
+    return 'editing';
+  }
+
+  return 'clean';
+}
+
+function syncDictTableModeFromRows(){
+  if(isDictTableBusy() || DICT_TABLE_STATE.mode === 'error'){
+    renderDictTableControls();
+    return;
+  }
+
+  setDictTableMode(getDictNextIdleMode());
+}
+
+function renderDictTableControls(){
+  const busy = isDictTableBusy();
+  const dirtyCount = getDictDirtyCount();
+  const editingCount = getDictEditingCount();
+  const hasDirtyRows = dirtyCount > 0;
+  const hasEditingRows = editingCount > 0;
+  const ready = dictLoaded && DICT_TABLE_STATE.mode !== 'error';
+  const blockNormalActions = busy || isReorderMode;
+
+  const status = document.getElementById('dictLoadStatus');
+  if(status && DICT_TABLE_STATE.lastMessage){
+    status.innerText = DICT_TABLE_STATE.lastMessage;
+  }
+
+  const scanBtn = document.getElementById('dictScanBtn');
+  const testSingleBtn = document.getElementById('testHydrocleanSingleBtn');
+  const testBoxBtn = document.getElementById('testHydrocleanBoxBtn');
+  const reorderBtn = document.getElementById('reorderBtn');
+  const saveOrderBtn = document.getElementById('saveOrderBtn');
+  const batchSaveBtn = document.getElementById('batchSaveBtn');
+
+  // 編輯中仍允許主掃描/測試碼，方便邊補資料邊加入新掃描流程。
+  // 只有 busy 或排序模式才鎖住掃描。
+  if(scanBtn) scanBtn.disabled = !ready || busy || isReorderMode;
+  if(testSingleBtn) testSingleBtn.disabled = !ready || busy || isReorderMode;
+  if(testBoxBtn) testBoxBtn.disabled = !ready || busy || isReorderMode;
+
+  if(reorderBtn){
+    reorderBtn.disabled = !ready || busy || hasEditingRows;
+    if(!isReorderMode){
+      reorderBtn.title = hasEditingRows ? '有正在編輯或未儲存的列時不能排序' : '';
+    }
+  }
+
+  if(saveOrderBtn){
+    saveOrderBtn.disabled = !ready || busy;
+  }
+
+  if(batchSaveBtn){
+    batchSaveBtn.style.display = (!isReorderMode && dirtyCount >= 2) ? 'inline-block' : 'none';
+    batchSaveBtn.disabled = !ready || busy;
+  }
+
+  document.querySelectorAll('#dictTbody tr:not(#dictEmptyRow)').forEach(function(tr){
+    const rowEditing = tr.classList.contains('editing');
+    tr.querySelectorAll('input, select').forEach(function(input){
+      input.disabled = busy || !rowEditing;
+    });
+
+    tr.querySelectorAll('.dictActionBtn').forEach(function(btn){
+      btn.disabled = busy || isReorderMode;
+    });
+
+    tr.querySelectorAll('.dictGtinScanBtn').forEach(function(btn){
+      btn.style.display = rowEditing ? '' : 'none';
+      btn.disabled = busy || isReorderMode || !rowEditing;
+    });
+  });
+}
+
+// HydroClean cavity 測試用完整碼：等你拿到完整碼後，只要改這兩行即可。
+const TEST_HYDROCLEAN_CAVITY_SINGLE_CODE = '(01)04052199255484(11)250324(17)280301(10)500113156';
+const TEST_HYDROCLEAN_CAVITY_BOX_CODE = '(01)04052199255491(11)250324(17)280301(10)500113156';
+
+function escapeHtml(value){
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+
+function normalizeGtinForCompare(value){
+  const clean = String(value || '').replace(/[^0-9]/g, '').trim();
+  if(!clean) return '';
+  const stripped = clean.replace(/^0+/, '');
+  return stripped || '0';
+}
+
+function sameGtin(a, b){
+  const na = normalizeGtinForCompare(a);
+  const nb = normalizeGtinForCompare(b);
+  return !!na && !!nb && na === nb;
+}
+
+function showNotice(message, type, title){
+  const stack = document.getElementById('noticeStack');
+  if(!stack){
+    console.log(message || title);
+    return;
+  }
+
+  stack.innerHTML = '';
+
+  const card = document.createElement('div');
+  card.className = 'noticeCard ' + (type || 'info');
+  card.innerHTML = `
+    <button type="button" class="noticeClose" aria-label="關閉通知">×</button>
+    ${title ? `<div class="noticeTitle">${escapeHtml(title)}</div>` : ''}
+    ${message ? `<div class="noticeMessage">${escapeHtml(message)}</div>` : ''}
+  `;
+
+  stack.appendChild(card);
+
+  const closeBtn = card.querySelector('.noticeClose');
+  if(closeBtn){
+    closeBtn.onclick = function(){
+      card.remove();
+    };
+  }
+
+  setTimeout(function(){
+    card.style.opacity = '0';
+    card.style.transform = 'translateY(-4px) scale(.98)';
+    card.style.transition = 'all .2s ease';
+    setTimeout(function(){ card.remove(); }, 220);
+  }, 3600);
+}
+
+function openAppDialog(options){
+  return new Promise(function(resolve){
+    const overlay = document.getElementById('appDialogOverlay');
+    const titleEl = document.getElementById('appDialogTitle');
+    const messageEl = document.getElementById('appDialogMessage');
+    const inputEl = document.getElementById('appDialogInput');
+    const okBtn = document.getElementById('appDialogOkBtn');
+    const cancelBtn = document.getElementById('appDialogCancelBtn');
+    
+    // Check if choices exist
+    let choicesContainer = document.getElementById('appDialogChoices');
+    if (!choicesContainer) {
+      choicesContainer = document.createElement('div');
+      choicesContainer.id = 'appDialogChoices';
+      choicesContainer.className = 'appDialogChoices';
+      inputEl.parentNode.insertBefore(choicesContainer, inputEl.nextSibling);
+    }
+    
+    titleEl.innerText = options.title || '提示';
+    messageEl.innerText = options.message || '';
+    inputEl.value = options.defaultValue || '';
+    
+    if (options.choices && options.choices.length > 0) {
+      inputEl.style.display = 'none';
+      choicesContainer.style.display = 'flex';
+      choicesContainer.innerHTML = '';
+      
+      options.choices.forEach(function(choice) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'appDialogChoiceBtn';
+        btn.innerText = choice.label || choice.value;
+        btn.onclick = function() {
+          cleanup(choice.value);
+        };
+        choicesContainer.appendChild(btn);
+      });
+      
+      // Hide OK button when using choices since selection is immediate
+      okBtn.style.display = 'none';
+    } else {
+      choicesContainer.style.display = 'none';
+      inputEl.style.display = options.input ? 'block' : 'none';
+      okBtn.style.display = 'inline-block';
+      okBtn.innerText = options.okText || '確定';
+    }
+
+    cancelBtn.style.display = options.cancel === false ? 'none' : 'inline-block';
+    cancelBtn.innerText = options.cancelText || '取消';
+    overlay.style.display = 'flex';
+
+    function cleanup(value){
+      overlay.style.display = 'none';
+      okBtn.onclick = null;
+      cancelBtn.onclick = null;
+      inputEl.onkeydown = null;
+      resolve(value);
+    }
+
+    okBtn.onclick = function(){
+      cleanup(options.input ? inputEl.value : true);
+    };
+
+    cancelBtn.onclick = function(){
+      cleanup(options.input ? null : false);
+    };
+
+    inputEl.onkeydown = function(e){
+      if(e.key === 'Enter') cleanup(inputEl.value);
+      if(e.key === 'Escape') cleanup(null);
+    };
+
+    if(options.input){
+      setTimeout(function(){ inputEl.focus(); inputEl.select(); }, 50);
+    } else {
+      setTimeout(function(){ okBtn.focus(); }, 50);
+    }
+  });
+}
+
+function showConfirmDialog(message, title){
+  return openAppDialog({ title:title || '確認', message:message, input:false, okText:'確定', cancelText:'取消' });
+}
+
+function showInputDialog(title, message, defaultValue){
+  return openAppDialog({ title:title, message:message, input:true, defaultValue:defaultValue || '', okText:'確定', cancelText:'取消' });
+}
+
+function isAppsScriptMode(){
+  return typeof google !== 'undefined' && google.script && google.script.run;
+}
+
+function setDictLoadState(state, message){
+  const status = document.getElementById('dictLoadStatus');
+  const ready = state === 'ready';
+
+  if(status){
+    status.innerText = message || '';
+  }
+
+  dictLoaded = ready;
+
+  if(state === 'loading'){
+    setDictTableMode('loading', message || '正在讀取敷料主檔');
+    return;
+  }
+
+  if(state === 'error'){
+    setDictTableMode('error', message || '敷料主檔讀取失敗');
+    return;
+  }
+
+  if(ready){
+    DICT_TABLE_STATE.cacheUpdatedAt = Date.now();
+    setDictTableMode(getDictNextIdleMode(), message || '已讀取敷料主檔');
+    return;
+  }
+
+  setDictTableMode('closed', message || '尚未讀取敷料主檔');
+}
+
+function hasPendingDictWork(){
+  /*
+    離開/重開建檔頁前的保護：
+    只要還有前端暫存列、正在編輯列、排序模式或儲存/刪除/刷新中，
+    切換頁面或重新讀取都可能洗掉畫面上的未儲存狀態。
+  */
+  try{
+    return isDictTableBusy() || isReorderMode || hasPendingLocalRows();
+  } catch(error){
+    return false;
+  }
+}
+
+async function confirmLeaveDictWork(targetAction){
+  if(!hasPendingDictWork()){
+    return true;
+  }
+
+  return await showConfirmDialog(
+    '目前敷料建檔表格還有未儲存或正在編輯的項目。\n\n若繼續「' +
+      (targetAction || '離開') +
+      '」，這些前端暫存內容可能會消失。\n\n確定要繼續嗎？',
+    '尚有未儲存項目'
+  );
+}
+
+async function openDressingDict(){
+  const ok = await confirmLeaveDictWork('重新開啟敷料建檔');
+  if(!ok){
+    showNotice('已停留在目前畫面，未重新讀取敷料主檔', 'warning', '已取消');
+    return;
+  }
+
+  document.getElementById('formArea').style.display = 'none';
+  document.getElementById('dictArea').style.display = 'block';
+  loadDictList();
+}
+
+function makeStatusSelect(value){
+  const current = value || '使用中';
+  const options = ['使用中','試用','停用'];
+  return `<select class="dict-status">${options.map(opt =>
+    `<option value="${escapeHtml(opt)}"${opt === current ? ' selected' : ''}>${escapeHtml(opt)}</option>`
+  ).join('')}</select>`;
+}
+
+async function loadDictList(){
+  isReorderMode = false;
+  document.getElementById('dictTable').classList.remove('reorder-mode');
+  document.getElementById('reorderBtn').innerText = '更改排序';
+  document.getElementById('saveOrderBtn').style.display = 'none';
+  updateBatchSaveButtonVisibility();
+
+  setDictLoadState('loading', '正在讀取敷料主檔，讀取完成後才能開啟掃描');
+
+  const tbody = document.getElementById('dictTbody');
+  tbody.innerHTML =
+    '<tr><td colspan="9" style="text-align:center; color:#64748b; padding:20px;">載入中...</td></tr>';
+
+  try{
+    const res = await listBarcode();
+
+    if(!res || !res.ok){
+      throw new Error((res && res.message) || '主檔讀取失敗');
+    }
+
+    dressingMasterCache = res.data || [];
+    tbody.innerHTML = '';
+
+    if(dressingMasterCache.length > 0){
+      dressingMasterCache.forEach(function(item){
+        tbody.appendChild(createDictRow(item, false));
+      });
+
+      setDictLoadState('ready', `已讀取 ${dressingMasterCache.length} 筆敷料資料，可以掃描或測試`);
+    } else {
+      tbody.innerHTML =
+        '<tr id="dictEmptyRow"><td colspan="9" style="text-align:center; color:#64748b; padding:20px;">目前主檔無資料；可開啟掃描新增第一筆</td></tr>';
+
+      setDictLoadState('ready', '主檔目前無資料；可掃描或測試新增第一筆');
+    }
+  } catch(err){
+    dressingMasterCache = [];
+    tbody.innerHTML =
+      '<tr><td colspan="9" style="text-align:center; color:#dc2626; padding:20px;">讀取失敗：' +
+      escapeHtml(err.message || err) +
+      '</td></tr>';
+
+    setDictLoadState('error', '敷料主檔讀取失敗，請確認後端 sheet gid 與權限；未讀到資料前不能掃描');
+  }
+
+  updateBatchSaveButtonVisibility();
+}
+
+function createDictRow(item, isNew){
+  const tr = document.createElement('tr');
+  tr.dataset.rowKey = item.singleGtin || item.gtin || item.boxGtin || '';
+  if(isNew){
+    tr.classList.add('editing');
+    tr.dataset.isNewRow = '1';
+    tr.dataset.frontOnly = '1';
+  }
+
+  tr.innerHTML = `
+    <td><input class="dict-hospital-code" type="number" inputmode="numeric" value="${escapeHtml(item.hospitalCode || '')}" placeholder="院內碼"></td>
+    <td><input class="dict-name" value="${escapeHtml(item.dressingName || '')}" placeholder="敷料名稱"></td>
+    <td><input class="dict-size" value="${escapeHtml(item.size || '')}" placeholder="規格"></td>
+    <td>
+      <div class="dictGtinInputGroup">
+        <input class="dict-single-gtin" type="number" inputmode="numeric" value="${escapeHtml(item.singleGtin || item.gtin || '')}" placeholder="單包GTIN">
+        <button type="button" class="dictGtinScanBtn" title="掃描單包GTIN" onclick="openDictGtinScanner(this)">📷</button>
+      </div>
+    </td>
+    <td>
+      <div class="dictGtinInputGroup">
+        <input class="dict-box-gtin" type="number" inputmode="numeric" value="${escapeHtml(item.boxGtin || '')}" placeholder="盒裝GTIN">
+        <button type="button" class="dictGtinScanBtn" title="掃描盒裝GTIN" onclick="openDictGtinScanner(this)">📷</button>
+      </div>
+    </td>
+    <td><input class="dict-box-qty" type="number" inputmode="numeric" value="${escapeHtml(item.boxQuantity || '')}"></td>
+    <td><input class="dict-category" type="number" inputmode="numeric" value="${escapeHtml(item.category || '')}"></td>
+    <td>${makeStatusSelect(item.status || '使用中')}</td>
+    <td style="white-space:nowrap;">
+      <span class="dragHandle">☰</span>
+      <button type="button" class="dictActionBtn edit-main-btn" onclick="handleDictMainButton(this)">${isNew ? '儲存' : '編輯'}</button>
+      <button type="button" class="dictActionBtn danger delete-main-btn" onclick="deleteDictRow(this)">${isNew ? '不儲存' : '刪除'}</button>
+      <div class="dictStatus ${isNew ? '' : 'saved'}">${isNew ? '新資料，請確認後儲存' : '已建檔'}</div>
+      ${isNew && item.scanMeta ? item.scanMeta : ''}
+    </td>
+  `;
+
+  bindDictRowDirtyWatch(tr);
+
+  if(isNew){
+    tr.dataset.originalData = JSON.stringify({});
+    tr.dataset.dirty = '1';
+    updateDictMainButton(tr);
+    setDictTableMode('adding');
+  } else {
+    setDictRowSnapshot(tr);
+    leaveDictEditMode(tr);
+  }
+
+  return tr;
+}
+
+function getRowInputValue(tr, selector){
+  const input = tr ? tr.querySelector(selector) : null;
+  return input ? String(input.value || '').trim() : '';
+}
+
+function getDictRowData(tr){
+  return {
+    hospitalCode: getRowInputValue(tr, '.dict-hospital-code'),
+    dressingName: getRowInputValue(tr, '.dict-name'),
+    size: getRowInputValue(tr, '.dict-size'),
+    singleGtin: getRowInputValue(tr, '.dict-single-gtin'),
+    boxGtin: getRowInputValue(tr, '.dict-box-gtin'),
+    boxQuantity: getRowInputValue(tr, '.dict-box-qty'),
+    category: getRowInputValue(tr, '.dict-category'),
+    status: getRowInputValue(tr, '.dict-status')
+  };
+}
+function setDictRowSnapshot(tr){
+  tr.dataset.originalData = JSON.stringify(getDictRowData(tr));
+  tr.dataset.dirty = '0';
+}
+
+function isDictRowDirty(tr){
+  if(tr.dataset.isNewRow === '1'){
+    return true;
+  }
+
+  const original = tr.dataset.originalData || '';
+  if(!original){
+    return false;
+  }
+
+  return original !== JSON.stringify(getDictRowData(tr));
+}
+
+function getDirtyDictRows(){
+  return Array.from(document.querySelectorAll('#dictTbody tr.editing:not(#dictEmptyRow)')).filter(function(tr){
+    return isDictRowDirty(tr);
+  });
+}
+
+function updateBatchSaveButtonVisibility(){
+  renderDictTableControls();
+}
+
+function bindDictRowDirtyWatch(tr){
+  tr.querySelectorAll('input, select').forEach(function(input){
+    if(input.dataset.dirtyWatchBound === '1'){
+      return;
+    }
+
+    input.dataset.dirtyWatchBound = '1';
+
+    input.addEventListener('input', function(){
+      if(tr.classList.contains('editing')){
+        updateDictMainButton(tr);
+        syncDictTableModeFromRows();
+      }
+    });
+
+    input.addEventListener('change', function(){
+      if(tr.classList.contains('editing')){
+        updateDictMainButton(tr);
+        syncDictTableModeFromRows();
+      }
+    });
+  });
+}
+
+function updateDictSecondaryButton(tr){
+  const deleteBtn = tr ? tr.querySelector('.delete-main-btn') : null;
+  if(!deleteBtn){
+    return;
+  }
+
+  deleteBtn.style.display = 'inline-block';
+
+  if(tr.classList.contains('editing')){
+    if(tr.dataset.isNewRow === '1'){
+      deleteBtn.innerText = '不儲存';
+      return;
+    }
+
+    if(isDictRowDirty(tr)){
+      deleteBtn.innerText = '取消編輯';
+      return;
+    }
+
+    deleteBtn.style.display = 'none';
+    return;
+  }
+
+  deleteBtn.innerText = '刪除';
+}
+
+function moveDictRowToTop(tr){
+  const tbody = document.getElementById('dictTbody');
+  if(!tbody || !tr || tr.id === 'dictEmptyRow'){
+    return;
+  }
+
+  const emptyRow = document.getElementById('dictEmptyRow');
+  if(emptyRow){
+    emptyRow.remove();
+  }
+
+  if(tbody.firstElementChild !== tr){
+    tbody.insertBefore(tr, tbody.firstElementChild);
+  }
+}
+
+
+function isSameDressingIdentityForRow(rowData, item){
+  rowData = rowData || {};
+  item = item || {};
+
+  const rowHospitalCode = String(rowData.hospitalCode || '').trim();
+  const itemHospitalCode = String(item.hospitalCode || '').trim();
+
+  if(rowHospitalCode && itemHospitalCode && rowHospitalCode === itemHospitalCode){
+    return true;
+  }
+
+  const rowSingle = rowData.singleGtin || rowData.gtin || '';
+  const itemSingle = item.singleGtin || item.gtin || '';
+  const rowBox = rowData.boxGtin || '';
+  const itemBox = item.boxGtin || '';
+
+  if(rowSingle && itemSingle && sameGtin(rowSingle, itemSingle)){
+    return true;
+  }
+
+  if(rowBox && itemBox && sameGtin(rowBox, itemBox)){
+    return true;
+  }
+
+  if(rowSingle && itemBox && sameGtin(rowSingle, itemBox)){
+    return true;
+  }
+
+  if(rowBox && itemSingle && sameGtin(rowBox, itemSingle)){
+    return true;
+  }
+
+  const rowName = normalizeTextForCompare(rowData.dressingName || '');
+  const itemName = normalizeTextForCompare(item.dressingName || '');
+  const rowSize = normalizeTextForCompare(rowData.size || '');
+  const itemSize = normalizeTextForCompare(item.size || '');
+
+  return !!rowName && !!itemName && rowName === itemName && rowSize === itemSize;
+}
+
+function findExistingRowByItem(item, excludeTr){
+  return Array.from(document.querySelectorAll('#dictTbody tr:not(#dictEmptyRow)')).find(function(row){
+    if(excludeTr && row === excludeTr){
+      return false;
+    }
+
+    return isSameDressingIdentityForRow(getDictRowData(row), item || {});
+  });
+}
+
+function applyDressingItemToDictRow(tr, item){
+  if(!tr || !item){
+    return;
+  }
+
+  const map = {
+    '.dict-hospital-code': item.hospitalCode || '',
+    '.dict-name': item.dressingName || '',
+    '.dict-size': item.size || '',
+    '.dict-single-gtin': item.singleGtin || item.gtin || '',
+    '.dict-box-gtin': item.boxGtin || '',
+    '.dict-box-qty': item.boxQuantity || '',
+    '.dict-category': item.category || '',
+    '.dict-status': item.status || '使用中'
+  };
+
+  Object.keys(map).forEach(function(selector){
+    const input = tr.querySelector(selector);
+    if(input){
+      input.disabled = false;
+      input.value = map[selector];
+      input.dispatchEvent(new Event('input', { bubbles:true }));
+      input.dispatchEvent(new Event('change', { bubbles:true }));
+    }
+  });
+
+  const single = item.singleGtin || item.gtin || '';
+  const box = item.boxGtin || '';
+
+  if(single){
+    setRowScannedGtinTarget(tr, single, 'single');
+  }
+
+  if(box){
+    setRowScannedGtinTarget(tr, box, 'box');
+  }
+
+  tr.dataset.rowKey = item.hospitalCode || single || box || '';
+}
+
+function mergeSavedItemWithVisibleRows(savedItem, mainTr, duplicateTr){
+  const merged = Object.assign({}, savedItem || {});
+  const sources = [mainTr, duplicateTr].filter(Boolean);
+
+  function firstValue(selector){
+    for(let i = 0; i < sources.length; i++){
+      const value = getRowInputValue(sources[i], selector);
+      if(value){
+        return value;
+      }
+    }
+    return '';
+  }
+
+  // 如果這次其實是重掃／重建造成的前端重複列，後端回傳空白時不要把畫面上原本已有的條碼洗掉。
+  if(!(merged.singleGtin || merged.gtin)){
+    const value = firstValue('.dict-single-gtin');
+    if(value){
+      merged.singleGtin = value;
+      merged.gtin = value;
+    }
+  }
+
+  if(!merged.boxGtin){
+    const value = firstValue('.dict-box-gtin');
+    if(value){
+      merged.boxGtin = value;
+    }
+  }
+
+  if(!merged.boxQuantity){
+    const value = firstValue('.dict-box-qty');
+    if(value){
+      merged.boxQuantity = value;
+    }
+  }
+
+  if(!merged.category){
+    const value = firstValue('.dict-category');
+    if(value){
+      merged.category = value;
+    }
+  }
+
+  return merged;
+}
+
+function updateDressingMasterCacheItem(item){
+  if(!item){
+    return;
+  }
+
+  if(!Array.isArray(dressingMasterCache)){
+    dressingMasterCache = [];
+  }
+
+  let replaced = false;
+
+  dressingMasterCache = dressingMasterCache.map(function(existing){
+    if(isSameDressingIdentityForRow(existing, item)){
+      replaced = true;
+      return Object.assign({}, existing, item);
+    }
+    return existing;
+  });
+
+  if(!replaced){
+    dressingMasterCache.unshift(item);
+  }
+}
+
+function removeDuplicateDictRowsForItem(item, keepTr){
+  Array.from(document.querySelectorAll('#dictTbody tr:not(#dictEmptyRow)')).forEach(function(row){
+    if(row === keepTr){
+      return;
+    }
+
+    if(isSameDressingIdentityForRow(getDictRowData(row), item || {})){
+      row.remove();
+    }
+  });
+
+  ensureDictEmptyRow();
+}
+
+function updateDictMainButton(tr){
+  const btn = tr.querySelector('.edit-main-btn');
+  if(!btn){
+    updateDictSecondaryButton(tr);
+    updateBatchSaveButtonVisibility();
+    return;
+  }
+
+  const dirty = isDictRowDirty(tr);
+  tr.dataset.dirty = dirty ? '1' : '0';
+
+  if(!tr.classList.contains('editing')){
+    btn.innerText = '編輯';
+    btn.classList.remove('primary');
+    updateDictSecondaryButton(tr);
+    updateBatchSaveButtonVisibility();
+    return;
+  }
+
+  btn.innerText = dirty ? '儲存' : '返回';
+
+  if(dirty){
+    btn.classList.add('primary');
+  } else {
+    btn.classList.remove('primary');
+  }
+
+  updateDictSecondaryButton(tr);
+  updateBatchSaveButtonVisibility();
+}
+
+function setDictInputsEnabled(tr, enabled){
+  tr.querySelectorAll('input, select').forEach(function(input){
+    input.disabled = !enabled;
+  });
+}
+
+function restoreDictRowSnapshot(tr){
+  let data = {};
+  try{
+    data = JSON.parse(tr.dataset.originalData || '{}');
+  } catch(error){
+    data = {};
+  }
+
+  const map = {
+    '.dict-hospital-code': data.hospitalCode,
+    '.dict-name': data.dressingName,
+    '.dict-size': data.size,
+    '.dict-single-gtin': data.singleGtin,
+    '.dict-box-gtin': data.boxGtin,
+    '.dict-box-qty': data.boxQuantity,
+    '.dict-category': data.category,
+    '.dict-status': data.status || '使用中'
+  };
+
+  Object.keys(map).forEach(function(selector){
+    const input = tr.querySelector(selector);
+    if(input){
+      input.value = map[selector] || '';
+    }
+  });
+}
+
+function enterDictEditMode(tr){
+  if(isDictTableBusy() || isReorderMode){
+    showNotice('表格處理中，暫時不能編輯', 'warning', '請稍候');
+    return;
+  }
+
+  tr.classList.add('editing');
+  setDictInputsEnabled(tr, true);
+  setDictRowSnapshot(tr);
+  bindDictRowDirtyWatch(tr);
+  updateDictMainButton(tr);
+
+  setDictTableMode(getDictNextIdleMode());
+
+  const nameInput = tr.querySelector('.dict-name');
+  if(nameInput){
+    nameInput.focus();
+  }
+}
+
+function leaveDictEditMode(tr){
+  tr.classList.remove('editing');
+  delete tr.dataset.isNewRow;
+
+  setDictInputsEnabled(tr, false);
+  updateDictMainButton(tr);
+  syncDictTableModeFromRows();
+}
+
+async function handleDictMainButton(btn){
+  const tr = btn.closest('tr');
+
+  if(!tr.classList.contains('editing')){
+    enterDictEditMode(tr);
+    return;
+  }
+
+  if(isDictRowDirty(tr)){
+    await saveDictRow(btn);
+    return;
+  }
+
+  restoreDictRowSnapshot(tr);
+  leaveDictEditMode(tr);
+
+  const statusEl = tr.querySelector('.dictStatus');
+  if(statusEl){
+    statusEl.innerText = '已返回';
+    statusEl.className = 'dictStatus saved';
+  }
+}
+
+
+async function checkBarcodeConflictBeforeSave(data, originalData){
+  originalData = originalData || {};
+
+  const originalSingle = originalData.singleGtin || originalData.gtin || '';
+  const originalBox = originalData.boxGtin || '';
+
+  const targets = [
+    { type:'single', gtin:data.singleGtin || '' },
+    { type:'box', gtin:data.boxGtin || '' }
+  ].filter(function(item){
+    return item.gtin;
+  });
+
+  for(const target of targets){
+    const isOriginal =
+      sameGtin(target.gtin, originalSingle) ||
+      sameGtin(target.gtin, originalBox);
+
+    if(isOriginal){
+      continue;
+    }
+
+    try{
+      const res = await lookupBarcode(target.gtin);
+
+      if(res && res.found && res.data){
+        const sameHospitalCode =
+          data.hospitalCode &&
+          res.data.hospitalCode &&
+          String(data.hospitalCode).trim() === String(res.data.hospitalCode).trim();
+
+        const sameNameSize =
+          normalizeTextForCompare(data.dressingName) === normalizeTextForCompare(res.data.dressingName) &&
+          normalizeTextForCompare(data.size) === normalizeTextForCompare(res.data.size);
+
+        if(sameHospitalCode || sameNameSize){
+          continue;
+        }
+
+        return {
+          conflict:true,
+          type:target.type,
+          gtin:target.gtin,
+          packageType:res.packageType || target.type,
+          data:res.data,
+          message:'此 GTIN 已由其他資料使用：' + describeDressingItem(res.data)
+        };
+      }
+    } catch(error){
+      console.log('儲存前查重失敗，交由後端 save 再判斷', error);
+    }
+  }
+
+  return { conflict:false };
+}
+function getOriginalDictRowData(tr){
+  try{
+    return JSON.parse(tr.dataset.originalData || '{}');
+  } catch(error){
+    return {};
+  }
+}
+
+
+function normalizeDictValueForCompare(value, kind){
+  const text = String(value || '').trim();
+
+  if(kind === 'gtin'){
+    return normalizeGtinForCompare(text);
+  }
+
+  if(kind === 'text'){
+    return normalizeTextForCompare(text);
+  }
+
+  if(kind === 'number'){
+    const clean = text.replace(/,/g, '');
+    if(clean === '') return '';
+    const num = Number(clean);
+    return Number.isFinite(num) ? String(num) : clean;
+  }
+
+  return text;
+}
+
+function normalizeDictItemForCompare(item){
+  item = item || {};
+
+  return {
+    hospitalCode: normalizeDictValueForCompare(item.hospitalCode, 'number'),
+    dressingName: normalizeDictValueForCompare(item.dressingName, 'text'),
+    size: normalizeDictValueForCompare(item.size, 'text'),
+    singleGtin: normalizeDictValueForCompare(item.singleGtin || item.gtin, 'gtin'),
+    boxGtin: normalizeDictValueForCompare(item.boxGtin, 'gtin'),
+    boxQuantity: normalizeDictValueForCompare(item.boxQuantity, 'number'),
+    category: normalizeDictValueForCompare(item.category, 'number'),
+    status: normalizeDictValueForCompare(item.status || '使用中', 'text')
+  };
+}
+
+function getCurrentDictItemsForCompare(){
+  return Array.from(document.querySelectorAll('#dictTbody tr:not(#dictEmptyRow)')).map(function(tr){
+    return normalizeDictItemForCompare(getDictRowData(tr));
+  });
+}
+
+function getBackendDictItemsForCompare(items){
+  return (Array.isArray(items) ? items : []).map(function(item){
+    return normalizeDictItemForCompare(item);
+  });
+}
+
+function areDictListsSame(currentItems, backendItems){
+  return JSON.stringify(currentItems || []) === JSON.stringify(backendItems || []);
+}
+
+async function syncDictListIfChanged(options){
+  options = options || {};
+
+  try{
+    const res = await listBarcode();
+
+    if(!res || !res.ok){
+      throw new Error((res && res.message) || '主檔讀取失敗');
+    }
+
+    const backendData = res.data || [];
+    const currentItems = getCurrentDictItemsForCompare();
+    const backendItems = getBackendDictItemsForCompare(backendData);
+
+    dressingMasterCache = backendData;
+
+    if(areDictListsSame(currentItems, backendItems)){
+      setDictLoadState('ready', `已讀取 ${backendData.length} 筆敷料資料，畫面與後端一致`);
+
+      if(options.sameMessage){
+        showNotice(options.sameMessage, 'success', options.sameTitle || '儲存完成');
+      }
+
+      return {
+        refreshed:false,
+        same:true,
+        count:backendData.length
+      };
+    }
+
+    await loadDictList();
+
+    if(options.changedMessage){
+      showNotice(options.changedMessage, 'success', options.changedTitle || '已同步畫面');
+    }
+
+    return {
+      refreshed:true,
+      same:false,
+      count:backendData.length
+    };
+  } catch(error){
+    console.log('儲存後比對主檔失敗，改用重新載入', error);
+    await loadDictList();
+
+    if(options.fallbackMessage){
+      showNotice(options.fallbackMessage, 'warning', options.fallbackTitle || '已重新載入');
+    }
+
+    return {
+      refreshed:true,
+      same:false,
+      error:error
+    };
+  }
+}
+
+
+function hasUnsavedFrontOnlyRows(excludeTr){
+  return Array.from(document.querySelectorAll('#dictTbody tr:not(#dictEmptyRow)')).some(function(row){
+    if(excludeTr && row === excludeTr){
+      return false;
+    }
+
+    return row.dataset.frontOnly === '1' || row.dataset.isNewRow === '1';
+  });
+}
+
+function hasPendingLocalRows(excludeTr){
+  /*
+    只要畫面上還有其他尚未完成的本地狀態，就不能整張 reload。
+    包含：
+    1. frontOnly/isNewRow：掃描新增但尚未儲存的列。
+    2. editing：正在編輯但尚未完成的既有列。
+
+    原因：reload 只會帶回後端資料，會洗掉前端暫存列，
+    也會殺掉正在編輯中的欄位值。
+  */
+  return Array.from(document.querySelectorAll('#dictTbody tr:not(#dictEmptyRow)')).some(function(row){
+    if(excludeTr && row === excludeTr){
+      return false;
+    }
+
+    return (
+      row.dataset.frontOnly === '1' ||
+      row.dataset.isNewRow === '1' ||
+      row.classList.contains('editing')
+    );
+  });
+}
+
+function finishDictLocalChange(message, title, type){
+  ensureDictEmptyRow();
+
+  /*
+    局部儲存/刪除完成後不能呼叫 syncDictTableModeFromRows() 來解除 saving，
+    因為 syncDictTableModeFromRows() 會在 busy 狀態直接 return。
+    這裡必須明確把 table mode 從 saving/deleting 拉回目前畫面應有狀態，
+    否則其他列會一直 disabled，畫面顯示「儲存中...」。
+  */
+  setDictTableMode(getDictNextIdleMode());
+  updateBatchSaveButtonVisibility();
+
+  if(message){
+    showNotice(message, type || 'success', title || '完成');
+  }
+}
+
+
+async function saveDictRow(btn){
+  const tr = btn.closest('tr');
+  if(isDictTableBusy()){
+    return;
+  }
+
+  const shouldReloadAfterSave = !hasPendingLocalRows(tr);
+
+  setDictTableMode('saving', '儲存中...');
+  const data = getDictRowData(tr);
+  const originalData = getOriginalDictRowData(tr) || {};
+  const statusEl = tr.querySelector('.dictStatus');
+
+  const hasKeyField =
+    data.hospitalCode ||
+    data.singleGtin ||
+    data.boxGtin;
+
+  if(!hasKeyField){
+    statusEl.innerText = '院內碼、單包GTIN、包裝GTIN至少填一項';
+    statusEl.className = 'dictStatus error';
+    setDictTableMode(getDictNextIdleMode());
+    return;
+  }
+
+  statusEl.innerText = '儲存前查重中...';
+  statusEl.className = 'dictStatus';
+  btn.disabled = true;
+  btn.innerText = '...';
+
+  let conflict = { conflict:false };
+
+  try{
+    conflict = await checkBarcodeConflictBeforeSave(data, originalData);
+  } catch(error){
+    console.log('儲存前查重失敗，繼續交由後端判斷', error);
+  }
+
+  if(conflict && conflict.conflict){
+    statusEl.innerText = '已存在，未儲存';
+    statusEl.className = 'dictStatus error';
+
+    showNotice(
+      String(conflict.message || '此資料已存在') + '\n\n請重新載入主檔，或改用既有資料。',
+      'warning',
+      '儲存前發現重複'
+    );
+
+    btn.disabled = false;
+    updateDictMainButton(tr);
+    setDictTableMode(getDictNextIdleMode());
+    return;
+  }
+
+  statusEl.innerText = '儲存中...';
+  statusEl.className = 'dictStatus';
+
+  try{
+    const res = await saveBarcode({
+      originalGtin: originalData.singleGtin || originalData.gtin || '',
+      originalBoxGtin: originalData.boxGtin || '',
+      hospitalCode: data.hospitalCode || '',
+      singleGtin: data.singleGtin || '',
+      gtin: data.singleGtin || '',
+      dressingName: data.dressingName || '',
+      size: data.size || '',
+      category: data.category || '',
+      boxGtin: data.boxGtin || '',
+      boxQuantity: data.boxQuantity || '',
+      status: data.status || '使用中'
+    });
+
+    if(res && res.ok){
+      const savedItem = res.savedItem || res.data || data;
+      const existingTargetRow = findExistingRowByItem(savedItem, tr);
+
+      if(existingTargetRow){
+        const mergedItem = mergeSavedItemWithVisibleRows(savedItem, existingTargetRow, tr);
+        applyDressingItemToDictRow(existingTargetRow, mergedItem);
+        updateDressingMasterCacheItem(mergedItem);
+        setDictRowSnapshot(existingTargetRow);
+        delete existingTargetRow.dataset.frontOnly;
+        leaveDictEditMode(existingTargetRow);
+
+        const targetStatusEl = existingTargetRow.querySelector('.dictStatus');
+        if(targetStatusEl){
+          targetStatusEl.innerText = res.mergeReason ? '已合併/儲存' : '已儲存';
+          targetStatusEl.className = 'dictStatus saved';
+        }
+
+        tr.remove();
+        removeDuplicateDictRowsForItem(mergedItem, existingTargetRow);
+        moveDictRowToTop(existingTargetRow);
+        flashDictRow(existingTargetRow);
+
+        if(shouldReloadAfterSave){
+          await reloadDictListAfterDataChange(
+            '已儲存並重新讀取主檔，掃描記憶已清空',
+            '儲存完成',
+            'success'
+          );
+        } else {
+          finishDictLocalChange(
+            '已儲存；因仍有未儲存新增列，暫不重新讀取主檔',
+            '儲存完成',
+            'success'
+          );
+        }
+        return;
+      }
+
+      applyDressingItemToDictRow(tr, savedItem);
+      updateDressingMasterCacheItem(savedItem);
+      removeDuplicateDictRowsForItem(savedItem, tr);
+
+      statusEl.innerText = res.mergeReason ? '已合併/儲存' : '已儲存';
+      statusEl.className = 'dictStatus saved';
+
+      setDictRowSnapshot(tr);
+      delete tr.dataset.frontOnly;
+      leaveDictEditMode(tr);
+
+      if(shouldReloadAfterSave){
+        await reloadDictListAfterDataChange(
+          '資料已儲存並重新讀取主檔，掃描記憶已清空',
+          '儲存完成',
+          'success'
+        );
+      } else {
+        finishDictLocalChange(
+          '已儲存；因仍有未儲存新增列，暫不重新讀取主檔',
+          '儲存完成',
+          'success'
+        );
+      }
+      return;
+    }
+
+    statusEl.innerText = (res && res.message) || '儲存失敗';
+    statusEl.className = 'dictStatus error';
+    showNotice((res && res.message) || '儲存失敗', 'error', '儲存失敗');
+
+  } catch(err){
+    statusEl.innerText = '儲存錯誤';
+    statusEl.className = 'dictStatus error';
+    showNotice('儲存錯誤：' + (err.message || err), 'error', '儲存錯誤');
+    console.log(err);
+  }
+
+  btn.disabled = false;
+  updateDictMainButton(tr);
+  setDictTableMode(getDictNextIdleMode());
+}
+
+function buildDictSavePayloadFromRow(tr){
+  const data = getDictRowData(tr);
+  const originalData = getOriginalDictRowData(tr) || {};
+
+  return {
+    data:data,
+    originalData:originalData,
+    payload:{
+      originalGtin: originalData.singleGtin || originalData.gtin || '',
+      originalBoxGtin: originalData.boxGtin || '',
+      hospitalCode: data.hospitalCode || '',
+      singleGtin: data.singleGtin || '',
+      gtin: data.singleGtin || '',
+      dressingName: data.dressingName || '',
+      size: data.size || '',
+      category: data.category || '',
+      boxGtin: data.boxGtin || '',
+      boxQuantity: data.boxQuantity || '',
+      status: data.status || '使用中'
+    }
+  };
+}
+
+async function saveDictRowWithoutReload(tr){
+  const built = buildDictSavePayloadFromRow(tr);
+  const data = built.data;
+  const originalData = built.originalData;
+  const payload = built.payload;
+  const statusEl = tr.querySelector('.dictStatus');
+  const mainBtn = tr.querySelector('.edit-main-btn');
+
+  const hasKeyField =
+    data.hospitalCode ||
+    data.singleGtin ||
+    data.boxGtin;
+
+  if(!hasKeyField){
+    if(statusEl){
+      statusEl.innerText = '院內碼、單包GTIN、包裝GTIN至少填一項';
+      statusEl.className = 'dictStatus error';
+    }
+
+    return {
+      ok:false,
+      skipped:false,
+      message:'院內碼、單包GTIN、包裝GTIN至少填一項'
+    };
+  }
+
+  if(statusEl){
+    statusEl.innerText = '批次儲存中...';
+    statusEl.className = 'dictStatus';
+  }
+
+  if(mainBtn){
+    mainBtn.disabled = true;
+    mainBtn.innerText = '...';
+  }
+
+  let conflict = { conflict:false };
+
+  try{
+    conflict = await checkBarcodeConflictBeforeSave(data, originalData);
+  } catch(error){
+    console.log('批次儲存前查重失敗，繼續交由後端判斷', error);
+  }
+
+  if(conflict && conflict.conflict){
+    if(statusEl){
+      statusEl.innerText = '已存在，未儲存';
+      statusEl.className = 'dictStatus error';
+    }
+
+    if(mainBtn){
+      mainBtn.disabled = false;
+      updateDictMainButton(tr);
+    }
+
+    return {
+      ok:false,
+      skipped:false,
+      message:conflict.message || '此資料已存在'
+    };
+  }
+
+  try{
+    const res = await saveBarcode(payload);
+
+    if(res && res.ok){
+      tr.dataset.rowKey =
+        data.hospitalCode ||
+        data.singleGtin ||
+        data.boxGtin ||
+        '';
+
+      if(statusEl){
+        statusEl.innerText = res.mergeReason ? '已合併/儲存' : '已儲存';
+        statusEl.className = 'dictStatus saved';
+      }
+
+      setDictRowSnapshot(tr);
+      delete tr.dataset.frontOnly;
+      leaveDictEditMode(tr);
+
+      return {
+        ok:true,
+        skipped:false,
+        response:res
+      };
+    }
+
+    if(statusEl){
+      statusEl.innerText = (res && res.message) || '儲存失敗';
+      statusEl.className = 'dictStatus error';
+    }
+
+    return {
+      ok:false,
+      skipped:false,
+      message:(res && res.message) || '儲存失敗'
+    };
+
+  } catch(err){
+    if(statusEl){
+      statusEl.innerText = '儲存錯誤';
+      statusEl.className = 'dictStatus error';
+    }
+
+    console.log(err);
+
+    return {
+      ok:false,
+      skipped:false,
+      message:err && err.message ? err.message : String(err)
+    };
+  } finally {
+    if(mainBtn){
+      mainBtn.disabled = false;
+      updateDictMainButton(tr);
+    }
+  }
+}
+
+async function batchSaveDict(){
+  if(isDictTableBusy()){
+    return;
+  }
+
+  const editingRows = Array.from(document.querySelectorAll('#dictTbody tr.editing'));
+
+  if(editingRows.length === 0){
+    showNotice('目前沒有需要處理的項目', 'warning');
+    return;
+  }
+
+  const dirtyRows = editingRows.filter(function(tr){
+    return isDictRowDirty(tr);
+  });
+
+  const cleanRows = editingRows.filter(function(tr){
+    return !isDictRowDirty(tr);
+  });
+
+  if(dirtyRows.length === 0){
+    cleanRows.forEach(function(tr){
+      restoreDictRowSnapshot(tr);
+      leaveDictEditMode(tr);
+      const statusEl = tr.querySelector('.dictStatus');
+      if(statusEl){
+        statusEl.innerText = '已返回';
+        statusEl.className = 'dictStatus saved';
+      }
+    });
+
+    showNotice('沒有變更需要儲存', 'warning');
+    return;
+  }
+
+  const btn = document.getElementById('batchSaveBtn');
+  const originalText = btn ? btn.innerText : '';
+
+  setDictTableMode('saving', '批次儲存中...');
+
+  if(btn){
+    btn.innerText = '批次儲存中...';
+    btn.disabled = true;
+  }
+
+  const batchPayload = dirtyRows.map(function(tr){
+    return buildDictSavePayloadFromRow(tr).payload;
+  });
+
+  debugDressingBarcode('batch-save-payload', batchPayload);
+
+  let successCount = 0;
+  let failCount = 0;
+  let returnedCount = 0;
+  const errors = [];
+
+  for(const tr of cleanRows){
+    restoreDictRowSnapshot(tr);
+    leaveDictEditMode(tr);
+    const statusEl = tr.querySelector('.dictStatus');
+    if(statusEl){
+      statusEl.innerText = '已返回';
+      statusEl.className = 'dictStatus saved';
+    }
+    returnedCount++;
+  }
+
+  for(const tr of dirtyRows){
+    const result = await saveDictRowWithoutReload(tr);
+
+    if(result && result.ok){
+      successCount++;
+    } else {
+      failCount++;
+      if(result && result.message){
+        errors.push(result.message);
+      }
+    }
+  }
+
+  if(btn){
+    btn.innerText = originalText;
+    btn.disabled = false;
+  }
+
+  setDictTableMode(getDictNextIdleMode());
+
+  const messages = [];
+  if(successCount > 0) messages.push('儲存：' + successCount + ' 筆');
+  if(returnedCount > 0) messages.push('未變更返回：' + returnedCount + ' 筆');
+  if(failCount > 0) messages.push('失敗：' + failCount + ' 筆');
+
+  showNotice(
+    '批次處理完成！\n' + messages.join('\n') +
+      (errors.length ? '\n\n第一筆錯誤：' + errors[0] : ''),
+    failCount ? 'warning' : 'success'
+  );
+
+  if(successCount > 0 && failCount === 0){
+    await reloadDictListAfterDataChange(
+      '批次儲存完成，已重新讀取主檔並清空掃描記憶。',
+      '批次儲存完成',
+      'success'
+    );
+  }
+}
+
+
+function removeDressingItemFromCache(data){
+  data = data || {};
+
+  const targetHospitalCode = String(data.hospitalCode || '').trim();
+  const targetSingleGtin = data.singleGtin || data.gtin || '';
+  const targetBoxGtin = data.boxGtin || '';
+  const targetName = normalizeTextForCompare(data.dressingName || '');
+  const targetSize = normalizeTextForCompare(data.size || '');
+
+  if(!Array.isArray(dressingMasterCache)){
+    dressingMasterCache = [];
+    return;
+  }
+
+  dressingMasterCache = dressingMasterCache.filter(function(item){
+    item = item || {};
+
+    const itemHospitalCode = String(item.hospitalCode || '').trim();
+    const itemSingleGtin = item.singleGtin || item.gtin || '';
+    const itemBoxGtin = item.boxGtin || '';
+
+    const sameHospitalCode =
+      targetHospitalCode &&
+      itemHospitalCode &&
+      targetHospitalCode === itemHospitalCode;
+
+    const sameSingleGtin =
+      targetSingleGtin &&
+      sameGtin(itemSingleGtin, targetSingleGtin);
+
+    const sameBoxGtin =
+      targetBoxGtin &&
+      sameGtin(itemBoxGtin, targetBoxGtin);
+
+    const sameNameSizeFallback =
+      !targetHospitalCode &&
+      !targetSingleGtin &&
+      !targetBoxGtin &&
+      targetName &&
+      targetSize &&
+      normalizeTextForCompare(item.dressingName || '') === targetName &&
+      normalizeTextForCompare(item.size || '') === targetSize;
+
+    return !(sameHospitalCode || sameSingleGtin || sameBoxGtin || sameNameSizeFallback);
+  });
+}
+
+async function deleteDictRow(btn){
+  if(isDictTableBusy()){
+    return;
+  }
+
+  const tr = btn.closest('tr');
+  const isFrontOnlyRow =
+    tr.dataset.frontOnly === '1' ||
+    tr.dataset.isNewRow === '1' ||
+    String(btn.innerText || '').trim() === '不儲存';
+
+  // 編輯狀態下，右邊按鈕不是刪除，而是「取消編輯」。
+  // 但前端暫存列的右邊按鈕是「不儲存」，必須只刪前端，不能 reload。
+  if(tr.classList.contains('editing') && !isFrontOnlyRow){
+    restoreDictRowSnapshot(tr);
+    leaveDictEditMode(tr);
+
+    const statusEl = tr.querySelector('.dictStatus');
+    if(statusEl){
+      statusEl.innerText = '已取消編輯';
+      statusEl.className = 'dictStatus saved';
+    }
+
+    showNotice('已取消編輯，尚未刪除資料', 'success', '取消編輯');
+    return;
+  }
+
+  const confirmDelete = await showConfirmDialog(
+    '確定要刪除這一列嗎？\n\n若後端已有資料，會同步刪除主檔；若尚未儲存，只會移除前端這一列。',
+    '刪除確認'
+  );
+
+  if(!confirmDelete){
+    showNotice('已取消刪除', 'warning', '刪除取消');
+    return;
+  }
+
+  const data = getDictRowData(tr);
+  const key = data.singleGtin || data.boxGtin || data.hospitalCode;
+
+  function removeUnsavedFrontEndRow(message, title){
+    /*
+      未儲存的新列只存在前端，按「不儲存」時不能 reload 主檔，
+      也不能改 dressingMasterCache，否則批次新增時其他暫存列可能被誤清。
+      同時清掉該列的掃描記憶，避免下一次掃同 GTIN 又回到已取消的暫存列。
+    */
+    markDictScanCancelledForRow(tr);
+    forgetDictScanMemoryForRow(tr);
+    tr.remove();
+    ensureDictEmptyRow();
+    syncDictTableModeFromRows();
+    updateBatchSaveButtonVisibility();
+
+    showNotice(
+      message || '已移除未儲存的新列，其他新增列已保留',
+      'success',
+      title || '不儲存'
+    );
+  }
+
+  async function removeFrontEndRowAndReload(message, title){
+    removeDressingItemFromCache(data);
+    tr.remove();
+    ensureDictEmptyRow();
+
+    await reloadDictListAfterDataChange(
+      message || '已移除前端列，並重新讀取主檔',
+      title || '移除完成',
+      'success'
+    );
+  }
+
+  // 前端暫存列尚未進後端：只刪前端列，不 reload，避免批次新增被洗掉。
+  if(isFrontOnlyRow){
+    removeUnsavedFrontEndRow('已移除未儲存的新列，其他新增列已保留', '不儲存');
+    return;
+  }
+
+  // 沒有任何可用 key：一定還沒進後端，直接刪前端列，不 reload。
+  if(!key){
+    removeUnsavedFrontEndRow('此列沒有院內碼/GTIN，已直接移除前端列，其他新增列已保留', '前端移除');
+    return;
+  }
+
+  setDictTableMode('deleting', '刪除中...');
+  btn.disabled = true;
+  btn.innerText = '刪除中...';
+
+  try{
+    /*
+      刪除邏輯簡化：
+      1. 交給後端 deleteBarcode 比對主檔是否存在。
+      2. 後端有找到：刪除後端資料，前端列也移除。
+      3. 後端找不到：代表只是前端暫存/未儲存列，直接移除前端列。
+    */
+    const res = await deleteBarcode(key, data.hospitalCode);
+
+    if(res && res.ok && res.deleted){
+      if(hasPendingLocalRows(tr)){
+        removeDressingItemFromCache(data);
+        tr.remove();
+        finishDictLocalChange('後端主檔已刪除；因仍有未完成編輯或新增列，暫不重新讀取主檔', '刪除完成', 'success');
+      } else {
+        await removeFrontEndRowAndReload('後端主檔已刪除，已重新讀取主檔並清空掃描記憶', '刪除完成');
+      }
+      return;
+    }
+
+    if(res && res.ok && !res.deleted){
+      if(hasPendingLocalRows(tr)){
+        tr.remove();
+        finishDictLocalChange('後端沒有這筆資料，已直接移除前端列；其他未完成編輯或新增列已保留', '前端移除', 'success');
+      } else {
+        await removeFrontEndRowAndReload('後端沒有這筆資料，已直接移除前端列並清空掃描記憶', '前端移除');
+      }
+      return;
+    }
+
+    showNotice('刪除失敗：' + ((res && res.message) || '未知錯誤'), 'error', '刪除失敗');
+
+  } catch(err){
+    showNotice('刪除錯誤：' + (err.message || err), 'error', '刪除錯誤');
+  }
+
+  btn.disabled = false;
+  updateDictSecondaryButton(tr);
+  setDictTableMode(getDictNextIdleMode());
+}
+
+function ensureDictEmptyRow(){
+  const tbody = document.getElementById('dictTbody');
+  if(tbody && tbody.querySelectorAll('tr').length === 0){
+    tbody.innerHTML =
+      '<tr id="dictEmptyRow"><td colspan="9" style="text-align:center; color:#64748b; padding:20px;">尚未掃描任何條碼，請點擊上方開啟掃描</td></tr>';
+  }
+
+  updateBatchSaveButtonVisibility();
+}
+
+function openDictGtinScanner(button){
+  if(isDictTableBusy() || isReorderMode){
+    showNotice('表格處理中，暫時不能掃描', 'warning', '請稍候');
+    return;
+  }
+
+  const tr = button ? button.closest('tr') : null;
+  const input = button ? button.parentNode.querySelector('input') : null;
+
+  if(!tr || !input){
+    showNotice('找不到要回填的GTIN欄位', 'error');
+    return;
+  }
+
+  if(!tr.classList.contains('editing')){
+    showNotice('請先按「編輯」後再掃描此列GTIN', 'warning', '請先編輯');
+    return;
+  }
+
+  setDictInputsEnabled(tr, true);
+
+  activeDictGtinInput = input;
+  scannerMode = 'dictField';
+  document.getElementById('scannerOverlay').style.display = 'block';
+  startDressingScanner();
+}
+
+function startDictScanner(){
+  if(isDictTableBusy() || isReorderMode){
+    showNotice('表格處理中或排序模式中，暫時不能開啟掃描', 'warning', '請稍候');
+    return;
+  }
+
+  if(!dictLoaded || dressingMasterCache === null){
+    showNotice('請先等敷料主檔讀取完成，再開啟掃描。', 'warning');
+    return;
+  }
+
+  scannerMode = 'dict';
+  document.getElementById('scannerOverlay').style.display = 'block';
+  startDressingScanner();
+}
+
+function manualDictScanForDebug(barcode){
+  const code = String(barcode || '').trim();
+  if(!code) return;
+  scannerMode = 'dict';
+  return handleBarcodeScanResult(code);
+}
+
+function triggerHydrocleanCavityTest(type){
+  if(isDictTableBusy() || isReorderMode){
+    showNotice('表格處理中或排序模式中，暫時不能測試條碼。', 'warning', '請稍候');
+    return;
+  }
+
+  if(!dictLoaded || dressingMasterCache === null){
+    showNotice('請先等敷料主檔讀取完成，再測試條碼。', 'warning');
+    return;
+  }
+
+  const code = type === 'box'
+    ? TEST_HYDROCLEAN_CAVITY_BOX_CODE
+    : TEST_HYDROCLEAN_CAVITY_SINGLE_CODE;
+
+  if(!code){
+    return;
+  }
+
+  scannerMode = 'dict';
+  return handleBarcodeScanResult(code);
+}
+
+function getDictRowKey(tr){
+  if(!tr) return '';
+
+  const data = getDictRowData(tr);
+  return String(data.singleGtin || data.boxGtin || tr.dataset.rowKey || '').trim();
+}
+
+function getScannedGtinFromRow(tr){
+  return String(tr.dataset.scannedGtin || tr.dataset.rowKey || getDictRowKey(tr) || '').trim();
+}
+
+function getExistingDressingItems(){
+  const cache = Array.isArray(dressingMasterCache) ? dressingMasterCache : [];
+
+  const rows = Array.from(document.querySelectorAll('#dictTbody tr:not(#dictEmptyRow)'));
+
+  const domItems = rows.map(function(tr){
+    return {
+      hospitalCode: getRowInputValue(tr, '.dict-hospital-code'),
+      dressingName: getRowInputValue(tr, '.dict-name'),
+      size: getRowInputValue(tr, '.dict-size'),
+      singleGtin: getRowInputValue(tr, '.dict-single-gtin'),
+      gtin: getRowInputValue(tr, '.dict-single-gtin'),
+      boxGtin: getRowInputValue(tr, '.dict-box-gtin'),
+      boxQuantity: getRowInputValue(tr, '.dict-box-qty'),
+      category: getRowInputValue(tr, '.dict-category'),
+      status: getRowInputValue(tr, '.dict-status') || '使用中'
+    };
+  });
+
+  return cache.concat(domItems).filter(function(item){
+    return String(item.hospitalCode || item.singleGtin || item.gtin || item.boxGtin || item.dressingName || '').trim();
+  });
+}
+
+function ensureOptionContainsCurrentValue(values, currentValue){
+  const list = Array.isArray(values) ? values.slice() : [];
+  const current = String(currentValue || '').trim();
+
+  if(!current){
+    return list;
+  }
+
+  const currentKey = normalizeTextForCompare(current);
+  const exists = list.some(function(item){
+    return normalizeTextForCompare(item) === currentKey;
+  });
+
+  if(!exists){
+    list.unshift(current);
+  }
+
+  return list;
+}
+async function pickValueByPrompt(title, values, defaultValue){
+  values = ensureOptionContainsCurrentValue(values || [], defaultValue);
+
+  if(!values || values.length === 0){
+    const val = await openAppDialog({
+      title: title,
+      message: '目前沒有既有選項，請直接輸入：',
+      input: true,
+      defaultValue: defaultValue || '',
+      okText: '確定',
+      cancelText: '取消'
+    });
+    return (val === null || val === false) ? null : String(val).trim();
+  }
+
+  while(true){
+    const choices = values.map(function(v){ return { label: v, value: v }; });
+    choices.push({ label: '➕ 自行輸入...', value: '__MANUAL_INPUT__' });
+
+    const choice = await openAppDialog({
+      title: title,
+      message: '請選擇現有項目，或點擊最下方「自行輸入...」：',
+      input: false,
+      choices: choices,
+      cancelText: '取消'
+    });
+
+    if(choice === null || choice === false){
+      return null;
+    }
+
+    if(choice === '__MANUAL_INPUT__'){
+      const manualVal = await openAppDialog({
+        title: title + ' (自行輸入)',
+        message: '請輸入內容：',
+        input: true,
+        defaultValue: defaultValue || '',
+        okText: '確定',
+        cancelText: '返回選項'
+      });
+
+      if(manualVal === null || manualVal === false){
+        continue;
+      }
+      return String(manualVal).trim();
+    }
+
+    return choice;
+  }
+}
+
+function findExistingItemByNameAndSize(name, size){
+  const cleanName = normalizeTextForCompare(name);
+  const cleanSize = normalizeTextForCompare(size);
+
+  return getExistingDressingItems().find(function(item){
+    return normalizeTextForCompare(item.dressingName) === cleanName &&
+      normalizeTextForCompare(item.size) === cleanSize;
+  });
+}
+
+function findExistingRowByNameAndSize(name, size, excludeTr){
+  const cleanName = normalizeTextForCompare(name);
+  const cleanSize = normalizeTextForCompare(size);
+
+  return Array.from(document.querySelectorAll('#dictTbody tr:not(#dictEmptyRow)')).find(function(row){
+    if(excludeTr && row === excludeTr){
+      return false;
+    }
+
+    const data = getDictRowData(row);
+
+    return normalizeTextForCompare(data.dressingName) === cleanName &&
+      normalizeTextForCompare(data.size) === cleanSize;
+  });
+}
+
+
+function findExistingItemByGtin(gtin){
+  return getExistingDressingItems().find(function(item){
+    return sameGtin(item.singleGtin || item.gtin || '', gtin) ||
+      sameGtin(item.boxGtin || '', gtin);
+  });
+}
+
+
+function rememberDictScanForRow(tr, gtin, target){
+  if(!tr || !gtin || (target !== 'single' && target !== 'box')){
+    return;
+  }
+
+  const key = normalizeGtinForCompare(gtin);
+  if(!key){
+    return;
+  }
+
+  if(!dictScanMemory || typeof dictScanMemory !== 'object'){
+    dictScanMemory = {};
+  }
+
+  dictScanMemory[key] = {
+    gtin: gtin,
+    target: target,
+    data: getDictRowData(tr)
+  };
+}
+
+function rememberDictRowBeforeRemove(tr){
+  if(!tr){
+    return;
+  }
+
+  const single = getRowInputValue(tr, '.dict-single-gtin');
+  const box = getRowInputValue(tr, '.dict-box-gtin');
+
+  if(single){
+    rememberDictScanForRow(tr, single, 'single');
+  }
+
+  if(box){
+    rememberDictScanForRow(tr, box, 'box');
+  }
+
+  const map = getRowScannedGtinMap(tr);
+  Object.keys(map || {}).forEach(function(key){
+    const target = map[key];
+    if(target === 'single' || target === 'box'){
+      rememberDictScanForRow(tr, key, target);
+    }
+  });
+}
+
+function clearDictScanMemory(){
+  dictScanMemory = {};
+  cancelledDictScanKeys = {};
+
+  document.querySelectorAll('#dictTbody tr:not(#dictEmptyRow)').forEach(function(tr){
+    delete tr.dataset.scannedGtin;
+    delete tr.dataset.gtinTarget;
+    delete tr.dataset.scannedGtinMap;
+  });
+}
+
+
+function forgetDictScanMemoryByGtin(gtin){
+  const key = normalizeGtinForCompare(gtin);
+  if(key && dictScanMemory && dictScanMemory[key]){
+    delete dictScanMemory[key];
+  }
+}
+
+function markDictScanCancelledByGtin(gtin){
+  const key = normalizeGtinForCompare(gtin);
+  if(!key){
+    return;
+  }
+
+  if(!cancelledDictScanKeys || typeof cancelledDictScanKeys !== 'object'){
+    cancelledDictScanKeys = {};
+  }
+
+  cancelledDictScanKeys[key] = true;
+}
+
+function markDictScanCancelledForRow(tr){
+  if(!tr){
+    return;
+  }
+
+  markDictScanCancelledByGtin(tr.dataset.scannedGtin || '');
+  markDictScanCancelledByGtin(tr.dataset.rowKey || '');
+  markDictScanCancelledByGtin(getRowInputValue(tr, '.dict-single-gtin'));
+  markDictScanCancelledByGtin(getRowInputValue(tr, '.dict-box-gtin'));
+
+  const map = getRowScannedGtinMap(tr);
+  Object.keys(map || {}).forEach(function(gtin){
+    markDictScanCancelledByGtin(gtin);
+  });
+}
+
+function clearDictScanCancelledByGtin(gtin){
+  const key = normalizeGtinForCompare(gtin);
+  if(key && cancelledDictScanKeys && cancelledDictScanKeys[key]){
+    delete cancelledDictScanKeys[key];
+  }
+}
+
+function isDictScanCancelled(gtin){
+  const key = normalizeGtinForCompare(gtin);
+  return !!(key && cancelledDictScanKeys && cancelledDictScanKeys[key]);
+}
+
+function forgetDictScanMemoryForRow(tr){
+  if(!tr){
+    return;
+  }
+
+  forgetDictScanMemoryByGtin(tr.dataset.scannedGtin || '');
+  forgetDictScanMemoryByGtin(tr.dataset.rowKey || '');
+  forgetDictScanMemoryByGtin(getRowInputValue(tr, '.dict-single-gtin'));
+  forgetDictScanMemoryByGtin(getRowInputValue(tr, '.dict-box-gtin'));
+
+  const map = getRowScannedGtinMap(tr);
+  Object.keys(map || {}).forEach(function(gtin){
+    forgetDictScanMemoryByGtin(gtin);
+  });
+
+  delete tr.dataset.scannedGtin;
+  delete tr.dataset.gtinTarget;
+  delete tr.dataset.scannedGtinMap;
+}
+
+function removePendingDictScanRow(tr, gtin, message, title){
+  /*
+    掃描新增流程中途取消時，這列只存在前端，不能 reload 主檔。
+    同時必須清掉掃描記憶，否則下次掃同一個 GTIN 會回到已取消的舊暫存列。
+  */
+  markDictScanCancelledByGtin(gtin);
+  markDictScanCancelledForRow(tr);
+  forgetDictScanMemoryByGtin(gtin);
+  forgetDictScanMemoryForRow(tr);
+
+  if(tr && tr.parentNode){
+    tr.remove();
+  }
+
+  activeDictGtinInput = null;
+  ensureDictEmptyRow();
+  syncDictTableModeFromRows();
+  updateBatchSaveButtonVisibility();
+
+  if(message !== false){
+    showNotice(
+      message || '已取消本次掃描建檔流程，暫存列已移除',
+      'warning',
+      title || '已取消'
+    );
+  }
+}
+
+async function reloadDictListAfterDataChange(message, title, type){
+  invalidateDressingMasterCache('data changed');
+  setDictTableMode('refreshing', '資料已變更，重新讀取主檔中...');
+  await loadDictList();
+
+  if(message){
+    showNotice(message, type || 'success', title || '完成');
+  }
+}
+
+
+function getRememberedDictScan(gtin){
+  const key = normalizeGtinForCompare(gtin);
+  if(!key || !dictScanMemory || !dictScanMemory[key]){
+    return null;
+  }
+
+  return dictScanMemory[key];
+}
+
+function recreateRememberedScanRow(gtin, parsed){
+  const memory = getRememberedDictScan(gtin);
+  if(!memory || !memory.data){
+    return null;
+  }
+
+  const data = Object.assign({}, memory.data);
+  const target = memory.target === 'box' ? 'box' : 'single';
+
+  if(target === 'box'){
+    data.boxGtin = gtin;
+  } else {
+    data.singleGtin = gtin;
+    data.gtin = gtin;
+  }
+
+  const emptyRow = document.getElementById('dictEmptyRow');
+  if(emptyRow){
+    emptyRow.remove();
+  }
+
+  const tr = createDictRow(data, true);
+  tr.dataset.scannedGtin = gtin;
+  tr.dataset.rowKey = data.singleGtin || data.boxGtin || data.hospitalCode || gtin;
+  setRowScannedGtinTarget(tr, gtin, target);
+
+  moveDictRowToTop(tr);
+  setDictInputsEnabled(tr, true);
+  bindDictRowDirtyWatch(tr);
+  updateDictMainButton(tr);
+
+  const statusEl = tr.querySelector('.dictStatus');
+  if(statusEl){
+    statusEl.innerText = target === 'box'
+      ? '已從本輪掃描記憶補回盒裝GTIN，請確認後儲存'
+      : '已從本輪掃描記憶補回單包GTIN，請確認後儲存';
+    statusEl.className = 'dictStatus';
+  }
+
+  showNotice(
+    target === 'box' ? '已補回盒裝GTIN' : '已補回單包GTIN',
+    'success',
+    '已補回條碼'
+  );
+
+  flashDictRow(tr);
+  return tr;
+}
+
+function getRowScannedGtinMap(tr){
+  if(!tr){
+    return {};
+  }
+
+  try{
+    return JSON.parse(tr.dataset.scannedGtinMap || '{}') || {};
+  } catch(error){
+    return {};
+  }
+}
+
+function setRowScannedGtinTarget(tr, gtin, target){
+  if(!tr || !gtin || (target !== 'single' && target !== 'box')){
+    return;
+  }
+
+  const key = normalizeGtinForCompare(gtin);
+  if(!key){
+    return;
+  }
+
+  const map = getRowScannedGtinMap(tr);
+  map[key] = target;
+  tr.dataset.scannedGtinMap = JSON.stringify(map);
+  tr.dataset.scannedGtin = gtin;
+  tr.dataset.gtinTarget = target;
+  rememberDictScanForRow(tr, gtin, target);
+}
+
+function getRowRememberedGtinTarget(tr, gtin){
+  if(!tr || !gtin){
+    return '';
+  }
+
+  const key = normalizeGtinForCompare(gtin);
+  const map = getRowScannedGtinMap(tr);
+
+  if(key && map[key]){
+    return map[key];
+  }
+
+  if(sameGtin(tr.dataset.scannedGtin || '', gtin)){
+    const target = String(tr.dataset.gtinTarget || '').trim();
+    if(target === 'single' || target === 'box'){
+      return target;
+    }
+  }
+
+  const memory = getRememberedDictScan(gtin);
+  if(memory && (memory.target === 'single' || memory.target === 'box')){
+    return memory.target;
+  }
+
+  return '';
+}
+
+function rowHasRememberedGtin(tr, gtin){
+  const key = normalizeGtinForCompare(gtin);
+  if(!tr || !key){
+    return false;
+  }
+
+  const map = getRowScannedGtinMap(tr);
+  return !!map[key] || sameGtin(tr.dataset.scannedGtin || '', gtin) || sameGtin(tr.dataset.rowKey || '', gtin);
+}
+
+function findExistingRowByGtin(gtin){
+  const rows = Array.from(document.querySelectorAll('#dictTbody tr:not(#dictEmptyRow)'));
+
+  const actualRow = rows.find(function(tr){
+    return sameGtin(getRowInputValue(tr, '.dict-single-gtin'), gtin) ||
+      sameGtin(getRowInputValue(tr, '.dict-box-gtin'), gtin);
+  });
+
+  if(actualRow){
+    return actualRow;
+  }
+
+  // 如果剛剛使用者對這個掃描碼按過「不儲存」或取消流程，
+  // 下一次掃同碼必須重新開始，不可以靠舊 scannedGtinMap / scan memory 跳回舊列。
+  if(isDictScanCancelled(gtin)){
+    return null;
+  }
+
+  return rows.find(function(tr){
+    return rowHasRememberedGtin(tr, gtin);
+  });
+}
+function describeDressingItem(item){
+  item = item || {};
+  const name = item.dressingName || '未命名敷料';
+  const size = item.size ? ' ' + item.size : '';
+  return name + size;
+}
+function applyExistingItemToRow(tr, item, keepScannedAs){
+  const scannedGtin = getScannedGtinFromRow(tr);
+
+  tr.querySelector('.dict-hospital-code').value = item.hospitalCode || '';
+  tr.querySelector('.dict-name').value = item.dressingName || '';
+  tr.querySelector('.dict-size').value = item.size || '';
+  tr.querySelector('.dict-category').value = item.category || '';
+  tr.querySelector('.dict-status').value = item.status || '使用中';
+
+  if(keepScannedAs === 'single'){
+    tr.querySelector('.dict-single-gtin').value = scannedGtin;
+    tr.querySelector('.dict-box-gtin').value = item.boxGtin || '';
+  }
+
+  if(keepScannedAs === 'box'){
+    tr.querySelector('.dict-single-gtin').value = item.singleGtin || item.gtin || '';
+    tr.querySelector('.dict-box-gtin').value = scannedGtin;
+  }
+
+  tr.querySelector('.dict-box-qty').value =
+    item.boxQuantity || tr.querySelector('.dict-box-qty').value || '';
+
+  setRowScannedGtinTarget(tr, scannedGtin, keepScannedAs);
+
+  tr.dataset.rowKey =
+    tr.querySelector('.dict-single-gtin').value ||
+    tr.querySelector('.dict-box-gtin').value ||
+    scannedGtin;
+}
+
+async function promptDictRowValue(row, selector, stepNumber, stepTitle, promptMessage){
+  const input = row.querySelector(selector);
+  const currentValue = input ? input.value || '' : '';
+
+  const value = await showInputDialog(
+    '步驟 ' + stepNumber + '：' + stepTitle,
+    promptMessage,
+    currentValue
+  );
+
+  if(value === null){
+    updateDictMainButton(row);
+    return null;
+  }
+
+  if(input){
+    input.disabled = false;
+    input.value = String(value).trim();
+    input.dispatchEvent(new Event('input', { bubbles:true }));
+    input.dispatchEvent(new Event('change', { bubbles:true }));
+  }
+
+  return String(value).trim();
+}
+
+async function guideDictRowAfterScan(tr, forcedTarget){
+  const scannedGtin = getScannedGtinFromRow(tr);
+  if(!scannedGtin){
+    showNotice('這列沒有可指定的掃描GTIN', 'warning');
+    return false;
+  }
+
+  tr.classList.add('editing');
+  setDictInputsEnabled(tr, true);
+
+  let target = forcedTarget || '';
+  if(!target){
+    const choice = await openAppDialog({
+      title: '步驟 1：條碼類型',
+      message: '請選擇這次掃到的條碼類型：',
+      input: false,
+      choices: [
+        { label: '單包條碼', value: '1' },
+        { label: '盒裝條碼', value: '2' }
+      ],
+      cancelText: '取消'
+    });
+
+    if(choice === null || choice === false){
+      return false;
+    }
+
+    target = String(choice).trim() === '2' ? 'box' : 'single';
+  }
+
+  tr.dataset.gtinTarget = target;
+  setRowScannedGtinTarget(tr, scannedGtin, target);
+
+  if(target === 'single'){
+    const singleInput = tr.querySelector('.dict-single-gtin');
+    const boxInput = tr.querySelector('.dict-box-gtin');
+
+    if(singleInput){
+      singleInput.value = scannedGtin;
+    }
+
+    if(boxInput){
+      boxInput.value = boxInput.value || '';
+    }
+  }
+
+  if(target === 'box'){
+    const boxInput = tr.querySelector('.dict-box-gtin');
+    const singleInput = tr.querySelector('.dict-single-gtin');
+
+    if(boxInput){
+      boxInput.value = scannedGtin;
+    }
+
+    if(singleInput){
+      singleInput.value = singleInput.value || '';
+    }
+  }
+
+  const allItems = getExistingDressingItems();
+  const currentNameValue = tr.querySelector('.dict-name').value || '';
+  const names = ensureOptionContainsCurrentValue(
+    Array.from(new Set(
+      allItems.map(function(item){
+        return String(item.dressingName || '').trim();
+      }).filter(Boolean)
+    )).sort(),
+    currentNameValue
+  );
+
+  const name = await pickValueByPrompt(
+    '步驟 2：請選擇或輸入敷料名稱',
+    names,
+    currentNameValue
+  );
+
+  if(name === null){
+    updateDictMainButton(tr);
+    return false;
+  }
+
+  tr.querySelector('.dict-name').value = name;
+
+  const currentSizeValue = tr.querySelector('.dict-size').value || '';
+  const sizesForName = ensureOptionContainsCurrentValue(
+    Array.from(new Set(
+      allItems
+        .filter(function(item){
+          return normalizeTextForCompare(item.dressingName) === normalizeTextForCompare(name);
+        })
+        .map(function(item){
+          return String(item.size || '').trim();
+        })
+        .filter(Boolean)
+    )).sort(),
+    currentSizeValue
+  );
+
+  const size = await pickValueByPrompt(
+    '步驟 3：請選擇或輸入規格描述',
+    sizesForName,
+    currentSizeValue
+  );
+
+  if(size === null){
+    updateDictMainButton(tr);
+    return false;
+  }
+
+  tr.querySelector('.dict-size').value = size;
+
+  const existingItem = findExistingItemByNameAndSize(name, size);
+
+  if(existingItem){
+    const existingRow = findExistingRowByNameAndSize(name, size, tr);
+
+    if(existingRow){
+      const originalBeforePatch = getDictRowData(existingRow);
+      const hadOriginalData = !!existingRow.dataset.originalData;
+      const wasEditingBeforeScan = existingRow.classList.contains('editing');
+
+      function rollbackExistingRowAfterCanceledScan(){
+        applyDressingItemToDictRow(existingRow, originalBeforePatch);
+        forgetDictScanMemoryByGtin(scannedGtin);
+        delete existingRow.dataset.scannedGtin;
+        delete existingRow.dataset.gtinTarget;
+        delete existingRow.dataset.scannedGtinMap;
+
+        if(!hadOriginalData){
+          delete existingRow.dataset.originalData;
+        }
+
+        if(!wasEditingBeforeScan){
+          leaveDictEditMode(existingRow);
+        } else {
+          updateDictMainButton(existingRow);
+          syncDictTableModeFromRows();
+        }
+      }
+
+      existingRow.classList.add('editing');
+      setDictInputsEnabled(existingRow, true);
+      bindDictRowDirtyWatch(existingRow);
+
+      // 保留最一開始「後端已儲存狀態」的快照。
+      // 如果這列已經有未儲存變更，後續再掃另一個條碼時，不能把未儲存狀態改寫成新的原始值。
+      if(!hadOriginalData){
+        existingRow.dataset.originalData = JSON.stringify(originalBeforePatch);
+      }
+
+      delete existingRow.dataset.isNewRow;
+
+      if(target === 'single'){
+        const input = existingRow.querySelector('.dict-single-gtin');
+        if(input){
+          input.disabled = false;
+          input.value = scannedGtin;
+          input.dispatchEvent(new Event('input', { bubbles:true }));
+          input.dispatchEvent(new Event('change', { bubbles:true }));
+        }
+      }
+
+      if(target === 'box'){
+        const boxInput = existingRow.querySelector('.dict-box-gtin');
+        if(boxInput){
+          boxInput.disabled = false;
+          boxInput.value = scannedGtin;
+          boxInput.dispatchEvent(new Event('input', { bubbles:true }));
+          boxInput.dispatchEvent(new Event('change', { bubbles:true }));
+        }
+      }
+
+      const hospitalCodeInput = existingRow.querySelector('.dict-hospital-code');
+      const currentHospitalCode = hospitalCodeInput ? hospitalCodeInput.value || '' : '';
+
+      const hospitalCode = await showInputDialog(
+        '步驟 4：院內碼',
+        '請確認院內碼\n\n已有資料會自動帶入，可直接按確定；沒有也可以留空。',
+        currentHospitalCode
+      );
+
+      if(hospitalCode === null){
+        rollbackExistingRowAfterCanceledScan();
+        return false;
+      }
+
+      if(hospitalCodeInput){
+        hospitalCodeInput.disabled = false;
+        hospitalCodeInput.value = String(hospitalCode).trim();
+        hospitalCodeInput.dispatchEvent(new Event('input', { bubbles:true }));
+        hospitalCodeInput.dispatchEvent(new Event('change', { bubbles:true }));
+      }
+
+      const qty = await promptDictRowValue(
+        existingRow,
+        '.dict-box-qty',
+        '5',
+        '一盒數量',
+        '請確認一盒數量\n\n已有資料會自動帶入，可直接按確定；沒有也可以留空。'
+      );
+
+      if(qty === null){
+        rollbackExistingRowAfterCanceledScan();
+        return false;
+      }
+
+      const price = await promptDictRowValue(
+        existingRow,
+        '.dict-category',
+        '6',
+        '自費價格',
+        '請確認自費價格\n\n已有資料會自動帶入，可直接按確定；沒有也可以留空。'
+      );
+
+      if(price === null){
+        rollbackExistingRowAfterCanceledScan();
+        return false;
+      }
+
+      setRowScannedGtinTarget(existingRow, scannedGtin, target);
+      existingRow.dataset.rowKey =
+        getRowInputValue(existingRow, '.dict-single-gtin') ||
+        getRowInputValue(existingRow, '.dict-box-gtin') ||
+        getRowInputValue(existingRow, '.dict-hospital-code') ||
+        scannedGtin;
+
+      updateDictMainButton(existingRow);
+
+      const statusEl = existingRow.querySelector('.dictStatus');
+      if(statusEl){
+        statusEl.innerText = '已找到既有敷料，請確認後儲存修改';
+        statusEl.className = 'dictStatus';
+      }
+
+      moveDictRowToTop(existingRow);
+      existingRow.scrollIntoView({ behavior:'smooth', block:'center' });
+      existingRow.classList.remove('highlight-flash');
+      void existingRow.offsetWidth;
+      existingRow.classList.add('highlight-flash');
+
+      tr.remove();
+      ensureDictEmptyRow();
+
+      showNotice(
+        target === 'box'
+          ? '已將盒裝GTIN填入既有資料列'
+          : '已將單包GTIN填入既有資料列',
+        'success',
+        describeDressingItem(existingItem)
+      );
+
+      return true;
+    }
+
+    applyExistingItemToRow(tr, existingItem, target);
+  }
+
+  const hospitalCodeInput = tr.querySelector('.dict-hospital-code');
+  const currentHospitalCode = hospitalCodeInput ? hospitalCodeInput.value || '' : '';
+
+  const hospitalCode = await showInputDialog(
+    '步驟 4：院內碼',
+    '請確認院內碼\n\n已有資料會自動帶入，可直接按確定；沒有也可以留空。',
+    currentHospitalCode
+  );
+
+  if(hospitalCode === null){
+    updateDictMainButton(tr);
+    return false;
+  }
+
+  if(hospitalCodeInput){
+    hospitalCodeInput.value = String(hospitalCode).trim();
+    hospitalCodeInput.dispatchEvent(new Event('input', { bubbles:true }));
+    hospitalCodeInput.dispatchEvent(new Event('change', { bubbles:true }));
+  }
+
+  const qty = await promptDictRowValue(
+    tr,
+    '.dict-box-qty',
+    '5',
+    '一盒數量',
+    '請確認一盒數量\n\n已有資料會自動帶入，可直接按確定；沒有也可以留空。'
+  );
+
+  if(qty === null){
+    return false;
+  }
+
+  const price = await promptDictRowValue(
+    tr,
+    '.dict-category',
+    '6',
+    '自費價格',
+    '請確認自費價格\n\n已有資料會自動帶入，可直接按確定；沒有也可以留空。'
+  );
+
+  if(price === null){
+    return false;
+  }
+
+  const statusEl = tr.querySelector('.dictStatus');
+  if(statusEl){
+    statusEl.innerText = target === 'box'
+      ? '已設定為盒裝，請確認後儲存'
+      : '已設定為單包，請確認後儲存';
+    statusEl.className = 'dictStatus';
+  }
+
+  updateDictMainButton(tr);
+
+  showNotice('已完成基本設定。\n\n接下來可自由修改任何欄位；確認無誤後，按「儲存」。', 'success');
+  return true;
+}
+
+function flashDictRow(tr){
+  if(!tr){
+    return;
+  }
+
+  tr.scrollIntoView({ behavior:'smooth', block:'center' });
+  tr.classList.remove('highlight-flash');
+  void tr.offsetWidth;
+  tr.classList.add('highlight-flash');
+}
+
+function reapplyScannedGtinToExistingRow(tr, scannedGtin, parsed){
+  if(!tr || !scannedGtin){
+    return false;
+  }
+
+  moveDictRowToTop(tr);
+
+  const data = getDictRowData(tr);
+  const alreadyHasGtin =
+    sameGtin(data.singleGtin, scannedGtin) ||
+    sameGtin(data.boxGtin, scannedGtin);
+
+  if(alreadyHasGtin){
+    return false;
+  }
+
+  tr.classList.add('editing');
+  setDictInputsEnabled(tr, true);
+  bindDictRowDirtyWatch(tr);
+
+  const rememberedTarget = getRowRememberedGtinTarget(tr, scannedGtin);
+  let target = rememberedTarget;
+
+  if(target !== 'single' && target !== 'box'){
+    if(!data.singleGtin){
+      target = 'single';
+    } else if(!data.boxGtin){
+      target = 'box';
+    } else {
+      target = 'single';
+    }
+  }
+
+  const selector =
+    target === 'box'
+      ? '.dict-box-gtin'
+      : '.dict-single-gtin';
+
+  const input = tr.querySelector(selector);
+  if(!input){
+    return false;
+  }
+
+  input.disabled = false;
+  input.value = scannedGtin;
+  input.dataset.raw = parsed && parsed.raw ? parsed.raw : scannedGtin;
+  input.dataset.lot = parsed && parsed.lot ? parsed.lot : '';
+  input.dataset.exp = parsed && parsed.exp ? parsed.exp : '';
+  input.dispatchEvent(new Event('input', { bubbles:true }));
+  input.dispatchEvent(new Event('change', { bubbles:true }));
+
+  setRowScannedGtinTarget(tr, scannedGtin, target);
+  tr.dataset.rowKey =
+    getRowInputValue(tr, '.dict-single-gtin') ||
+    getRowInputValue(tr, '.dict-box-gtin') ||
+    getRowInputValue(tr, '.dict-hospital-code') ||
+    scannedGtin;
+
+  updateDictMainButton(tr);
+
+  const statusEl = tr.querySelector('.dictStatus');
+  if(statusEl){
+    statusEl.innerText =
+      target === 'box'
+        ? '已將剛剛刪掉的盒裝GTIN加回，請確認後儲存'
+        : '已將剛剛刪掉的單包GTIN加回，請確認後儲存';
+    statusEl.className = 'dictStatus';
+  }
+
+  showNotice(
+    target === 'box' ? '盒裝GTIN已加回此列' : '單包GTIN已加回此列',
+    'success',
+    '已補回條碼'
+  );
+
+  flashDictRow(tr);
+  return true;
+}
+
+async function addDictRow(barcode, parsed){
+  const emptyRow = document.getElementById('dictEmptyRow');
+  if(emptyRow) emptyRow.remove();
+
+  const scannedGtin = String(barcode || '').trim();
+
+  const existingRow = findExistingRowByGtin(scannedGtin);
+  if(existingRow){
+    moveDictRowToTop(existingRow);
+    const reapplied = reapplyScannedGtinToExistingRow(existingRow, scannedGtin, parsed);
+    if(!reapplied){
+      const data = getDictRowData(existingRow);
+      showNotice('', 'warning', describeDressingItem(data));
+      flashDictRow(existingRow);
+      if(!existingRow.classList.contains('editing')){
+        const editBtn = existingRow.querySelector('.edit-main-btn');
+        if(editBtn) handleDictMainButton(editBtn);
+      }
+    }
+    return;
+  }
+
+  const rememberedRow = recreateRememberedScanRow(scannedGtin, parsed);
+  if(rememberedRow){
+    return;
+  }
+
+  const localExistingItem = findExistingItemByGtin(scannedGtin);
+  if(localExistingItem){
+    const target = sameGtin(localExistingItem.boxGtin || '', scannedGtin) ? 'box' : 'single';
+    let tr = findExistingRowByItem(localExistingItem, null);
+
+    if(!tr){
+      tr = createDictRow(localExistingItem, false);
+      const tbody = document.getElementById('dictTbody');
+      if(tbody){
+        tbody.appendChild(tr);
+      }
+    }
+
+    setRowScannedGtinTarget(tr, scannedGtin, target);
+    moveDictRowToTop(tr);
+
+    if(!tr.classList.contains('editing')){
+      tr.classList.add('editing');
+      setDictInputsEnabled(tr, true);
+      bindDictRowDirtyWatch(tr);
+      updateDictMainButton(tr);
+    }
+
+    reapplyScannedGtinToExistingRow(tr, scannedGtin, parsed);
+    removeDuplicateDictRowsForItem(localExistingItem, tr);
+    showNotice('', 'success', describeDressingItem(localExistingItem));
+    return;
+  }
+
+  // 走到這裡代表要重新建立一列；清掉取消標記，讓這一輪新的暫存列可以正常記憶。
+  clearDictScanCancelledByGtin(scannedGtin);
+
+  const scanMeta =
+    `<div class="scanMeta">掃描GTIN：${escapeHtml(scannedGtin)}${parsed && parsed.lot ? '<br>批號：' + escapeHtml(parsed.lot) : ''}${parsed && parsed.exp ? '<br>效期：' + escapeHtml(parsed.exp) : ''}</div>`;
+
+  const tr = createDictRow({
+    hospitalCode:'',
+    dressingName:'',
+    size:'',
+    singleGtin:'',
+    gtin:'',
+    boxGtin:'',
+    boxQuantity:'',
+    category:'',
+    status:'使用中',
+    scanMeta:scanMeta
+  }, true);
+
+  tr.dataset.scannedGtin = scannedGtin;
+  tr.dataset.rowKey = scannedGtin;
+
+  moveDictRowToTop(tr);
+
+  tr.querySelector('.dictStatus').innerText = '本機主檔未找到，開始引導建檔';
+  tr.querySelector('.dictStatus').className = 'dictStatus';
+
+  showNotice('', 'info', '新敷料');
+
+  const completed = await guideDictRowAfterScan(tr);
+  if(completed === false){
+    removePendingDictScanRow(
+      tr,
+      scannedGtin,
+      '已取消本次掃描建檔流程，其他未儲存列已保留',
+      '掃描取消'
+    );
+  }
+}
+
+/* 排序 */
+function toggleReorderMode(){
+  if(isDictTableBusy()){
+    return;
+  }
+
+  if(hasDictEditingRows()){
+    showNotice('請先儲存、返回或取消編輯，再更改排序', 'warning', '尚有未儲存變更');
+    return;
+  }
+
+  if(isReorderMode){
+    cancelReorderMode();
+    return;
+  }
+
+  const rows = document.querySelectorAll('#dictTbody tr:not(#dictEmptyRow)');
+  if(rows.length === 0) return;
+
+  isReorderMode = true;
+  setDictTableMode('reordering', '排序模式中；拖曳完成後按儲存排序');
+  initialOrder = Array.from(rows).map(r => getDictRowKey(r));
+
+  document.getElementById('dictTable').classList.add('reorder-mode');
+  document.getElementById('reorderBtn').innerText = '返回';
+  document.getElementById('saveOrderBtn').style.display = 'none';
+  document.getElementById('batchSaveBtn').style.display = 'none';
+
+  renderDictTableControls();
+
+  rows.forEach(row => {
+    row.setAttribute('draggable','true');
+    row.addEventListener('dragstart', handleDragStart);
+    row.addEventListener('dragend', handleDragEnd);
+    row.addEventListener('dragover', handleDragOver);
+    row.addEventListener('drop', handleDrop);
+    row.addEventListener('touchstart', handleTouchStart, { passive:false });
+    row.addEventListener('touchmove', handleTouchMove, { passive:false });
+    row.addEventListener('touchend', handleTouchEnd);
+  });
+}
+
+function cancelReorderMode(){
+  isReorderMode = false;
+  document.getElementById('dictTable').classList.remove('reorder-mode');
+  document.getElementById('reorderBtn').innerText = '更改排序';
+  document.getElementById('saveOrderBtn').style.display = 'none';
+  updateBatchSaveButtonVisibility();
+
+  const tbody = document.getElementById('dictTbody');
+  const rows = Array.from(tbody.querySelectorAll('tr:not(#dictEmptyRow)'));
+
+  rows.forEach(row => {
+    row.removeAttribute('draggable');
+    row.removeEventListener('dragstart', handleDragStart);
+    row.removeEventListener('dragend', handleDragEnd);
+    row.removeEventListener('dragover', handleDragOver);
+    row.removeEventListener('drop', handleDrop);
+    row.removeEventListener('touchstart', handleTouchStart);
+    row.removeEventListener('touchmove', handleTouchMove);
+    row.removeEventListener('touchend', handleTouchEnd);
+  });
+
+  rows.sort((a,b) => initialOrder.indexOf(getDictRowKey(a)) - initialOrder.indexOf(getDictRowKey(b)));
+  rows.forEach(r => tbody.appendChild(r));
+  syncDictTableModeFromRows();
+}
+
+function checkOrderChanged(){
+  const rows = document.querySelectorAll('#dictTbody tr:not(#dictEmptyRow)');
+  const currentOrder = Array.from(rows).map(r => getDictRowKey(r));
+  const changed = JSON.stringify(currentOrder) !== JSON.stringify(initialOrder);
+  document.getElementById('saveOrderBtn').style.display = changed ? 'inline-block' : 'none';
+  renderDictTableControls();
+}
+
+function handleDragStart(e){
+  draggedRow = this;
+  if(e.dataTransfer){
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', getDictRowKey(this));
+  }
+  setTimeout(() => this.classList.add('dragging'), 0);
+}
+
+function handleDragEnd(){
+  this.classList.remove('dragging');
+  draggedRow = null;
+  document.querySelectorAll('#dictTbody tr').forEach(r => r.classList.remove('drag-over','drag-over-bottom'));
+}
+
+function handleDragOver(e){
+  e.preventDefault();
+  if(!draggedRow || this === draggedRow) return false;
+
+  const rect = this.getBoundingClientRect();
+  const midpoint = rect.top + rect.height / 2;
+
+  this.classList.remove('drag-over','drag-over-bottom');
+  if(e.clientY < midpoint){
+    this.classList.add('drag-over');
+  } else {
+    this.classList.add('drag-over-bottom');
+  }
+  return false;
+}
+
+function handleDrop(e){
+  e.preventDefault();
+  if(!draggedRow || this === draggedRow) return false;
+
+  this.classList.remove('drag-over','drag-over-bottom');
+
+  const rect = this.getBoundingClientRect();
+  const midpoint = rect.top + rect.height / 2;
+
+  if(e.clientY < midpoint){
+    this.parentNode.insertBefore(draggedRow, this);
+  } else {
+    this.parentNode.insertBefore(draggedRow, this.nextSibling);
+  }
+
+  checkOrderChanged();
+  return false;
+}
+
+function handleTouchStart(e){
+  if(!e.target.classList.contains('dragHandle')) return;
+  draggedRow = this;
+  this.classList.add('dragging');
+}
+
+function handleTouchMove(e){
+  if(!draggedRow || draggedRow !== this) return;
+  e.preventDefault();
+
+  const touch = e.touches[0];
+  const targetElement = document.elementFromPoint(touch.clientX, touch.clientY);
+  if(!targetElement) return;
+
+  const targetRow = targetElement.closest('tr');
+  if(!targetRow || targetRow === draggedRow || targetRow.id === 'dictEmptyRow' || targetRow.parentNode !== draggedRow.parentNode) return;
+
+  const rect = targetRow.getBoundingClientRect();
+  const midpoint = rect.top + rect.height / 2;
+
+  targetRow.parentNode.insertBefore(draggedRow, touch.clientY < midpoint ? targetRow : targetRow.nextSibling);
+}
+
+function handleTouchEnd(){
+  if(!draggedRow) return;
+  this.classList.remove('dragging');
+  draggedRow = null;
+  checkOrderChanged();
+}
+
+async function saveDictOrder(){
+  if(isDictTableBusy()){
+    return;
+  }
+
+  const rows = document.querySelectorAll('#dictTbody tr:not(#dictEmptyRow)');
+  const barcodes = Array.from(rows).map(tr => getDictRowKey(tr)).filter(Boolean);
+  if(barcodes.length === 0) return;
+
+  const btn = document.getElementById('saveOrderBtn');
+  setDictTableMode('saving', '排序儲存中...');
+  btn.innerText = '儲存中...';
+  btn.disabled = true;
+
+  try{
+    const res = await reorderBarcode(barcodes.join(','));
+    if(res.ok){
+      isReorderMode = false;
+      btn.style.display = 'none';
+      document.getElementById('reorderBtn').innerText = '更改排序';
+      updateBatchSaveButtonVisibility();
+      document.getElementById('dictTable').classList.remove('reorder-mode');
+      invalidateDressingMasterCache('order saved');
+      await loadDictList();
+    } else {
+      showNotice('排序儲存失敗', 'error');
+    }
+  } catch(err){
+    showNotice('儲存錯誤：' + err.message, 'error');
+  }
+
+  btn.innerText = '儲存排序';
+  btn.disabled = false;
+  setDictTableMode(getDictNextIdleMode());
+}
+
+window.addEventListener('beforeunload', function(event){
+  if(!hasPendingDictWork()){
+    return;
+  }
+
+  event.preventDefault();
+  event.returnValue = '';
+  return '';
+});
+
+/* 領用區 */
+async function startUse(){
+  const ok = await confirmLeaveDictWork('開始領用');
+  if(!ok){
+    showNotice('已停留在敷料建檔畫面，未切換到領用流程', 'warning', '已取消');
+    return;
+  }
+
+  document.getElementById('formArea').style.display = 'block';
+  document.getElementById('dictArea').style.display = 'none';
+
+  document.getElementById('useDateTime').value =
+    new Date().toLocaleString('zh-TW');
+
+  if(patientCount === 0){
+    addPatientBlock();
+  }
+}
+
+function addPatientBlock(){
+  patientCount++;
+
+  const block = document.createElement('div');
+  block.className = 'patientBlock';
+
+  block.innerHTML = `
+    <div class="patientTitle">病人 ${patientCount}</div>
+
+    <div class="infoRow">
+      <label>病歷號：</label>
+      <input class="patientId">
+    </div>
+
+    <div class="useTableWrap">
+      <table class="useTable">
+        <thead>
+          <tr>
+            <th class="col-action">操作</th>
+            <th class="col-charge">計價狀態</th>
+            <th class="col-dressing">敷料名稱</th>
+            <th class="col-qty">數量</th>
+            <th class="col-pay">支付類別</th>
+            <th class="col-doctor">主治醫師</th>
+          </tr>
+        </thead>
+        <tbody class="dressingRows">
+          ${createRow()}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="actions">
+      <button type="button" onclick="addRow(this)">新增一列</button>
+      <button type="button" class="danger deletePatient">刪除病人</button>
+    </div>
+  `;
+
+  document.getElementById('patientArea').appendChild(block);
+  refreshPatientTitle();
+}
+
+function createRow(){
+  const id = Date.now() + '_' + Math.random();
+
+  return `
+    <tr>
+      <td><button type="button" class="danger deleteRow">刪除</button></td>
+
+      <td>
+        <div class="radioGroup">
+          <label><input type="radio" name="charge_${id}" value="已計價">已計價</label>
+          <label><input type="radio" name="charge_${id}" checked value="未計價">未計價</label>
+        </div>
+      </td>
+
+      <td>
+        <div class="dressingInputGroup">
+          <input class="dressingName">
+          <button type="button" class="cameraBtn" onclick="openDressingScanner(this)">📷</button>
+        </div>
+      </td>
+
+      <td><input class="quantity" type="number" value="1" min="1"></td>
+
+      <td>
+        <div class="radioGroup">
+          <label><input type="radio" name="pay_${id}" value="健保">健保</label>
+          <label><input type="radio" name="pay_${id}" checked value="自費">自費</label>
+        </div>
+      </td>
+
+      <td><input class="doctorName"></td>
+    </tr>
+  `;
+}
+
+function addRow(button){
+  button
+    .closest('.patientBlock')
+    .querySelector('.dressingRows')
+    .insertAdjacentHTML('beforeend', createRow());
+}
+
+function openDressingScanner(button){
+  scannerMode = 'row';
+  activeDressingInput = button.closest('td').querySelector('.dressingName');
+  document.getElementById('scannerOverlay').style.display = 'block';
+  startDressingScanner();
+}
+
+function startDressingScanner(){
+  if(dressingScanner){
+    return;
+  }
+
+  dressingScanner = new Html5Qrcode('scannerReader');
+
+  const config = {
+    fps:10,
+    qrbox:{ width:260, height:180 },
+    formatsToSupport:[
+      Html5QrcodeSupportedFormats.QR_CODE,
+      Html5QrcodeSupportedFormats.CODE_128,
+      Html5QrcodeSupportedFormats.CODE_39,
+      Html5QrcodeSupportedFormats.EAN_13,
+      Html5QrcodeSupportedFormats.EAN_8,
+      Html5QrcodeSupportedFormats.UPC_A,
+      Html5QrcodeSupportedFormats.UPC_E
+    ]
+  };
+
+  dressingScanner
+    .start(
+      { facingMode:{ exact:'environment' } },
+      config,
+      function(decodedText){
+        handleBarcodeScanResult(decodedText);
+        closeDressingScanner();
+      },
+      function(errorMessage){}
+    )
+    .catch(function(err){
+      console.log(err);
+      showNotice('無法開啟相機，請確認手機瀏覽器已允許相機權限', 'error');
+    });
+}
+
+function closeDressingScanner(){
+  document.getElementById('scannerOverlay').style.display = 'none';
+
+  if(dressingScanner){
+    dressingScanner
+      .stop()
+      .then(function(){
+        dressingScanner.clear();
+        dressingScanner = null;
+      })
+      .catch(function(err){
+        console.log(err);
+        dressingScanner = null;
+      });
+  }
+}
+
+async function handleBarcodeScanResult(barcode){
+  const parsed = parseUDI(barcode);
+  const gtin = parsed.gtin || '';
+
+  if(!gtin){
+    showNotice(
+      '掃描內容無法提取有效 GTIN。請確認掃到的是含 AI(01) 的 UDI/GS1 條碼，或是 8/12/13/14 碼純數字條碼。',
+      'warning',
+      '無法提取GTIN'
+    );
+    activeDictGtinInput = null;
+    return;
+  }
+
+  if(scannerMode === 'row'){
+    if(activeDressingInput){
+      activeDressingInput.value = gtin;
+      activeDressingInput.dataset.gtin = gtin;
+      activeDressingInput.dataset.lot = parsed.lot || '';
+      activeDressingInput.dataset.exp = parsed.exp || '';
+      activeDressingInput.dataset.raw = parsed.raw || barcode;
+      activeDressingInput.dataset.packageType = '';
+      activeDressingInput.dataset.unitQuantity = '1';
+
+      try{
+        const res = await lookupBarcode(gtin);
+        if(res.found && res.data.dressingName){
+          const sizeText = res.data.size ? ` ${res.data.size}` : '';
+          const packageText = res.packageType === 'box' ? '（盒裝）' : '';
+          activeDressingInput.value = `${res.data.dressingName}${sizeText}${packageText}`;
+          activeDressingInput.dataset.packageType = res.packageType || '';
+          activeDressingInput.dataset.unitQuantity = String(res.unitQuantity || 1);
+          activeDressingInput.title =
+            `GTIN: ${gtin}\n包裝: ${res.packageType || ''}\n數量: ${res.unitQuantity || 1}\nLOT: ${parsed.lot || ''}\nEXP: ${parsed.exp || ''}`;
+
+          const row = activeDressingInput.closest('tr');
+          const qtyInput = row ? row.querySelector('.quantity') : null;
+          if(qtyInput && res.packageType === 'box'){
+            qtyInput.value = res.unitQuantity || res.data.boxQuantity || 1;
+          }
+        }
+      } catch(e){
+        console.log('查詢失敗', e);
+      }
+    }
+    return;
+  }
+
+  if(scannerMode === 'dictField'){
+    if(activeDictGtinInput){
+      const tr = activeDictGtinInput.closest('tr');
+
+      activeDictGtinInput.disabled = false;
+      activeDictGtinInput.value = gtin;
+      activeDictGtinInput.dataset.raw = parsed.raw || barcode;
+      activeDictGtinInput.dataset.lot = parsed.lot || '';
+      activeDictGtinInput.dataset.exp = parsed.exp || '';
+      activeDictGtinInput.dispatchEvent(new Event('input', { bubbles:true }));
+      activeDictGtinInput.dispatchEvent(new Event('change', { bubbles:true }));
+
+      if(tr){
+        moveDictRowToTop(tr);
+
+        const fieldTarget = activeDictGtinInput.classList.contains('dict-box-gtin') ? 'box' : 'single';
+        setRowScannedGtinTarget(tr, gtin, fieldTarget);
+
+        tr.dataset.rowKey =
+          getRowInputValue(tr, '.dict-single-gtin') ||
+          getRowInputValue(tr, '.dict-box-gtin') ||
+          getRowInputValue(tr, '.dict-hospital-code') ||
+          gtin;
+
+        updateDictMainButton(tr);
+
+        const statusEl = tr.querySelector('.dictStatus');
+        if(statusEl){
+          statusEl.innerText = '已掃描GTIN，請確認後儲存';
+          statusEl.className = 'dictStatus';
+        }
+      }
+
+      showNotice('GTIN 已填入欄位', 'success', gtin);
+    }
+
+    activeDictGtinInput = null;
+    return;
+  }
+
+  if(scannerMode === 'dict'){
+    await addDictRow(gtin, parsed);
+  }
+}
+
+function parseUDI(barcode){
+  const raw = String(barcode || '');
+  const GS = String.fromCharCode(29);
+
+  let text = raw.replace(/[()]/g, '').trim();
+  let gtin = '';
+  let lot = '';
+  let exp = '';
+
+  function formatExp(yymmdd){
+    if(!yymmdd || yymmdd.length !== 6) return '';
+    return `20${yymmdd.substring(0,2)}-${yymmdd.substring(2,4)}-${yymmdd.substring(4,6)}`;
+  }
+
+  let i = 0;
+
+  while(i < text.length){
+    const ai2 = text.substring(i, i + 2);
+
+    if(ai2 === '01' && i + 16 <= text.length){
+      gtin = text.substring(i + 2, i + 16);
+      i += 16;
+      continue;
+    }
+
+    if(ai2 === '17' && i + 8 <= text.length){
+      exp = formatExp(text.substring(i + 2, i + 8));
+      i += 8;
+      continue;
+    }
+
+    if(ai2 === '10' && i + 2 <= text.length){
+      const start = i + 2;
+      let end = text.indexOf(GS, start);
+
+      if(end === -1){
+        const nextAiMatch = text.substring(start).match(/(17\d{6}|21[A-Za-z0-9]{1,20}|30\d{1,8})/);
+        end = nextAiMatch && nextAiMatch.index > 0
+          ? start + nextAiMatch.index
+          : text.length;
+      }
+
+      lot = text.substring(start, end);
+      i = end;
+      continue;
+    }
+
+    i++;
+  }
+
+  if(!gtin){
+    const plainDigits =
+      raw
+        .replace(/[\x00-\x1F\x7F]/g, '')
+        .replace(/\s+/g, '')
+        .trim();
+
+    if(/^\d{8}$/.test(plainDigits) ||
+       /^\d{12}$/.test(plainDigits) ||
+       /^\d{13}$/.test(plainDigits) ||
+       /^\d{14}$/.test(plainDigits)){
+      gtin = plainDigits;
+    }
+  }
+
+  return {
+    raw:raw,
+    gtin:gtin,
+    lot:lot,
+    exp:exp,
+    extracted:!!gtin
+  };
+}
+
+/* API */
+
+function lookupBarcode(gtin){
+  if(isAppsScriptMode()){
+    return new Promise(function(resolve, reject){
+      google.script.run
+        .withSuccessHandler(resolve)
+        .withFailureHandler(reject)
+        .lookupDressingBarcode(gtin);
+    });
+  }
+
+  return callDressingBarcodeApi({ action:'lookupDressingBarcode', gtin:gtin });
+}
+
+function listBarcode(){
+  if(isAppsScriptMode()){
+    return new Promise(function(resolve, reject){
+      google.script.run
+        .withSuccessHandler(resolve)
+        .withFailureHandler(reject)
+        .listDressingBarcode();
+    });
+  }
+
+  return callDressingBarcodeApi({ action:'listDressingBarcode' });
+}
+
+function reorderBarcode(gtins){
+  if(isAppsScriptMode()){
+    return new Promise(function(resolve, reject){
+      google.script.run
+        .withSuccessHandler(resolve)
+        .withFailureHandler(reject)
+        .reorderDressingBarcode({ barcodes:gtins });
+    });
+  }
+
+  return callDressingBarcodeApi({ action:'reorderDressingBarcode', barcodes:gtins });
+}
+
+function deleteBarcode(gtin, hospitalCode){
+  if(isAppsScriptMode()){
+    return new Promise(function(resolve, reject){
+      google.script.run
+        .withSuccessHandler(resolve)
+        .withFailureHandler(reject)
+        .deleteDressingBarcode({ gtin:gtin, hospitalCode:hospitalCode || '' });
+    });
+  }
+
+  return callDressingBarcodeApi({ action:'deleteDressingBarcode', gtin:gtin, hospitalCode:hospitalCode || '' });
+}
+function saveBarcode(data){
+  if(isAppsScriptMode()){
+    return new Promise(function(resolve, reject){
+      google.script.run
+        .withSuccessHandler(resolve)
+        .withFailureHandler(reject)
+        .saveDressingBarcode(data);
+    });
+  }
+
+  return callDressingBarcodeApi({
+    action:'saveDressingBarcode',
+    originalGtin:data.originalGtin || '',
+    originalBoxGtin:data.originalBoxGtin || '',
+    hospitalCode:data.hospitalCode || '',
+    singleGtin:data.singleGtin || data.gtin || '',
+    gtin:data.singleGtin || data.gtin || '',
+    dressingName:data.dressingName || '',
+    size:data.size || '',
+    category:data.category || '',
+    boxGtin:data.boxGtin || '',
+    boxQuantity:data.boxQuantity || '',
+    status:data.status || '使用中'
+  });
+}
+
+function callDressingBarcodeApi(params){
+  return jsonpDressingBarcode(params);
+}
+
+function jsonpDressingBarcode(params){
+  return new Promise(function(resolve, reject){
+    const callbackName =
+      '__dressingBarcodeCallback_' +
+      Date.now() +
+      '_' +
+      Math.random().toString(36).slice(2);
+
+    const query = new URLSearchParams();
+
+    Object.keys(params).forEach(function(key){
+      if(params[key] !== undefined && params[key] !== null){
+        query.set(key, params[key]);
+      }
+    });
+
+    query.set('callback', callbackName);
+
+    const script = document.createElement('script');
+
+    const timer = setTimeout(function(){
+      cleanup();
+      reject(new Error('API 逾時，請檢查部署網址或 Sheet 權限'));
+    }, 15000);
+
+    window[callbackName] = function(result){
+      debugDressingBarcode('response', result);
+      cleanup();
+
+      if(!result || typeof result !== 'object'){
+        reject(new Error('API 回傳格式錯誤'));
+        return;
+      }
+
+      resolve(result);
+    };
+
+    script.onerror = function(){
+      debugDressingBarcode('script-error', { url:script.src, callback:callbackName });
+      cleanup();
+      reject(new Error('API 載入失敗，請檢查部署網址或 Apps Script 權限'));
+    };
+
+    script.src = APP_ENTRY_URL + '?' + query.toString();
+    debugDressingBarcode('request', { url:script.src, params:params, callback:callbackName });
+    document.head.appendChild(script);
+
+    function cleanup(){
+      clearTimeout(timer);
+      if(script.parentNode){
+        script.parentNode.removeChild(script);
+      }
+
+      try{
+        delete window[callbackName];
+      } catch(error){
+        window[callbackName] = undefined;
+      }
+    }
+  });
+}
+
+function isDressingBarcodeDebugMode(){
+  return /(?:\?|&)debug=1(?:&|$)/.test(window.location.search || '');
+}
+
+function debugDressingBarcode(label, data){
+  if(!isDressingBarcodeDebugMode()) return;
+  console.log('[DressingBarcode]', label, data);
+  debugger;
+}
+
+
+
+document.addEventListener('click', function(e){
+  if(e.target.classList.contains('deleteRow')){
+    const tbody = e.target.closest('tbody');
+
+    if(tbody.rows.length <= 1){
+      showNotice('至少保留一列', 'warning');
+      return;
+    }
+
+    e.target.closest('tr').remove();
+  }
+
+  if(e.target.classList.contains('deletePatient')){
+    if(document.querySelectorAll('.patientBlock').length <= 1){
+      showNotice('至少保留一位病人', 'warning');
+      return;
+    }
+
+    e.target.closest('.patientBlock').remove();
+    refreshPatientTitle();
+  }
+});
+
+function refreshPatientTitle(){
+  document.querySelectorAll('.patientTitle').forEach(function(el, i){
+    el.innerText = '病人 ' + (i + 1);
+  });
+}
+
+function submitUse(){
+  showNotice('下一步接 Sheet', 'info');
+}
+</script>
+</main>
+
+<?!= getVersionBadgeHtml() ?>
+
+<script>
+if (window.location.hostname.includes('github.io')) {
+  document.body.style.padding = '0';
+  document.body.style.display = 'flex';
+  document.body.style.flexDirection = 'column';
+  document.body.style.minHeight = '100vh';
+
+  const mainShell = document.querySelector('.shell');
+  if (mainShell) {
+    mainShell.style.flex = '1';
+    mainShell.style.padding = '24px';
+    mainShell.style.boxSizing = 'border-box';
+  }
+  const ghHeader = document.createElement('header');
+  ghHeader.className = 'appHeader';
+  ghHeader.style.cssText = 'position:relative; flex-shrink:0; z-index:20; display:flex; justify-content:space-between; align-items:center; gap:18px; height:76px; margin:0; padding:0 max(24px,calc((100vw - 1400px) / 2 + 24px)); box-sizing:border-box; border-bottom:1px solid #dbe4ef; background:rgba(248,251,255,.92); backdrop-filter:blur(10px); box-shadow:0 8px 24px rgba(15,23,42,.06);';
+  ghHeader.innerHTML = `
+    <div class="brand" onclick="goHome()" style="display:flex; align-items:center; gap:14px; cursor:pointer;">
+      <div class="brandMark" style="width:46px; height:46px; display:grid; place-items:center; border-radius:14px; color:#ffffff; font-size:22px; font-weight:800; background:linear-gradient(135deg,#2563eb,#0f766e); box-shadow:0 12px 24px rgba(37,99,235,.2);">S</div>
+      <div class="brandText" style="display:grid; gap:2px;">
+        <span class="brandName" style="font-size:18px; font-weight:800;">新光整形外科科室系統</span>
+        <span class="brandSub" style="color:#64748b; font-size:13px;">敷料領用登錄</span>
+      </div>
+    </div>
+  `;
+  document.body.prepend(ghHeader);
+
+  const ghFooter = document.createElement('div');
+  ghFooter.style.cssText = 'position:relative; margin-top:auto; flex-shrink:0; z-index:10000; height:42px; display:flex; align-items:center; justify-content:center; padding:0 16px; box-sizing:border-box; background:rgba(248,251,255,.94); border-top:1px solid rgba(148,163,184,.38); box-shadow:0 -8px 24px rgba(15,23,42,.08); backdrop-filter:blur(10px);';
+  ghFooter.innerHTML = `
+    <div style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">
+      <span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>
+      <span>v.2.19.0-202605300801</span>
+    </div>
+  `;
+  document.body.appendChild(ghFooter);
+}
+
+function normalizeTextForCompare(value){
+  return String(value || '')
+    .trim()
+    .replace(/\s+/g, '')
+    .replace(/[×Xx＊]/g, '*')
+    .toLowerCase();
+}
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  if(document.getElementById('dictArea')){
+    loadDictList();
+  }
+});
+</script>
+
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+

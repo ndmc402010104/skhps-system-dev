@@ -8,8 +8,8 @@ Google Apps Script × Google Sheets × GitHub
 
 # 當前版本號
 正式版: v2.17.0-202605292358
-測試版: v2.19.0-202605300801
-Github: v2.19.0-202605300801
+測試版: v2.20.0-202605300838
+Github: v2.20.0-202605300838
 
 ---
 
@@ -37,7 +37,7 @@ Github: v2.19.0-202605300801
 
 ### Regression Checklist
 
-- [敷料建檔 Regression Checklist](敷料領用登錄系統/Dressing_table_regression_checklist.md)
+- [敷料建檔 Regression Checklist](敷料領用登錄系統/敷料建檔/Dressing_table_regression_checklist.md)
 
 用途：
 
@@ -161,6 +161,14 @@ v2.17.0-202605292314
 # 版本日誌
 
 ## 最新版本（保留近期）
+
+---
+
+v2.20.0-202605300838
+
+更新：
+
+- 搬運檔案到敷料建檔
 
 ---
 
@@ -305,6 +313,8 @@ Checklist 比記憶可靠
 每個 Bug
 都應該成為下一次不再發生的測試項目
 ```
+
+
 
 
 

@@ -1050,3 +1050,36 @@ function reorderDressingBarcode(data){
 function deleteDressingBarcode(data){
   return deleteDressingBarcode_(data);
 }
+
+//AJAX
+const DRESSING_API_URL = APP_ENTRY_URL;
+
+async function dressingApi(action, payload = {}) {
+  const params = new URLSearchParams({
+    action,
+    ...payload
+  });
+
+  const res = await fetch(`${DRESSING_API_URL}?${params.toString()}`);
+  return await res.json();
+}
+
+function listBarcode() {
+  return dressingApi('listDressingBarcode');
+}
+
+function lookupBarcode(gtin) {
+  return dressingApi('lookupDressingBarcode', { gtin });
+}
+
+function saveBarcode(data) {
+  return dressingApi('saveDressingBarcode', data);
+}
+
+function deleteBarcode(data) {
+  return dressingApi('deleteDressingBarcode', data);
+}
+
+function reorderBarcode(order) {
+  return dressingApi('reorderDressingBarcode', { order });
+}
