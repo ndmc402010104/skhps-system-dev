@@ -47,81 +47,33 @@ function doGet(e){
     ADMIN_ACCOUNT +
     ADMIN_PASSWORD;
 
-  /*
-  ========================================
-  會議簽到
-  ========================================
-  */
-
   if(page === 'signmeeting'){
     return showSignMeetingPage(e);
   }
-
-  /*
-  ========================================
-  QR產生
-  ========================================
-  */
 
   if(page === 'signqr'){
     return showSignQRGeneratorPage();
   }
 
-  /*
-  ========================================
-  醫院系統登入
-  ========================================
-  */
-
   if(page === 'hospitalsignin'){
     return showHospitalSignInPage();
   }
-
-  /*
-  ========================================
-  後台首頁
-  ========================================
-  */
 
   if(page === adminPageKey){
     return showAdminIndexPage();
   }
 
-  /*
-  ========================================
-  敷料首頁
-  ========================================
-  */
-
   if(page === 'dressingfront'){
     return showDressingFrontPage();
   }
-
-  /*
-  ========================================
-  敷料領用
-  ========================================
-  */
 
   if(page === 'dressingUse'){
     return showDressingUsePage();
   }
 
-  /*
-  ========================================
-  敷料建檔
-  ========================================
-  */
-
   if(page === 'dressingDict'){
     return showDressingDictPage();
   }
-
-  /*
-  ========================================
-  會議管理後台
-  ========================================
-  */
 
   if(
     page === 'meeting'
@@ -130,12 +82,6 @@ function doGet(e){
   ){
     return showAdminMeetingPage();
   }
-
-  /*
-  ========================================
-  預設首頁
-  ========================================
-  */
 
   return showFrontIndex();
 
@@ -190,11 +136,13 @@ function isDressingBarcodeAction_(action){
 
 }
 
-/*
-========================================
-敷料頁面
-========================================
-*/
+function getDressingPageEntryUrl_(){
+
+  return APP_REQUEST_ENV === 'dev'
+    ? APP_DEV_URL
+    : APP_ENTRY_URL;
+
+}
 
 function showDressingUsePage(){
 
@@ -204,7 +152,10 @@ function showDressingUsePage(){
     );
 
   template.appEntryUrl =
-    getAppEntryUrl();
+    getDressingPageEntryUrl_();
+
+  template.versionBadgeHtml =
+    getVersionBadgeHtml();
 
   return template
     .evaluate()
@@ -220,7 +171,10 @@ function showDressingDictPage(){
     );
 
   template.appEntryUrl =
-    getAppEntryUrl();
+    getDressingPageEntryUrl_();
+
+  template.versionBadgeHtml =
+    getVersionBadgeHtml();
 
   return template
     .evaluate()

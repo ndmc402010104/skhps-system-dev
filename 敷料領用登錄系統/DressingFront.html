@@ -36,51 +36,91 @@ h1{ margin:0; font-size:clamp(28px,4vw,42px); line-height:1.18; }
 .pageLead{ margin:12px 0 0; color:#475569; font-size:16px; line-height:1.7; }
 .cardGrid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; margin-top:24px; }
 .navCard{
-  width:100%; text-align:left; background:var(--card); padding:26px; border:1px solid var(--line);
-  border-radius:12px; box-shadow:0 8px 24px rgba(15,23,42,.06); cursor:pointer;
+  width:100%;
+  text-align:left;
+  background:var(--card);
+  padding:26px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  box-shadow:0 8px 24px rgba(15,23,42,.06);
+  cursor:pointer;
 }
-.navCard:hover{ border-color:#93c5fd; box-shadow:0 14px 32px rgba(37,99,235,.12); transform:translateY(-1px); }
+.navCard:hover{
+  border-color:#93c5fd;
+  box-shadow:0 14px 32px rgba(37,99,235,.12);
+  transform:translateY(-1px);
+}
 .navTitle{ margin:0 0 8px; font-size:22px; font-weight:800; color:var(--text); }
 .navDesc{ margin:0; color:var(--muted); font-size:15px; line-height:1.7; }
-.navAction{ margin-top:18px; display:inline-flex; align-items:center; justify-content:center; padding:9px 14px; border-radius:8px; background:var(--primary); color:#fff; font-weight:800; font-size:14px; }
-@media(max-width:760px){ body{ padding:104px 12px 72px; } .cardGrid{ grid-template-columns:1fr; } .navCard{ padding:20px; } }
+.navAction{
+  margin-top:18px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:9px 14px;
+  border-radius:8px;
+  background:var(--primary);
+  color:#fff;
+  font-weight:800;
+  font-size:14px;
+}
+@media(max-width:760px){
+  body{ padding:104px 12px 72px; }
+  .cardGrid{ grid-template-columns:1fr; }
+  .navCard{ padding:20px; }
+}
 </style>
 <script>
 let APP_ENTRY_URL = '<?= appEntryUrl ?>';
+
 if (APP_ENTRY_URL.includes('<' + '?=') || APP_ENTRY_URL.trim() === '') {
   APP_ENTRY_URL = 'https://script.google.com/macros/s/AKfycbwbz8pXfU68j2aFeF_AaDmmG6Vco3JsPSw-PGyYeLu0AF3vCfzaZJQFOjORnwSw8Xp4/exec';
 }
+
 function goHome(){
   window.top.location.href = APP_ENTRY_URL;
 }
+
 function goPage(page){
-  window.top.location.href = APP_ENTRY_URL + '?page=' + encodeURIComponent(page);
+  const url = new URL(APP_ENTRY_URL);
+  url.searchParams.set('page', page);
+  window.top.location.href = url.toString();
 }
 </script>
 </head>
+
 <body>
 <main class="shell">
+
 <?!= include('共用設定檔/AppHeader', { subtitle: '敷料領用登錄系統', onClick: 'goHome()', maxWidth: '1100px' }) ?>
+
 <nav class="pageMap" aria-label="頁面地圖">
   <span class="pageMapCurrent">首頁 / 敷料領用登錄系統</span>
 </nav>
+
 <section>
   <p class="eyebrow">敷料作業</p>
   <h1>敷料領用登錄系統</h1>
   <p class="pageLead">請選擇要進入的功能。此頁只負責導向，敷料建檔與敷料領用各自獨立維護。</p>
 </section>
+
 <section class="cardGrid" aria-label="敷料系統功能選單">
   <button type="button" class="navCard" onclick="goPage('dressingUse')">
     <h2 class="navTitle">敷料領用</h2>
     <p class="navDesc">登錄病人敷料領用資料，包含品項、數量、支付類別與主治醫師。</p>
     <span class="navAction">進入領用</span>
   </button>
+
   <button type="button" class="navCard" onclick="goPage('dressingDict')">
     <h2 class="navTitle">敷料建檔 📷</h2>
     <p class="navDesc">維護敷料主檔、單包 GTIN、包裝 GTIN、一盒數量、自費價格與啟用狀態。</p>
     <span class="navAction">進入建檔</span>
   </button>
 </section>
+
 </main>
+
+<?!= versionBadgeHtml ?>
+
 </body>
 </html>

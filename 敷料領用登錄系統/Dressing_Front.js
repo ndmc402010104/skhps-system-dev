@@ -14,16 +14,17 @@ function showDressingFrontPage(){
       );
 
   template.appEntryUrl =
-    getAppEntryUrl();
+    APP_REQUEST_ENV === 'dev'
+      ? APP_DEV_URL
+      : APP_ENTRY_URL;
 
-  //調用版本號
   template.versionBadgeHtml =
     getVersionBadgeHtml();
 
   return template
     .evaluate()
     .setTitle(
-      '敷料領用'
+      '敷料領用登錄系統'
     );
 
 }
