@@ -1,14 +1,170 @@
-.skh-btn
+/* =====================================
+   SKH Design System v1
+   01_按鈕 / UiButton
+===================================== */
 
-.skh-btn-primary
-.skh-btn-secondary
-.skh-btn-success
-.skh-btn-danger
-.skh-btn-camera
 
-.skh-btn-sm
-.skh-btn-lg
+/* 基底按鈕 */
 
-disabled
-hover
-active
+.skh-btn{
+
+  border:none;
+
+  border-radius:
+    var(--skh-radius);
+
+  padding:
+    10px 16px;
+
+  font-size:14px;
+
+  font-weight:600;
+
+  cursor:pointer;
+
+  transition:
+    var(--skh-transition);
+
+  display:inline-flex;
+
+  align-items:center;
+
+  justify-content:center;
+
+  gap:6px;
+
+}
+
+
+/* Hover */
+
+.skh-btn:hover{
+
+  transform:
+    translateY(-1px);
+
+}
+
+
+/* Active */
+
+.skh-btn:active{
+
+  transform:
+    translateY(1px);
+
+}
+
+
+/* Disabled */
+
+.skh-btn:disabled{
+
+  opacity:.5;
+
+  cursor:not-allowed;
+
+  transform:none;
+
+}
+
+
+
+/* =====================================
+   Primary
+===================================== */
+
+.skh-btn-primary{
+
+  background:
+    var(--skh-primary);
+
+  color:white;
+
+}
+
+
+
+/* =====================================
+   Secondary
+===================================== */
+
+.skh-btn-secondary{
+
+  background:
+    #64748b;
+
+  color:white;
+
+}
+
+
+
+/* =====================================
+   Success
+===================================== */
+
+.skh-btn-success{
+
+  background:
+    var(--skh-success);
+
+  color:white;
+
+}
+
+
+
+/* =====================================
+   Danger
+===================================== */
+
+.skh-btn-danger{
+
+  background:
+    var(--skh-danger);
+
+  color:white;
+
+}
+
+
+
+/* =====================================
+   Camera
+===================================== */
+
+.skh-btn-camera{
+
+  background:
+    #7c3aed;
+
+  color:white;
+
+}
+
+
+
+/* =====================================
+   Size
+===================================== */
+
+.skh-btn-sm{
+
+  padding:
+    6px 12px;
+
+  font-size:13px;
+
+}
+
+
+
+.skh-btn-lg{
+
+  padding:
+    12px 20px;
+
+  font-size:16px;
+
+}
