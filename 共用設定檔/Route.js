@@ -121,7 +121,7 @@ function doGet(e){
 
   //CSS模組化分支多出來的按鈕
   if (page === 'uitest') {
-    return HtmlService.createTemplateFromFile('UI設定/99_文件/skh-ui-test-page')
+    return HtmlService.createTemplateFromFile('共用設定檔/UI設定/99_文件/skh-ui-test-page')
       .evaluate()
       .setTitle('SKH UI 測試中心');
   }
