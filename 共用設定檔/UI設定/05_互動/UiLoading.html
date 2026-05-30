@@ -1,5 +1,200 @@
-.skh-spinner
+/* =====================================
+   SKH Design System v1
+   05_互動 / UiLoading
+===================================== */
 
-.skh-loading-overlay
 
-.skh-loading-text
+/* Spinner base */
+
+.skh-spinner{
+  width:14px;
+  height:14px;
+
+  border:2px solid rgba(255,255,255,.45);
+  border-top-color:#ffffff;
+  border-radius:50%;
+
+  animation:skh-spin .8s linear infinite;
+  flex:0 0 auto;
+}
+
+
+/* 深色文字按鈕內的 spinner */
+
+.skh-btn-warning .skh-spinner,
+.skh-btn-ghost .skh-spinner{
+  border-color:rgba(15,23,42,.25);
+  border-top-color:var(--skh-text);
+}
+
+
+/* 一般深色背景 overlay 用 */
+
+.skh-spinner-dark{
+  border-color:rgba(15,23,42,.18);
+  border-top-color:var(--skh-primary);
+}
+
+
+/* Spinner size */
+
+.skh-spinner-sm{
+  width:12px;
+  height:12px;
+  border-width:2px;
+}
+
+.skh-spinner-lg{
+  width:22px;
+  height:22px;
+  border-width:3px;
+}
+
+
+/* Animation */
+
+@keyframes skh-spin{
+  to{
+    transform:rotate(360deg);
+  }
+}
+
+
+/* Loading text */
+
+.skh-loading-text{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+
+  color:var(--skh-muted);
+  font-size:14px;
+  font-weight:700;
+}
+
+
+/* Loading overlay */
+
+.skh-loading-overlay{
+  position:fixed;
+  inset:0;
+  z-index:900;
+
+  display:none;
+  align-items:center;
+  justify-content:center;
+
+  background:rgba(248,250,252,.72);
+  backdrop-filter:blur(3px);
+}
+
+
+/* 顯示 overlay */
+
+.skh-loading-overlay.is-show{
+  display:flex;
+}
+
+
+/* Overlay card */
+
+.skh-loading-card{
+  display:flex;
+  align-items:center;
+  gap:10px;
+
+  padding:14px 18px;
+
+  background:#ffffff;
+  border:1px solid var(--skh-border);
+  border-radius:var(--skh-radius);
+  box-shadow:var(--skh-shadow-hover);
+
+  color:var(--skh-text);
+  font-size:14px;
+  font-weight:800;
+}
+
+
+/* Inline loading block */
+
+.skh-loading-inline{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+
+  padding:8px 10px;
+
+  color:var(--skh-muted);
+  background:#f8fafc;
+
+  border:1px solid var(--skh-border);
+  border-radius:10px;
+
+  font-size:13px;
+  font-weight:700;
+}
+
+
+/* Skeleton */
+
+.skh-skeleton{
+  display:block;
+  min-height:16px;
+
+  background:linear-gradient(
+    90deg,
+    #f1f5f9 25%,
+    #e2e8f0 37%,
+    #f1f5f9 63%
+  );
+
+  background-size:400% 100%;
+  border-radius:8px;
+
+  animation:skh-skeleton 1.2s ease-in-out infinite;
+}
+
+@keyframes skh-skeleton{
+  0%{
+    background-position:100% 0;
+  }
+
+  100%{
+    background-position:0 0;
+  }
+}
+
+
+/* 常用寬度 */
+
+.skh-skeleton-short{
+  width:40%;
+}
+
+.skh-skeleton-medium{
+  width:70%;
+}
+
+.skh-skeleton-full{
+  width:100%;
+}
+
+
+/* Button loading：避免 loading 時寬度跳動 */
+
+.skh-btn.is-loading{
+  pointer-events:none;
+  opacity:.85;
+}
+
+
+/* Mobile */
+
+@media(max-width:768px){
+
+  .skh-loading-card{
+    max-width:calc(100vw - 32px);
+  }
+
+}

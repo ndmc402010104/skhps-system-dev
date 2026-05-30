@@ -1,8 +1,184 @@
-.skh-input
-.skh-select
-.skh-textarea
+/* =====================================
+   SKH Design System v1
+   02_表單 / UiForm
+===================================== */
 
-.skh-label
 
-.skh-radio
-.skh-checkbox
+/* Form group */
+
+.skh-field{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  margin-bottom:12px;
+}
+
+
+/* Label */
+
+.skh-label{
+  color:var(--skh-muted);
+  font-size:13px;
+  font-weight:700;
+}
+
+
+/* Input / Select / Textarea */
+
+.skh-input,
+.skh-select,
+.skh-textarea{
+  width:100%;
+  min-height:38px;
+  padding:8px 10px;
+
+  color:var(--skh-text);
+  background:#ffffff;
+
+  border:1px solid var(--skh-border);
+  border-radius:10px;
+
+  font-family:var(--skh-font);
+  font-size:14px;
+  line-height:1.4;
+
+  transition:var(--skh-transition);
+}
+
+
+/* Textarea */
+
+.skh-textarea{
+  min-height:84px;
+  resize:vertical;
+}
+
+
+/* Focus */
+
+.skh-input:focus,
+.skh-select:focus,
+.skh-textarea:focus{
+  outline:2px solid rgba(37,99,235,.18);
+  border-color:var(--skh-primary);
+}
+
+
+/* Disabled */
+
+.skh-input:disabled,
+.skh-select:disabled,
+.skh-textarea:disabled{
+  background:#f1f5f9;
+  color:#94a3b8;
+  cursor:not-allowed;
+}
+
+
+/* Radio / Checkbox group */
+
+.skh-radio-group,
+.skh-checkbox-group{
+  display:flex;
+  gap:12px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+
+
+/* Radio / Checkbox item */
+
+.skh-radio,
+.skh-checkbox{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+
+  color:var(--skh-text);
+  font-size:14px;
+  font-weight:600;
+
+  cursor:pointer;
+}
+
+
+/* 原生 input 微調 */
+
+.skh-radio input,
+.skh-checkbox input{
+  margin:0;
+  cursor:pointer;
+}
+
+
+/* Inline form row */
+
+.skh-form-row{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+  gap:12px;
+}
+
+
+/* Compact input for table */
+
+.skh-input-sm,
+.skh-select-sm{
+  min-height:32px;
+  padding:5px 8px;
+  font-size:13px;
+  border-radius:8px;
+}
+
+
+/* Error / warning state */
+
+.skh-field.is-error .skh-input,
+.skh-field.is-error .skh-select,
+.skh-field.is-error .skh-textarea{
+  border-color:var(--skh-danger);
+  outline:2px solid rgba(220,38,38,.12);
+}
+
+.skh-field.is-warning .skh-input,
+.skh-field.is-warning .skh-select,
+.skh-field.is-warning .skh-textarea{
+  border-color:var(--skh-warning);
+  outline:2px solid rgba(245,158,11,.14);
+}
+
+
+/* Help text */
+
+.skh-help{
+  color:var(--skh-muted);
+  font-size:12px;
+  line-height:1.4;
+}
+
+
+/* Error text */
+
+.skh-error-text{
+  color:var(--skh-danger);
+  font-size:12px;
+  font-weight:700;
+}
+
+
+/* Mobile */
+
+@media(max-width:768px){
+
+  .skh-input,
+  .skh-select,
+  .skh-textarea{
+    font-size:16px;
+  }
+
+  .skh-radio-group,
+  .skh-checkbox-group{
+    gap:10px;
+  }
+
+}

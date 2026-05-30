@@ -1,9 +1,191 @@
-.skh-table
-.skh-table-wrap
+/* =====================================
+   SKH Design System v1
+   03_表格 / UiTable
+===================================== */
 
-thead
-tbody
 
-hover
+/* Table wrapper：手機版橫向捲動 */
 
-手機橫向捲動
+.skh-table-wrap{
+  width:100%;
+  overflow-x:auto;
+  border:1px solid var(--skh-border);
+  border-radius:var(--skh-radius);
+  background:#ffffff;
+}
+
+
+/* Table base */
+
+.skh-table{
+  width:100%;
+  min-width:720px;
+  border-collapse:collapse;
+  background:#ffffff;
+}
+
+
+/* Cell */
+
+.skh-table th,
+.skh-table td{
+  padding:10px;
+  border-bottom:1px solid var(--skh-border);
+  text-align:left;
+  vertical-align:middle;
+  font-size:14px;
+  line-height:1.4;
+}
+
+
+/* Header */
+
+.skh-table th{
+  background:#f1f5f9;
+  color:#334155;
+  font-weight:800;
+  white-space:nowrap;
+}
+
+
+/* Row hover */
+
+.skh-table tbody tr:hover td{
+  background:#f8fafc;
+}
+
+
+/* Last row */
+
+.skh-table tbody tr:last-child td{
+  border-bottom:none;
+}
+
+
+/* Compact table */
+
+.skh-table-sm th,
+.skh-table-sm td{
+  padding:6px 8px;
+  font-size:13px;
+}
+
+
+/* Sticky header */
+
+.skh-table-sticky th{
+  position:sticky;
+  top:0;
+  z-index:2;
+}
+
+
+/* Numeric cell */
+
+.skh-td-number{
+  text-align:right;
+  font-variant-numeric:tabular-nums;
+}
+
+
+/* Action cell */
+
+.skh-td-action{
+  width:1%;
+  white-space:nowrap;
+}
+
+
+/* Status cell */
+
+.skh-td-status{
+  white-space:nowrap;
+}
+
+
+/* Table toolbar */
+
+.skh-toolbar{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-bottom:12px;
+}
+
+
+/* Table 裡面的 input 不要太高 */
+
+.skh-table .skh-input,
+.skh-table .skh-select{
+  min-height:32px;
+  padding:5px 8px;
+  font-size:13px;
+  border-radius:8px;
+}
+
+
+/* Table 裡面的 button 不要太高 */
+
+.skh-table .skh-btn{
+  min-height:30px;
+  padding:5px 10px;
+  font-size:13px;
+  border-radius:8px;
+}
+
+
+/* Table 裡面的 radio 不要擠爆 */
+
+.skh-table .skh-radio,
+.skh-table .skh-checkbox{
+  font-size:13px;
+  margin-right:8px;
+}
+
+
+/* Empty state */
+
+.skh-table-empty{
+  padding:28px 16px;
+  text-align:center;
+  color:var(--skh-muted);
+  font-weight:600;
+}
+
+
+/* Warning row */
+
+.skh-tr-warning td{
+  background:#fffbeb;
+}
+
+
+/* Error row */
+
+.skh-tr-error td{
+  background:#fef2f2;
+}
+
+
+/* Selected row */
+
+.skh-tr-selected td{
+  background:#eff6ff;
+}
+
+
+/* Mobile */
+
+@media(max-width:768px){
+
+  .skh-toolbar{
+    align-items:stretch;
+  }
+
+  .skh-toolbar .skh-row{
+    width:100%;
+  }
+
+}
