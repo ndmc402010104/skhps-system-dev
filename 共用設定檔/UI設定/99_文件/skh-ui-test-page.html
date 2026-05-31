@@ -368,6 +368,17 @@ body{
   var activeRequestId = 0;
   var isLoadingPage = false;
 
+  window.getCurrentUiTestState = function(){
+    return {
+      activeRequestId:activeRequestId,
+      isLoadingPage:isLoadingPage,
+      hasLoadUiStyleTheme:typeof window.loadUiStyleTheme,
+      hasLoadBaseTheme:typeof window.loadBaseTheme,
+      hasLoadButtonTheme:typeof window.loadButtonTheme,
+      hasLoadUiTheme:typeof window.loadUiTheme
+    };
+  };
+
   function wrapTables(container){
 
     var tables =
@@ -447,6 +458,31 @@ body{
     else{
       content.classList.remove('is-loading');
     }
+
+  }
+
+  function forceUnlockIfStuck(requestId){
+
+    setTimeout(function(){
+
+      if(
+        isLoadingPage &&
+        requestId === activeRequestId
+      ){
+
+        setSidebarLocked(false);
+
+        var loadingEl =
+          content.querySelector('[data-ui-loading]');
+
+        if(loadingEl){
+          loadingEl.querySelector('div:last-child').textContent =
+            '讀取較久，已解除選單鎖定；可重新選擇頁面。';
+        }
+
+      }
+
+    },3000);
 
   }
 
@@ -537,33 +573,98 @@ body{
 
     }
 
+    function getThemeLoader(){
+
+      if(
+        pageObj.id === 'UiStyleTest'
+      ){
+
+        if(
+          typeof window.loadUiStyleTheme === 'function'
+        ){
+          return window.loadUiStyleTheme;
+        }
+
+        if(
+          typeof window.loadBaseTheme === 'function'
+        ){
+          return window.loadBaseTheme;
+        }
+
+      }
+
+      if(
+        pageObj.id === 'UiButtonTest' &&
+        typeof window.loadButtonTheme === 'function'
+      ){
+        return window.loadButtonTheme;
+      }
+
+      return null;
+
+    }
+
+    function runPageThemeLoader(){
+
+      var loader =
+        getThemeLoader();
+
+      if(loader){
+        safeThemeLoad(
+          loader
+        );
+        return;
+      }
+
+      reveal();
+
+    }
+
+    /*
+      Future-ready:
+      若之後新增 00_基礎/UiThemeLoader.html 並提供 window.loadUiTheme(done)，
+      這裡會先載全站 token，再載入單頁 builder 自己的資料。
+      目前沒有 UiThemeLoader 也不會卡住。
+    */
     if(
-      pageObj.id === 'UiStyleTest' &&
-      typeof window.loadBaseTheme === 'function'
+      typeof window.loadUiTheme === 'function'
     ){
 
-      safeThemeLoad(
-        window.loadBaseTheme
-      );
+      var globalTimeoutId =
+        setTimeout(function(){
+
+          runPageThemeLoader();
+
+        },1200);
+
+      try{
+
+        window.loadUiTheme(function(){
+
+          clearTimeout(
+            globalTimeoutId
+          );
+
+          runPageThemeLoader();
+
+        });
+
+      }
+      catch(err){
+
+        clearTimeout(
+          globalTimeoutId
+        );
+
+        runPageThemeLoader();
+
+      }
 
       return;
 
     }
 
-    if(
-      pageObj.id === 'UiButtonTest' &&
-      typeof window.loadButtonTheme === 'function'
-    ){
-
-      safeThemeLoad(
-        window.loadButtonTheme
-      );
-
-      return;
-
-    }
-
-    reveal();
+    runPageThemeLoader();
 
   }
   
@@ -579,6 +680,10 @@ body{
       activeRequestId;
 
     setSidebarLocked(true);
+
+    forceUnlockIfStuck(
+      requestId
+    );
 
     activateButton(btn);
 

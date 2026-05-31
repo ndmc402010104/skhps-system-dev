@@ -1,9 +1,9 @@
 <section class="testSection">
 
-  <h2>00 UiBase / 基礎樣式 Theme Editor</h2>
+  <h2>00 UiStyle / 基礎樣式 Theme Editor</h2>
 
   <p class="testNote">
-    Base Builder v1：用和 Button Builder 相同的設計思維管理全站基礎 token。Brand / Page / Surface / Radius / Spacing / Font / Motion / Layout 都可編輯、復原、恢復 default、設為新 default、儲存。
+    UiStyle Builder v1：用和 Button Builder 相同的設計思維管理全站基礎 token。Brand / Page / Surface / Radius / Spacing / Font / Motion / Layout 都可編輯、復原、恢復 default、設為新 default、儲存。
   </p>
 
   <div id="baseEditorRoot"></div>
@@ -2126,28 +2126,79 @@
     updateBasePlayground();
   }
 
+
+  function hasGoogleFunction(fnName){
+    return (
+      typeof google !== 'undefined' &&
+      google.script &&
+      google.script.run &&
+      typeof google.script.run[fnName] === 'function'
+    );
+  }
+
+  function localThemeData(){
+    var data = {};
+
+    CONFIG.forEach(function(cfg){
+      data[cfg.className] = clone(cfg.fallback);
+    });
+
+    return data;
+  }
+
   window.loadBaseTheme = function(done){
-    if(isBusy) return;
+
+    function finish(){
+      if(typeof done === 'function'){
+        done();
+      }
+    }
+
+    if(isBusy){
+      finish();
+      return;
+    }
 
     setBusy(true,'讀取中...');
 
+    if(!hasGoogleFunction('getBaseCssSettings')){
+      applyLoaded(localThemeData(),localThemeData());
+      setBusy(false);
+      setStatus('使用本頁預設值：尚未偵測到 getBaseCssSettings()','');
+      finish();
+      return;
+    }
+
     google.script.run
       .withSuccessHandler(function(currentData){
+
+        if(!hasGoogleFunction('getBaseDefaultCssSettings')){
+          applyLoaded(currentData || localThemeData(),localThemeData());
+          setBusy(false);
+          setStatus('使用本頁 default：尚未偵測到 getBaseDefaultCssSettings()','');
+          finish();
+          return;
+        }
+
         google.script.run
           .withSuccessHandler(function(defaultData){
-            applyLoaded(currentData,defaultData);
+            applyLoaded(
+              currentData || localThemeData(),
+              defaultData || localThemeData()
+            );
+
             setBusy(false);
-
-            if(typeof done === 'function'){
-              done();
-            }
-
+            finish();
           })
           .withFailureHandler(function(err){
-            setBusy(false);
+            applyLoaded(
+              currentData || localThemeData(),
+              localThemeData()
+            );
 
+            setBusy(false);
             setStatus(
-              '讀取 default 失敗：' +
+              '讀取 default 失敗，已先使用本頁 default：' +
               (
                 err &&
                 err.message
@@ -2157,18 +2208,17 @@
               'error'
             );
 
-            if(typeof done === 'function'){
-              done();
-            }
-
+            finish();
           })
           .getBaseDefaultCssSettings();
+
       })
       .withFailureHandler(function(err){
+        applyLoaded(localThemeData(),localThemeData());
         setBusy(false);
 
         setStatus(
-          '讀取失敗：' +
+          '讀取失敗，已先使用本頁預設值：' +
           (
             err &&
             err.message
@@ -2178,17 +2228,23 @@
           'error'
         );
 
-        if(typeof done === 'function'){
-          done();
-        }
+        finish();
 
       })
       .getBaseCssSettings();
+
   };
 
   window.applyBaseTheme = function(data){
     applyLoaded(data,{});
   };
+
+
+  window.loadUiStyleTheme =
+    window.loadBaseTheme;
+
+  window.applyUiStyleTheme =
+    window.applyBaseTheme;
 
   function toggleEdit(key){
     var s = state[key];
@@ -2370,25 +2426,34 @@
       }
     );
 
+    function afterSave(message,tone){
+      s.original = clone(vals);
+      s.history = [];
+      s.themeEditSnapshot = null;
+      s.isEditing = false;
+      s.cssEditSnapshot = null;
+      s.cssDirty = false;
+
+      setInputsEnabled(key,false);
+      setCssLocked(key,true);
+      setBusy(false);
+      setStatus(message,tone || 'success');
+      refresh(key);
+    }
+
     setBusy(true,'儲存中...');
+
+    if(!hasGoogleFunction('saveBaseCssSetting')){
+      afterSave('已套用在本頁：尚未偵測到 saveBaseCssSetting()','');
+      return;
+    }
 
     saveJobs(
       jobs(key,vals),
       0,
       'saveBaseCssSetting',
       function(){
-        s.original = clone(vals);
-        s.history = [];
-        s.themeEditSnapshot = null;
-        s.isEditing = false;
-        s.cssEditSnapshot = null;
-        s.cssDirty = false;
-
-        setInputsEnabled(key,false);
-        setCssLocked(key,true);
-        setBusy(false);
-        setStatus('已儲存','success');
-        refresh(key);
+        afterSave('已儲存','success');
       }
     );
   }
@@ -2407,6 +2472,14 @@
     }
 
     setBusy(true,'設定 default 中...');
+
+    if(!hasGoogleFunction('saveBaseDefaultCssSetting')){
+      s.defaultValue = clone(vals);
+      setBusy(false);
+      setStatus('已設為本頁 default：尚未偵測到 saveBaseDefaultCssSetting()','');
+      refresh(key);
+      return;
+    }
 
     saveJobs(
       jobs(key,vals),

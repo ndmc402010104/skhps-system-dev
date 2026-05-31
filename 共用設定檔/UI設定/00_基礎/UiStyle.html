@@ -1,7 +1,7 @@
 <style>
 /* =====================================
    SKH Design System v1
-   00_基礎樣式 / UiBase
+   00_基礎樣式 / UiStyle
    Variable-driven foundation
 ===================================== */
 
@@ -47,7 +47,9 @@
   --skh-line-height:1.6;
 
   /* Motion */
-  --skh-transition:.18s ease;
+  --skh-transition-duration:.18s;
+  --skh-transition-easing:ease;
+  --skh-transition:var(--skh-transition-duration) var(--skh-transition-easing);
 
   /* Layout */
   --skh-container-max-width:1200px;
