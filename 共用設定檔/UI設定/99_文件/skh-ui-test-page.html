@@ -471,11 +471,21 @@ body{
 
   function revealWhenThemeReady(pageObj, wrapper, loadingEl, requestId){
 
+    var revealed =
+      false;
+
     function reveal(){
+
+      if(revealed){
+        return;
+      }
 
       if(requestId !== activeRequestId){
         return;
       }
+
+      revealed =
+        true;
 
       if(
         loadingEl &&
@@ -493,9 +503,37 @@ body{
 
     }
 
-    function failOpen(){
+    function safeThemeLoad(loader){
 
-      reveal();
+      var timeoutId =
+        setTimeout(function(){
+
+          reveal();
+
+        },1800);
+
+      try{
+
+        loader(function(){
+
+          clearTimeout(
+            timeoutId
+          );
+
+          reveal();
+
+        });
+
+      }
+      catch(err){
+
+        clearTimeout(
+          timeoutId
+        );
+
+        reveal();
+
+      }
 
     }
 
@@ -504,11 +542,9 @@ body{
       typeof window.loadBaseTheme === 'function'
     ){
 
-      window.loadBaseTheme(function(){
-
-        reveal();
-
-      });
+      safeThemeLoad(
+        window.loadBaseTheme
+      );
 
       return;
 
@@ -519,17 +555,15 @@ body{
       typeof window.loadButtonTheme === 'function'
     ){
 
-      window.loadButtonTheme(function(){
-
-        reveal();
-
-      });
+      safeThemeLoad(
+        window.loadButtonTheme
+      );
 
       return;
 
     }
 
-    failOpen();
+    reveal();
 
   }
   
