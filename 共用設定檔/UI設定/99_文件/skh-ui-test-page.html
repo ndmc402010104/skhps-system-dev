@@ -239,6 +239,16 @@ body{
   color:#1d4ed8;
   font-weight:bold;
 }
+.testNavButton:disabled{
+  opacity:.55;
+  cursor:not-allowed;
+  background:#f8fafc;
+}
+
+.testContent.is-loading{
+  pointer-events:none;
+}
+
 
 .ui-loading-box{
   padding:40px;
@@ -332,7 +342,7 @@ body{
 
   <div class="testContent" id="test-content">
     <div style="padding:40px;text-align:center;color:#64748b;border:1px dashed var(--skh-line,#cbd5e1);border-radius:var(--skh-radius,8px);">
-      請從選單選擇要測試的元件
+      請從左側選單選擇要測試的元件
     </div>
   </div>
 </div>
@@ -354,6 +364,9 @@ body{
 
   var sidebar = document.getElementById('test-sidebar');
   var content = document.getElementById('test-content');
+
+  var activeRequestId = 0;
+  var isLoadingPage = false;
 
   function wrapTables(container){
 
@@ -416,6 +429,27 @@ body{
     }
   }
 
+  function setSidebarLocked(locked){
+
+    isLoadingPage =
+      !!locked;
+
+    var buttons =
+      sidebar.querySelectorAll('.testNavButton');
+
+    buttons.forEach(function(btn){
+      btn.disabled = !!locked;
+    });
+
+    if(locked){
+      content.classList.add('is-loading');
+    }
+    else{
+      content.classList.remove('is-loading');
+    }
+
+  }
+
   function showLoading(message){
 
     content.innerHTML =
@@ -435,9 +469,13 @@ body{
       '</div>';
   }
 
-  function revealWhenThemeReady(pageObj, wrapper, loadingEl){
+  function revealWhenThemeReady(pageObj, wrapper, loadingEl, requestId){
 
     function reveal(){
+
+      if(requestId !== activeRequestId){
+        return;
+      }
 
       if(
         loadingEl &&
@@ -450,6 +488,29 @@ body{
 
       wrapper.style.display =
         '';
+
+      setSidebarLocked(false);
+
+    }
+
+    function failOpen(){
+
+      reveal();
+
+    }
+
+    if(
+      pageObj.id === 'UiStyleTest' &&
+      typeof window.loadBaseTheme === 'function'
+    ){
+
+      window.loadBaseTheme(function(){
+
+        reveal();
+
+      });
+
+      return;
 
     }
 
@@ -468,16 +529,29 @@ body{
 
     }
 
-    reveal();
+    failOpen();
 
   }
   
   function loadPage(pageObj, btn){
 
+    if(isLoadingPage){
+      return;
+    }
+
+    activeRequestId += 1;
+
+    var requestId =
+      activeRequestId;
+
+    setSidebarLocked(true);
+
     activateButton(btn);
 
     var startTime =
       Date.now();
+
+    content.innerHTML = '';
 
     showLoading(
       '載入中：' +
@@ -487,6 +561,10 @@ body{
 
     google.script.run
       .withSuccessHandler(function(html){
+
+        if(requestId !== activeRequestId){
+          return;
+        }
 
         var loadingEl =
           content.querySelector('[data-ui-loading]');
@@ -523,7 +601,7 @@ body{
         var wait =
           Math.max(
             0,
-            400 - elapsed
+            350 - elapsed
           );
 
         setTimeout(function(){
@@ -531,13 +609,20 @@ body{
           revealWhenThemeReady(
             pageObj,
             wrapper,
-            loadingEl
+            loadingEl,
+            requestId
           );
 
         },wait);
 
       })
       .withFailureHandler(function(error){
+
+        if(requestId !== activeRequestId){
+          return;
+        }
+
+        setSidebarLocked(false);
 
         showError(
           error
@@ -565,11 +650,6 @@ body{
 
       sidebar.appendChild(btn);
 
-      if(page.id === 'UiButtonTest'){
-        setTimeout(function(){
-          loadPage(page, btn);
-        },0);
-      }
     });
   }
 
