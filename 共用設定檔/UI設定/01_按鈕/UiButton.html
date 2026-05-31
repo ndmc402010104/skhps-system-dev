@@ -2,18 +2,117 @@
 /* =====================================
    SKH Design System v1
    01_按鈕 / UiButton
+   Variable-driven full component
 ===================================== */
 
 :root{
+
+  /* Base */
+  --skh-btn-base-border-width:1px;
+  --skh-btn-base-border-style:solid;
+  --skh-btn-base-border-color:transparent;
+  --skh-btn-base-radius:var(--skh-radius);
+  --skh-btn-base-padding-y:10px;
+  --skh-btn-base-padding-x:16px;
+  --skh-btn-base-font-size:14px;
+  --skh-btn-base-font-weight:700;
+  --skh-btn-base-gap:6px;
+  --skh-btn-base-line-height:1.2;
+  --skh-btn-base-hover-shadow:0 8px 20px rgba(15,23,42,.08);
+  --skh-btn-base-active-shadow:0 3px 10px rgba(15,23,42,.06);
+  --skh-btn-base-focus-outline:3px solid rgba(37,99,235,.25);
+  --skh-btn-base-focus-outline-offset:2px;
+
+  /* Primary */
   --skh-btn-primary-bg:#344f9f;
+  --skh-btn-primary-text:#ffffff;
+  --skh-btn-primary-border:#344f9f;
+  --skh-btn-primary-hover-bg:#344f9f;
+  --skh-btn-primary-hover-border:#344f9f;
+
+  /* Secondary */
+  --skh-btn-secondary-bg:#ffffff;
+  --skh-btn-secondary-text:#475569;
+  --skh-btn-secondary-border:#cbd5e1;
+  --skh-btn-secondary-hover-bg:#f8fafc;
+  --skh-btn-secondary-hover-border:#94a3b8;
+
+  /* Danger */
+  --skh-btn-danger-bg:#fff7f7;
+  --skh-btn-danger-text:#b42318;
+  --skh-btn-danger-border:#f4b4ae;
+  --skh-btn-danger-hover-bg:#feeceb;
+  --skh-btn-danger-hover-border:#e98078;
+
+  /* Ghost */
+  --skh-btn-ghost-bg:transparent;
+  --skh-btn-ghost-text:#344f9f;
+  --skh-btn-ghost-border:transparent;
+  --skh-btn-ghost-hover-bg:#eef3ff;
+  --skh-btn-ghost-hover-border:transparent;
+
+  /* Camera */
+  --skh-btn-camera-bg:#eef6ff;
+  --skh-btn-camera-text:#1d4ed8;
+  --skh-btn-camera-border:#bfdbfe;
+  --skh-btn-camera-hover-bg:#dbeafe;
+  --skh-btn-camera-hover-border:#93c5fd;
+
+  /* Size */
+  --skh-btn-sm-padding-y:6px;
+  --skh-btn-sm-padding-x:10px;
+  --skh-btn-sm-font-size:13px;
+
+  --skh-btn-lg-padding-y:14px;
+  --skh-btn-lg-padding-x:20px;
+  --skh-btn-lg-font-size:16px;
+
+  --skh-btn-full-width:100%;
+
+  /* Shape */
+  --skh-btn-icon-width:36px;
+  --skh-btn-icon-height:36px;
+  --skh-btn-icon-padding:0;
+
+  --skh-btn-pill-radius:999px;
+
+  /* State */
+  --skh-btn-selected-bg:var(--skh-primary);
+  --skh-btn-selected-text:#ffffff;
+  --skh-btn-selected-border:var(--skh-primary);
+
+  --skh-btn-loading-opacity:.85;
+  --skh-btn-loading-spinner-size:14px;
+  --skh-btn-loading-spinner-border-width:2px;
+  --skh-btn-loading-spinner-border-color:rgba(255,255,255,.35);
+  --skh-btn-loading-spinner-top-color:currentColor;
+
+  --skh-btn-disabled-opacity:.5;
+
+  /* Group */
+  --skh-btn-group-gap:8px;
+  --skh-btn-toolbar-gap:10px;
+
+  /* Mobile */
+  --skh-btn-mobile-min-height:44px;
+  --skh-btn-icon-mobile-width:44px;
+  --skh-btn-icon-mobile-height:44px;
+
 }
 
+/* Base */
+
 .skh-btn{
-  border:1px solid transparent;
-  border-radius:var(--skh-radius);
-  padding:10px 16px;
-  font-size:14px;
-  font-weight:700;
+  border:
+    var(--skh-btn-base-border-width)
+    var(--skh-btn-base-border-style)
+    var(--skh-btn-base-border-color);
+  border-radius:var(--skh-btn-base-radius);
+  padding:
+    var(--skh-btn-base-padding-y)
+    var(--skh-btn-base-padding-x);
+  font-size:var(--skh-btn-base-font-size);
+  font-weight:var(--skh-btn-base-font-weight);
   cursor:pointer;
   transition:
     transform var(--skh-transition),
@@ -24,30 +123,30 @@
   display:inline-flex;
   align-items:center;
   justify-content:center;
-  gap:6px;
+  gap:var(--skh-btn-base-gap);
   white-space:nowrap;
   user-select:none;
-  line-height:1.2;
+  line-height:var(--skh-btn-base-line-height);
 }
 
 .skh-btn:hover{
   transform:translateY(-1px);
-  box-shadow:0 8px 20px rgba(15,23,42,.08);
+  box-shadow:var(--skh-btn-base-hover-shadow);
 }
 
 .skh-btn:active{
   transform:translateY(0);
-  box-shadow:0 3px 10px rgba(15,23,42,.06);
+  box-shadow:var(--skh-btn-base-active-shadow);
 }
 
 .skh-btn:focus-visible{
-  outline:3px solid rgba(37,99,235,.25);
-  outline-offset:2px;
+  outline:var(--skh-btn-base-focus-outline);
+  outline-offset:var(--skh-btn-base-focus-outline-offset);
 }
 
 .skh-btn:disabled,
 .skh-btn.is-disabled{
-  opacity:.5;
+  opacity:var(--skh-btn-disabled-opacity);
   cursor:not-allowed;
   transform:none;
   box-shadow:none;
@@ -63,102 +162,111 @@
 }
 
 .skh-btn-primary:hover{
-  background:var(--skh-btn-primary-bg);
+  background:var(--skh-btn-primary-hover-bg);
+  border-color:var(--skh-btn-primary-hover-border);
 }
 
 .skh-btn-secondary{
-  background:#ffffff;
-  color:#475569;
-  border:1px solid #cbd5e1;
+  background:var(--skh-btn-secondary-bg);
+  color:var(--skh-btn-secondary-text);
+  border-color:var(--skh-btn-secondary-border);
 }
 
 .skh-btn-secondary:hover{
-  background:#f8fafc;
-  border-color:#94a3b8;
+  background:var(--skh-btn-secondary-hover-bg);
+  border-color:var(--skh-btn-secondary-hover-border);
 }
 
 .skh-btn-danger{
-  background:#fff7f7;
-  color:#b42318;
-  border-color:#f4b4ae;
+  background:var(--skh-btn-danger-bg);
+  color:var(--skh-btn-danger-text);
+  border-color:var(--skh-btn-danger-border);
 }
 
 .skh-btn-danger:hover{
-  background:#feeceb;
-  border-color:#e98078;
+  background:var(--skh-btn-danger-hover-bg);
+  border-color:var(--skh-btn-danger-hover-border);
 }
 
 .skh-btn-ghost{
-  background:transparent;
-  color:#344f9f;
-  border-color:transparent;
+  background:var(--skh-btn-ghost-bg);
+  color:var(--skh-btn-ghost-text);
+  border-color:var(--skh-btn-ghost-border);
   box-shadow:none;
 }
 
 .skh-btn-ghost:hover{
-  background:#eef3ff;
+  background:var(--skh-btn-ghost-hover-bg);
+  border-color:var(--skh-btn-ghost-hover-border);
   box-shadow:none;
 }
 
 .skh-btn-camera{
-  background:#eef6ff;
-  color:#1d4ed8;
-  border:1px solid #bfdbfe;
+  background:var(--skh-btn-camera-bg);
+  color:var(--skh-btn-camera-text);
+  border-color:var(--skh-btn-camera-border);
 }
 
 .skh-btn-camera:hover{
-  background:#dbeafe;
-  border-color:#93c5fd;
+  background:var(--skh-btn-camera-hover-bg);
+  border-color:var(--skh-btn-camera-hover-border);
 }
 
 /* Size */
 
 .skh-btn-sm{
-  padding:6px 10px;
-  font-size:13px;
+  padding:
+    var(--skh-btn-sm-padding-y)
+    var(--skh-btn-sm-padding-x);
+  font-size:var(--skh-btn-sm-font-size);
 }
 
 .skh-btn-lg{
-  padding:14px 20px;
-  font-size:16px;
+  padding:
+    var(--skh-btn-lg-padding-y)
+    var(--skh-btn-lg-padding-x);
+  font-size:var(--skh-btn-lg-font-size);
 }
 
 .skh-btn-full{
-  width:100%;
+  width:var(--skh-btn-full-width);
 }
 
 /* Shape */
 
 .skh-btn-icon{
-  width:36px;
-  height:36px;
-  padding:0;
+  width:var(--skh-btn-icon-width);
+  height:var(--skh-btn-icon-height);
+  padding:var(--skh-btn-icon-padding);
   flex:0 0 auto;
 }
 
 .skh-btn-pill{
-  border-radius:999px;
+  border-radius:var(--skh-btn-pill-radius);
 }
 
 /* State */
 
 .skh-btn-selected{
-  background:var(--skh-primary);
-  color:white;
-  border-color:var(--skh-primary);
+  background:var(--skh-btn-selected-bg);
+  color:var(--skh-btn-selected-text);
+  border-color:var(--skh-btn-selected-border);
 }
 
 .skh-btn-loading{
   pointer-events:none;
-  opacity:.85;
+  opacity:var(--skh-btn-loading-opacity);
 }
 
 .skh-btn-loading::before{
   content:'';
-  width:14px;
-  height:14px;
-  border:2px solid rgba(255,255,255,.35);
-  border-top-color:currentColor;
+  width:var(--skh-btn-loading-spinner-size);
+  height:var(--skh-btn-loading-spinner-size);
+  border:
+    var(--skh-btn-loading-spinner-border-width)
+    solid
+    var(--skh-btn-loading-spinner-border-color);
+  border-top-color:var(--skh-btn-loading-spinner-top-color);
   border-radius:50%;
   animation:skhSpin .8s linear infinite;
   flex:0 0 auto;
@@ -174,27 +282,29 @@
 .skh-btn-group{
   display:inline-flex;
   flex-wrap:wrap;
-  gap:8px;
+  gap:var(--skh-btn-group-gap);
   align-items:center;
 }
 
 .skh-btn-toolbar{
   display:flex;
   flex-wrap:wrap;
-  gap:10px;
+  gap:var(--skh-btn-toolbar-gap);
   align-items:center;
 }
 
 /* Mobile */
 
 @media(max-width:640px){
+
   .skh-btn{
-    min-height:44px;
+    min-height:var(--skh-btn-mobile-min-height);
   }
 
   .skh-btn-icon{
-    width:44px;
-    height:44px;
+    width:var(--skh-btn-icon-mobile-width);
+    height:var(--skh-btn-icon-mobile-height);
   }
+
 }
 </style>

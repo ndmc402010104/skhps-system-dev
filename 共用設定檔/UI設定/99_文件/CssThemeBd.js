@@ -1,14 +1,21 @@
-const CSS_DB_SPREADSHEET_ID = '1Kd2T_XhkeAUyDzmdXvDUBcHKbmGII-7sky5nfJ8PY50';
+const CSS_DB_SPREADSHEET_ID =
+  '1Kd2T_XhkeAUyDzmdXvDUBcHKbmGII-7sky5nfJ8PY50';
 
 const CSS_SHEETS = {
   BUTTON: '01_按鈕'
 };
 
+const DEFAULT_MARK =
+  'default';
+
+
 function setupCssDb_01Button(){
 
-  const ss = SpreadsheetApp.openById(CSS_DB_SPREADSHEET_ID);
+  const ss =
+    SpreadsheetApp.openById(CSS_DB_SPREADSHEET_ID);
 
-  let sh = ss.getSheetByName(CSS_SHEETS.BUTTON);
+  let sh =
+    ss.getSheetByName(CSS_SHEETS.BUTTON);
 
   if(!sh){
     sh = ss.getSheets()[0];
@@ -27,30 +34,13 @@ function setupCssDb_01Button(){
   ]]);
 
   const rows = [
-    ['button','base','bg','#ffffff','Base 背景',''],
-    ['button','base','text','#172033','Base 文字',''],
-    ['button','base','border','#cbd5e1','Base 邊框',''],
-    ['button','base','radius','10','Base 圓角 px',''],
-    ['button','base','paddingY','10','Base 上下 padding px',''],
-    ['button','base','paddingX','16','Base 左右 padding px',''],
-    ['button','base','fontSize','14','Base 字體 px',''],
-    ['button','base','fontWeight','700','Base 字重',''],
+    ['button','primary','bg','#344f9f','Primary 背景',DEFAULT_MARK],
+    ['button','primary','text','#ffffff','Primary 文字',DEFAULT_MARK],
+    ['button','primary','border','#344f9f','Primary 邊框',DEFAULT_MARK],
 
-    ['button','primary','bg','#344f9f','Primary 背景',''],
-    ['button','primary','text','#ffffff','Primary 文字',''],
-    ['button','primary','border','#344f9f','Primary 邊框',''],
-
-    ['button','secondary','bg','#ffffff','Secondary 背景',''],
-    ['button','secondary','text','#475569','Secondary 文字',''],
-    ['button','secondary','border','#cbd5e1','Secondary 邊框',''],
-
-    ['button','danger','bg','#fff7f7','Danger 背景',''],
-    ['button','danger','text','#b42318','Danger 文字',''],
-    ['button','danger','border','#f4b4ae','Danger 邊框',''],
-
-    ['button','camera','bg','#eef6ff','Camera 背景',''],
-    ['button','camera','text','#1d4ed8','Camera 文字',''],
-    ['button','camera','border','#bfdbfe','Camera 邊框','']
+    ['button','primary','bg','#344f9f','Primary 背景',new Date()],
+    ['button','primary','text','#ffffff','Primary 文字',new Date()],
+    ['button','primary','border','#344f9f','Primary 邊框',new Date()]
   ];
 
   sh.getRange(2,1,rows.length,6).setValues(rows);
@@ -58,26 +48,37 @@ function setupCssDb_01Button(){
   sh.setFrozenRows(1);
   sh.autoResizeColumns(1,6);
 }
-function getButtonCssSettings(){
 
-  const ss =
-    SpreadsheetApp.openById(CSS_DB_SPREADSHEET_ID);
+
+/* 讀目前系統設定：updatedAt 不是 default 的最新值 */
+function getButtonCssSettings(){
+  return getButtonCssSettingsByDefaultMark_(false);
+}
+
+
+/* 讀 default：updatedAt 是 default */
+function getButtonDefaultCssSettings(){
+  return getButtonCssSettingsByDefaultMark_(true);
+}
+
+
+function getButtonCssSettingsByDefaultMark_(wantDefault){
 
   const sh =
-    ss.getSheetByName(CSS_SHEETS.BUTTON);
-
-  if(!sh){
-    throw new Error('找不到工作表：' + CSS_SHEETS.BUTTON);
-  }
+    SpreadsheetApp
+      .openById(CSS_DB_SPREADSHEET_ID)
+      .getSheetByName(CSS_SHEETS.BUTTON);
 
   const values =
     sh.getDataRange().getValues();
 
-  values.shift();
+  const result = {};
+  const latestMap = {};
 
-  const data = {};
+  for(let i = 1; i < values.length; i++){
 
-  values.forEach(function(row){
+    const row =
+      values[i];
 
     const component =
       row[0];
@@ -91,66 +92,124 @@ function getButtonCssSettings(){
     const value =
       row[3];
 
+    const updatedAt =
+      row[5];
+
+    const isDefault =
+      String(updatedAt).trim() === DEFAULT_MARK;
+
     if(component !== 'button'){
-      return;
+      continue;
     }
 
-    if(!data[className]){
-      data[className] = {};
+    if(wantDefault !== isDefault){
+      continue;
     }
 
-    data[className][property] =
-      value;
+    if(!result[className]){
+      result[className] = {};
+    }
+
+    /*
+      default 只會有一筆，直接吃。
+      current 可能有多筆，吃最後一筆。
+    */
+    const key =
+      className + '|' + property;
+
+    latestMap[key] = {
+      className:className,
+      property:property,
+      value:value,
+      rowIndex:i
+    };
+
+  }
+
+  Object.keys(latestMap).forEach(function(key){
+
+    const item =
+      latestMap[key];
+
+    if(!result[item.className]){
+      result[item.className] = {};
+    }
+
+    result[item.className][item.property] =
+      item.value;
 
   });
 
-  return data;
+  return result;
 
 }
 
 
-function test_getButtonCssSettings(){
+/* 儲存目前系統設定 */
+function saveButtonCssSetting(className, property, value){
 
-  const data =
-    getButtonCssSettings();
-
-  Logger.log(
-    JSON.stringify(data,null,2)
+  return saveButtonCssSetting_(
+    className,
+    property,
+    value,
+    new Date()
   );
 
 }
-function saveButtonCssSetting(className, property, value){
 
-  const ss =
-    SpreadsheetApp.openById(CSS_DB_SPREADSHEET_ID);
+
+/* 設為新 default */
+function saveButtonDefaultCssSetting(className, property, value){
+
+  return saveButtonCssSetting_(
+    className,
+    property,
+    value,
+    DEFAULT_MARK
+  );
+
+}
+
+
+function saveButtonCssSetting_(
+  className,
+  property,
+  value,
+  updatedAtValue
+){
 
   const sh =
-    ss.getSheetByName(CSS_SHEETS.BUTTON);
-
-  if(!sh){
-    throw new Error('找不到工作表：' + CSS_SHEETS.BUTTON);
-  }
+    SpreadsheetApp
+      .openById(CSS_DB_SPREADSHEET_ID)
+      .getSheetByName(CSS_SHEETS.BUTTON);
 
   const values =
     sh.getDataRange().getValues();
 
+  const wantDefault =
+    String(updatedAtValue).trim() === DEFAULT_MARK;
+
   for(let i = 1; i < values.length; i++){
 
+    const row =
+      values[i];
+
+    const isDefaultRow =
+      String(row[5]).trim() === DEFAULT_MARK;
+
     if(
-      values[i][0] === 'button' &&
-      values[i][1] === className &&
-      values[i][2] === property
+      row[0] === 'button' &&
+      row[1] === className &&
+      row[2] === property &&
+      isDefaultRow === wantDefault
     ){
 
-      sh.getRange(i + 1, 4).setValue(value);
-      sh.getRange(i + 1, 6).setValue(new Date());
+      sh.getRange(i + 1,4).setValue(value);
+      sh.getRange(i + 1,6).setValue(updatedAtValue);
 
       return {
         ok:true,
-        mode:'updated',
-        className:className,
-        property:property,
-        value:value
+        updated:true
       };
 
     }
@@ -162,32 +221,13 @@ function saveButtonCssSetting(className, property, value){
     className,
     property,
     value,
-    '',
-    new Date()
+    className + ' ' + property,
+    updatedAtValue
   ]);
 
   return {
     ok:true,
-    mode:'inserted',
-    className:className,
-    property:property,
-    value:value
+    inserted:true
   };
-
-}
-
-
-function test_saveButtonCssSetting(){
-
-  const result =
-    saveButtonCssSetting(
-      'primary',
-      'bg',
-      '#4864b1'
-    );
-
-  Logger.log(
-    JSON.stringify(result,null,2)
-  );
 
 }

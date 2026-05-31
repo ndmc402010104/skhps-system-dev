@@ -24,48 +24,31 @@ body{
   font-family:Arial,"Noto Sans TC","Microsoft JhengHei",sans-serif;
 }
 
-.testPage{max-width:1180px;margin:0 auto;}
-.testHeader{margin-bottom:28px;}
-.testHeader h1{margin:0 0 8px;font-size:34px;}
-.testHeader p{margin:0;color:var(--skh-muted,#64748b);}
-
-.testSection{
-  background:white;
-  border:1px solid var(--skh-line,#cbd5e1);
-  border-radius:var(--skh-radius,8px);
-  padding:24px;
-  margin-bottom:22px;
-  box-shadow:var(--skh-shadow,0 1px 3px rgba(0,0,0,.1));
+.testPage{
+  width:100%;
+  max-width:1800px;
+  margin:0 auto;
 }
 
-.testSection h2{margin:0 0 8px;font-size:22px;}
-.testNote{margin:0 0 18px;color:var(--skh-muted,#64748b);line-height:1.7;}
-.testSubhead{margin:24px 0 10px;font-size:16px;font-weight:800;color:#1e293b;}
-.testRow{display:flex;flex-wrap:wrap;gap:10px;align-items:center;}
-
-.testTable{width:100%;border-collapse:collapse;margin-bottom:18px;}
-.testTable th{
-  background:#f8fafc;
-  text-align:left;
-  padding:12px;
-  border:1px solid var(--skh-line,#cbd5e1);
-  font-size:14px;
-}
-.testTable td{
-  padding:12px;
-  border:1px solid var(--skh-line,#cbd5e1);
-  vertical-align:middle;
-}
-.testTable code{
-  background:#eef2f7;
-  padding:3px 6px;
-  border-radius:6px;
-  font-size:13px;
-  display:inline-block;
-  margin:2px 0;
+.testHeader{
+  margin-bottom:28px;
 }
 
-.testLayout{display:flex;gap:24px;align-items:flex-start;}
+.testHeader h1{
+  margin:0 0 8px;
+  font-size:34px;
+}
+
+.testHeader p{
+  margin:0;
+  color:var(--skh-muted,#64748b);
+}
+
+.testLayout{
+  display:flex;
+  gap:24px;
+  align-items:flex-start;
+}
 
 .testSidebar{
   width:220px;
@@ -78,13 +61,157 @@ body{
 }
 
 .testContent{
-  flex-grow:1;
+  flex:1;
   min-width:0;
   background:#fff;
   border-radius:var(--skh-radius,8px);
   min-height:600px;
   padding:24px;
   box-shadow:var(--skh-shadow,0 1px 3px rgba(0,0,0,.1));
+  overflow:hidden;
+}
+
+.testContent > div{
+  min-width:0;
+}
+
+.testSection{
+  background:white;
+  border:1px solid var(--skh-line,#cbd5e1);
+  border-radius:var(--skh-radius,8px);
+  padding:24px;
+  margin-bottom:22px;
+  box-shadow:var(--skh-shadow,0 1px 3px rgba(0,0,0,.1));
+  box-sizing:border-box;
+  max-width:100%;
+}
+
+.testSection h2{
+  margin:0 0 8px;
+  font-size:22px;
+}
+
+.testNote{
+  margin:0 0 18px;
+  color:var(--skh-muted,#64748b);
+  line-height:1.7;
+}
+
+.testSubhead{
+  margin:24px 0 10px;
+  font-size:16px;
+  font-weight:800;
+  color:#1e293b;
+}
+
+.testRow{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  align-items:center;
+}
+
+/* Table 預設：大畫面維持壓縮式 table，不出現內部拉條 */
+.testTableScroll{
+  width:100%;
+  max-width:100%;
+}
+
+/* 大畫面：table 吃滿可用寬度，自動壓縮 */
+.testTable{
+  width:100%;
+  border-collapse:collapse;
+  margin:0;
+  table-layout:auto;
+}
+
+/*
+  中小視窗：
+  這裡用 1500px，不用 1200px。
+  因為左側 sidebar 會吃掉 220px + gap，
+  實際內容區會比視窗寬度小很多。
+*/
+@media(max-width:1500px){
+
+  .testTableScroll{
+    width:100%;
+    max-width:100%;
+    max-height:52vh;
+    overflow:auto;
+    border:1px solid var(--skh-line,#cbd5e1);
+    border-radius:12px;
+    background:white;
+    box-sizing:border-box;
+  }
+
+  .testTable{
+    width:max-content;
+    min-width:1120px;
+  }
+
+}
+
+/* 很小的高度：讓水平捲軸更容易出現在畫面內 */
+@media(max-height:720px){
+
+  .testTableScroll{
+    max-height:46vh;
+  }
+
+}
+
+.testTable th{
+  position:sticky;
+  top:0;
+  z-index:2;
+  background:#f8fafc;
+  text-align:left;
+  padding:12px;
+  border:1px solid var(--skh-line,#cbd5e1);
+  font-size:14px;
+  white-space:nowrap;
+}
+
+.testTable td{
+  padding:14px;
+  border:1px solid var(--skh-line,#cbd5e1);
+  vertical-align:top;
+  background:white;
+}
+
+.testTable code{
+  background:#eef2f7;
+  padding:3px 6px;
+  border-radius:6px;
+  font-size:13px;
+  display:inline-block;
+  margin:2px 0;
+}
+
+.testTable th:nth-child(1),
+.testTable td:nth-child(1){
+  min-width:180px;
+  max-width:220px;
+}
+
+.testTable th:nth-child(2),
+.testTable td:nth-child(2){
+  min-width:150px;
+}
+
+.testTable th:nth-child(3),
+.testTable td:nth-child(3){
+  min-width:280px;
+}
+
+.testTable th:nth-child(4),
+.testTable td:nth-child(4){
+  min-width:300px;
+}
+
+.testTable th:nth-child(5),
+.testTable td:nth-child(5){
+  min-width:360px;
 }
 
 .testNavButton{
@@ -102,10 +229,23 @@ body{
   color:var(--skh-text,#334155);
 }
 
-.testNavButton:hover{background:#f1f5f9;color:#2563eb;}
-.testNavButton.active{background:#eff6ff;color:#1d4ed8;font-weight:bold;}
+.testNavButton:hover{
+  background:#f1f5f9;
+  color:#2563eb;
+}
 
-.ui-loading-box{padding:40px;text-align:center;color:#64748b;}
+.testNavButton.active{
+  background:#eff6ff;
+  color:#1d4ed8;
+  font-weight:bold;
+}
+
+.ui-loading-box{
+  padding:40px;
+  text-align:center;
+  color:#64748b;
+}
+
 .ui-error-box{
   color:#b42318;
   background:#fff7f7;
@@ -114,23 +254,66 @@ body{
   padding:20px;
 }
 
-@media(max-width:900px){
-  body{padding:18px;}
-  .testLayout{flex-direction:column;}
+@media(max-width:1200px){
+  body{
+    padding:20px;
+  }
+
+  .testLayout{
+    flex-direction:column;
+  }
+
   .testSidebar{
     width:auto;
     display:flex;
     flex-wrap:wrap;
     gap:8px;
-    padding:16px;
+    padding:14px;
   }
+
   .testNavButton{
     width:auto;
     margin-bottom:0;
     padding:8px 14px;
     border:1px solid var(--skh-line,#cbd5e1);
   }
-  .testTable{display:block;overflow-x:auto;white-space:nowrap;}
+
+  .testContent{
+    width:100%;
+    box-sizing:border-box;
+  }
+}
+
+@media(max-width:640px){
+  body{
+    padding:14px;
+  }
+
+  .testHeader h1{
+    font-size:28px;
+  }
+
+  .testContent{
+    padding:14px;
+  }
+
+  .testSection{
+    padding:14px;
+  }
+
+  .testSidebar{
+    flex-direction:column;
+    width:100%;
+    box-sizing:border-box;
+  }
+
+  .testNavButton{
+    width:100%;
+  }
+
+  .testTableScroll{
+    max-height:62vh;
+  }
 }
 </style>
 </head>
@@ -171,6 +354,39 @@ body{
 
   var sidebar = document.getElementById('test-sidebar');
   var content = document.getElementById('test-content');
+
+  function wrapTables(container){
+
+    var tables =
+      container.querySelectorAll('table.testTable');
+
+    tables.forEach(function(table){
+
+      if(
+        table.parentElement &&
+        table.parentElement.classList.contains('testTableScroll')
+      ){
+        return;
+      }
+
+      var wrap =
+        document.createElement('div');
+
+      wrap.className =
+        'testTableScroll';
+
+      table.parentNode.insertBefore(
+        wrap,
+        table
+      );
+
+      wrap.appendChild(
+        table
+      );
+
+    });
+
+  }
 
   function runInsertedScripts(container){
     var scripts = container.querySelectorAll('script');
@@ -221,45 +437,40 @@ body{
 
   function revealWhenThemeReady(pageObj, wrapper, loadingEl){
 
-  function reveal(){
+    function reveal(){
 
-    if(
-      loadingEl &&
-      loadingEl.parentNode
-    ){
-      loadingEl.parentNode.removeChild(
-        loadingEl
-      );
+      if(
+        loadingEl &&
+        loadingEl.parentNode
+      ){
+        loadingEl.parentNode.removeChild(
+          loadingEl
+        );
+      }
+
+      wrapper.style.display =
+        '';
+
     }
 
-    wrapper.style.display =
-      '';
+    if(
+      pageObj.id === 'UiButtonTest' &&
+      typeof window.loadButtonTheme === 'function'
+    ){
+
+      window.loadButtonTheme(function(){
+
+        reveal();
+
+      });
+
+      return;
+
+    }
+
+    reveal();
 
   }
-
-  /*
-    Button Theme：
-    一定等 Sheet Theme 載入完成才顯示。
-    不准先顯示舊樣式。
-  */
-  if(
-    pageObj.id === 'UiButtonTest' &&
-    typeof window.loadButtonTheme === 'function'
-  ){
-
-    window.loadButtonTheme(function(){
-
-      reveal();
-
-    });
-
-    return;
-
-  }
-
-  reveal();
-
-}
   
   function loadPage(pageObj, btn){
 
@@ -294,12 +505,11 @@ body{
         wrapper.innerHTML =
           html;
 
-        /*
-          不要清掉 content。
-          Loading 要留著，wrapper 先藏起來。
-          等 theme ready 再移除 Loading 並顯示 wrapper。
-        */
         content.appendChild(
+          wrapper
+        );
+
+        wrapTables(
           wrapper
         );
 
