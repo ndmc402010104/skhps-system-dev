@@ -24,24 +24,10 @@ body{
   font-family:Arial,"Noto Sans TC","Microsoft JhengHei",sans-serif;
 }
 
-.testPage{
-  max-width:1180px;
-  margin:0 auto;
-}
-
-.testHeader{
-  margin-bottom:28px;
-}
-
-.testHeader h1{
-  margin:0 0 8px;
-  font-size:34px;
-}
-
-.testHeader p{
-  margin:0;
-  color:var(--skh-muted,#64748b);
-}
+.testPage{max-width:1180px;margin:0 auto;}
+.testHeader{margin-bottom:28px;}
+.testHeader h1{margin:0 0 8px;font-size:34px;}
+.testHeader p{margin:0;color:var(--skh-muted,#64748b);}
 
 .testSection{
   background:white;
@@ -52,37 +38,12 @@ body{
   box-shadow:var(--skh-shadow,0 1px 3px rgba(0,0,0,.1));
 }
 
-.testSection h2{
-  margin:0 0 8px;
-  font-size:22px;
-}
+.testSection h2{margin:0 0 8px;font-size:22px;}
+.testNote{margin:0 0 18px;color:var(--skh-muted,#64748b);line-height:1.7;}
+.testSubhead{margin:24px 0 10px;font-size:16px;font-weight:800;color:#1e293b;}
+.testRow{display:flex;flex-wrap:wrap;gap:10px;align-items:center;}
 
-.testNote{
-  margin:0 0 18px;
-  color:var(--skh-muted,#64748b);
-  line-height:1.7;
-}
-
-.testSubhead{
-  margin:24px 0 10px;
-  font-size:16px;
-  font-weight:800;
-  color:#1e293b;
-}
-
-.testRow{
-  display:flex;
-  flex-wrap:wrap;
-  gap:10px;
-  align-items:center;
-}
-
-.testTable{
-  width:100%;
-  border-collapse:collapse;
-  margin-bottom:18px;
-}
-
+.testTable{width:100%;border-collapse:collapse;margin-bottom:18px;}
 .testTable th{
   background:#f8fafc;
   text-align:left;
@@ -90,13 +51,11 @@ body{
   border:1px solid var(--skh-line,#cbd5e1);
   font-size:14px;
 }
-
 .testTable td{
   padding:12px;
   border:1px solid var(--skh-line,#cbd5e1);
   vertical-align:middle;
 }
-
 .testTable code{
   background:#eef2f7;
   padding:3px 6px;
@@ -106,11 +65,7 @@ body{
   margin:2px 0;
 }
 
-.testLayout{
-  display:flex;
-  gap:24px;
-  align-items:flex-start;
-}
+.testLayout{display:flex;gap:24px;align-items:flex-start;}
 
 .testSidebar{
   width:220px;
@@ -147,26 +102,21 @@ body{
   color:var(--skh-text,#334155);
 }
 
-.testNavButton:hover{
-  background:#f1f5f9;
-  color:#2563eb;
-}
+.testNavButton:hover{background:#f1f5f9;color:#2563eb;}
+.testNavButton.active{background:#eff6ff;color:#1d4ed8;font-weight:bold;}
 
-.testNavButton.active{
-  background:#eff6ff;
-  color:#1d4ed8;
-  font-weight:bold;
+.ui-loading-box{padding:40px;text-align:center;color:#64748b;}
+.ui-error-box{
+  color:#b42318;
+  background:#fff7f7;
+  border:1px solid #f4b4ae;
+  border-radius:10px;
+  padding:20px;
 }
 
 @media(max-width:900px){
-  body{
-    padding:18px;
-  }
-
-  .testLayout{
-    flex-direction:column;
-  }
-
+  body{padding:18px;}
+  .testLayout{flex-direction:column;}
   .testSidebar{
     width:auto;
     display:flex;
@@ -174,19 +124,13 @@ body{
     gap:8px;
     padding:16px;
   }
-
   .testNavButton{
     width:auto;
     margin-bottom:0;
     padding:8px 14px;
     border:1px solid var(--skh-line,#cbd5e1);
   }
-
-  .testTable{
-    display:block;
-    overflow-x:auto;
-    white-space:nowrap;
-  }
+  .testTable{display:block;overflow-x:auto;white-space:nowrap;}
 }
 </style>
 </head>
@@ -216,86 +160,36 @@ body{
 (function(){
 
   var testPages = [
-    {
-      id:'UiStyleTest',
-      name:'00_基礎樣式',
-      path:'共用設定檔/UI設定/00_基礎/UiStyleTest'
-    },
-    {
-      id:'UiButtonTest',
-      name:'01_按鈕元件',
-      path:'共用設定檔/UI設定/01_按鈕/UiButtonTest'
-    },
-    {
-      id:'UiFormTest',
-      name:'02_表單元件',
-      path:'共用設定檔/UI設定/02_表單/UiFormTest'
-    },
-    {
-      id:'UiTableTest',
-      name:'03_表格元件',
-      path:'共用設定檔/UI設定/03_表格/UiTableTest'
-    },
-    {
-      id:'UiAlertTest',
-      name:'04_提示元件',
-      path:'共用設定檔/UI設定/04_提示/UiAlertTest'
-    },
-    {
-      id:'UiLoadingTest',
-      name:'05_載入互動',
-      path:'共用設定檔/UI設定/05_互動/UiLoadingTest'
-    },
-    {
-      id:'UiModalTest',
-      name:'06_彈跳視窗',
-      path:'共用設定檔/UI設定/05_互動/UiModalTest'
-    }
+    {id:'UiStyleTest',name:'00_基礎樣式',path:'共用設定檔/UI設定/00_基礎/UiStyleTest'},
+    {id:'UiButtonTest',name:'01_按鈕元件',path:'共用設定檔/UI設定/01_按鈕/UiButtonTest'},
+    {id:'UiFormTest',name:'02_表單元件',path:'共用設定檔/UI設定/02_表單/UiFormTest'},
+    {id:'UiTableTest',name:'03_表格元件',path:'共用設定檔/UI設定/03_表格/UiTableTest'},
+    {id:'UiAlertTest',name:'04_提示元件',path:'共用設定檔/UI設定/04_提示/UiAlertTest'},
+    {id:'UiLoadingTest',name:'05_載入互動',path:'共用設定檔/UI設定/05_互動/UiLoadingTest'},
+    {id:'UiModalTest',name:'06_彈跳視窗',path:'共用設定檔/UI設定/05_互動/UiModalTest'}
   ];
 
-  var sidebar =
-    document.getElementById('test-sidebar');
-
-  var content =
-    document.getElementById('test-content');
-
+  var sidebar = document.getElementById('test-sidebar');
+  var content = document.getElementById('test-content');
 
   function runInsertedScripts(container){
-
-    var scripts =
-      container.querySelectorAll('script');
+    var scripts = container.querySelectorAll('script');
 
     scripts.forEach(function(oldScript){
+      var newScript = document.createElement('script');
 
-      var newScript =
-        document.createElement('script');
+      Array.prototype.slice.call(oldScript.attributes).forEach(function(attr){
+        newScript.setAttribute(attr.name, attr.value);
+      });
 
-      Array.prototype.slice
-        .call(oldScript.attributes)
-        .forEach(function(attr){
-          newScript.setAttribute(
-            attr.name,
-            attr.value
-          );
-        });
+      newScript.textContent = oldScript.textContent;
 
-      newScript.textContent =
-        oldScript.textContent;
-
-      oldScript.parentNode.replaceChild(
-        newScript,
-        oldScript
-      );
-
+      oldScript.parentNode.replaceChild(newScript, oldScript);
     });
-
   }
 
-
   function activateButton(activeBtn){
-
-    var buttons =
-      sidebar.querySelectorAll('.testNavButton');
+    var buttons = sidebar.querySelectorAll('.testNavButton');
 
     buttons.forEach(function(btn){
       btn.classList.remove('active');
@@ -304,92 +198,113 @@ body{
     if(activeBtn){
       activeBtn.classList.add('active');
     }
+  }
+
+  function showLoading(message){
+
+    content.innerHTML =
+      `
+      <div class="ui-loading-box">
+        <div class="skh-spinner"></div>
+        <div style="
+          margin-top:12px;
+          font-weight:600;
+          color:#64748b;
+        ">
+          ${message}
+        </div>
+      </div>
+      `;
 
   }
 
+  function showError(error){
+    content.innerHTML =
+      '<div class="ui-error-box">載入失敗：' +
+      (error && error.message ? error.message : error) +
+      '</div>';
+  }
+
+  function revealWhenThemeReady(pageObj, wrapper){
+    if(
+      pageObj.id === 'UiButtonTest' &&
+      typeof window.loadButtonTheme === 'function'
+    ){
+      window.loadButtonTheme(function(){
+        wrapper.style.display = '';
+      });
+      return;
+    }
+
+    wrapper.style.display = '';
+  }
 
   function loadPage(pageObj, btn){
 
     activateButton(btn);
 
-    content.innerHTML =
-      '<div style="padding:40px;text-align:center;color:#64748b;">載入中：' +
+    const startTime =
+      Date.now();
+
+    showLoading(
+      '載入中：' +
       pageObj.name +
-      '...</div>';
+      '...'
+    );
 
     google.script.run
       .withSuccessHandler(function(html){
 
-        content.innerHTML =
+        var wrapper =
+          document.createElement('div');
+
+        wrapper.style.display =
+          'none';
+
+        wrapper.innerHTML =
           html;
 
-        runInsertedScripts(
-          content
+        content.innerHTML =
+          '';
+
+        content.appendChild(
+          wrapper
         );
 
-        /*
-          AJAX 插入的子頁 script 不會吃到 DOMContentLoaded。
-          所以這裡針對 ButtonTest 手動啟動一次。
-        */
-        if(
-          pageObj.id === 'UiButtonTest' &&
-          typeof window.loadButtonTheme === 'function'
-        ){
-          content.innerHTML =
-            '<div style="padding:40px;text-align:center;color:#64748b;">讀取樣式設定中...</div>';
+        runInsertedScripts(
+          wrapper
+        );
 
-          var hiddenWrap =
-            document.createElement('div');
+        function reveal(){
 
-          hiddenWrap.style.display =
-            'none';
+          const elapsed =
+            Date.now() - startTime;
 
-          hiddenWrap.innerHTML =
-            html;
+          const wait =
+            Math.max(
+              0,
+              400 - elapsed
+            );
 
-          content.innerHTML =
-            '';
+          setTimeout(function(){
 
-          content.appendChild(
-            hiddenWrap
-          );
+            revealWhenThemeReady(
+              pageObj,
+              wrapper
+            );
 
-          runInsertedScripts(
-            hiddenWrap
-          );
+          },wait);
 
-          if(
-            pageObj.id === 'UiButtonTest' &&
-            typeof window.loadButtonTheme === 'function'
-          ){
+        }
 
-            window.loadButtonTheme(function(){
-
-              hiddenWrap.style.display =
-                '';
-
-            });
-
-          }
-          else{
-
-            hiddenWrap.style.display =
-              '';
-
-          }
+        reveal();
 
       })
       .withFailureHandler(function(error){
 
-        content.innerHTML =
-          '<div style="color:red;padding:20px;">載入失敗：' +
-          (
-            error &&
-            error.message
-            ? error.message
-            : error
-          ) +
-          '</div>';
+        showError(
+          error
+        );
 
       })
       .getUiTestPageContent(
@@ -398,57 +313,30 @@ body{
 
   }
 
-
   function renderSidebar(){
+    sidebar.innerHTML = '';
 
-    sidebar.innerHTML =
-      '';
+    testPages.forEach(function(page){
+      var btn = document.createElement('button');
 
-    testPages.forEach(function(page,index){
+      btn.className = 'testNavButton';
+      btn.textContent = page.name;
 
-      var btn =
-        document.createElement('button');
+      btn.onclick = function(){
+        loadPage(page, btn);
+      };
 
-      btn.className =
-        'testNavButton';
+      sidebar.appendChild(btn);
 
-      btn.textContent =
-        page.name;
-
-      btn.onclick =
-        function(){
-          loadPage(
-            page,
-            btn
-          );
-        };
-
-      sidebar.appendChild(
-        btn
-      );
-
-      /*
-        預設先載入 Button，方便你現在測 primary。
-        之後穩定後可改成 index === 0。
-      */
       if(page.id === 'UiButtonTest'){
         setTimeout(function(){
-          loadPage(
-            page,
-            btn
-          );
+          loadPage(page, btn);
         },0);
       }
-
     });
-
   }
 
-
-  document.addEventListener(
-    'DOMContentLoaded',
-    renderSidebar
-  );
+  document.addEventListener('DOMContentLoaded', renderSidebar);
 
 })();
 </script>
