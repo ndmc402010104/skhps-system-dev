@@ -119,3 +119,75 @@ function test_getButtonCssSettings(){
   );
 
 }
+function saveButtonCssSetting(className, property, value){
+
+  const ss =
+    SpreadsheetApp.openById(CSS_DB_SPREADSHEET_ID);
+
+  const sh =
+    ss.getSheetByName(CSS_SHEETS.BUTTON);
+
+  if(!sh){
+    throw new Error('找不到工作表：' + CSS_SHEETS.BUTTON);
+  }
+
+  const values =
+    sh.getDataRange().getValues();
+
+  for(let i = 1; i < values.length; i++){
+
+    if(
+      values[i][0] === 'button' &&
+      values[i][1] === className &&
+      values[i][2] === property
+    ){
+
+      sh.getRange(i + 1, 4).setValue(value);
+      sh.getRange(i + 1, 6).setValue(new Date());
+
+      return {
+        ok:true,
+        mode:'updated',
+        className:className,
+        property:property,
+        value:value
+      };
+
+    }
+
+  }
+
+  sh.appendRow([
+    'button',
+    className,
+    property,
+    value,
+    '',
+    new Date()
+  ]);
+
+  return {
+    ok:true,
+    mode:'inserted',
+    className:className,
+    property:property,
+    value:value
+  };
+
+}
+
+
+function test_saveButtonCssSetting(){
+
+  const result =
+    saveButtonCssSetting(
+      'primary',
+      'bg',
+      '#4864b1'
+    );
+
+  Logger.log(
+    JSON.stringify(result,null,2)
+  );
+
+}

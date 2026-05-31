@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html>
 <head>
 <base target="_top">
@@ -19,8 +19,8 @@
 body{
   margin:0;
   padding:32px;
-  background:var(--skh-bg);
-  color:var(--skh-text);
+  background:var(--skh-bg,#f8fafc);
+  color:var(--skh-text,#334155);
   font-family:Arial,"Noto Sans TC","Microsoft JhengHei",sans-serif;
 }
 
@@ -40,16 +40,16 @@ body{
 
 .testHeader p{
   margin:0;
-  color:var(--skh-muted);
+  color:var(--skh-muted,#64748b);
 }
 
 .testSection{
   background:white;
-  border:1px solid var(--skh-line);
-  border-radius:var(--skh-radius);
+  border:1px solid var(--skh-line,#cbd5e1);
+  border-radius:var(--skh-radius,8px);
   padding:24px;
   margin-bottom:22px;
-  box-shadow:var(--skh-shadow);
+  box-shadow:var(--skh-shadow,0 1px 3px rgba(0,0,0,.1));
 }
 
 .testSection h2{
@@ -59,7 +59,7 @@ body{
 
 .testNote{
   margin:0 0 18px;
-  color:var(--skh-muted);
+  color:var(--skh-muted,#64748b);
   line-height:1.7;
 }
 
@@ -68,6 +68,13 @@ body{
   font-size:16px;
   font-weight:800;
   color:#1e293b;
+}
+
+.testRow{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  align-items:center;
 }
 
 .testTable{
@@ -80,13 +87,13 @@ body{
   background:#f8fafc;
   text-align:left;
   padding:12px;
-  border:1px solid var(--skh-line);
+  border:1px solid var(--skh-line,#cbd5e1);
   font-size:14px;
 }
 
 .testTable td{
   padding:12px;
-  border:1px solid var(--skh-line);
+  border:1px solid var(--skh-line,#cbd5e1);
   vertical-align:middle;
 }
 
@@ -99,23 +106,80 @@ body{
   margin:2px 0;
 }
 
-.testDemoBox{
-  border:1px dashed var(--skh-line);
-  border-radius:var(--skh-radius);
-  padding:14px;
-  background:#f8fafc;
+.testLayout{
+  display:flex;
+  gap:24px;
+  align-items:flex-start;
 }
 
-.testRow{
-  display:flex;
-  flex-wrap:wrap;
-  gap:10px;
-  align-items:center;
+.testSidebar{
+  width:220px;
+  flex-shrink:0;
+  background:white;
+  border:1px solid var(--skh-line,#cbd5e1);
+  border-radius:var(--skh-radius,8px);
+  padding:12px;
+  box-shadow:var(--skh-shadow,0 1px 3px rgba(0,0,0,.1));
+}
+
+.testContent{
+  flex-grow:1;
+  min-width:0;
+  background:#fff;
+  border-radius:var(--skh-radius,8px);
+  min-height:600px;
+  padding:24px;
+  box-shadow:var(--skh-shadow,0 1px 3px rgba(0,0,0,.1));
+}
+
+.testNavButton{
+  display:block;
+  width:100%;
+  text-align:left;
+  padding:12px 16px;
+  margin-bottom:8px;
+  background:transparent;
+  border:none;
+  border-radius:6px;
+  cursor:pointer;
+  transition:all .2s;
+  font-size:15px;
+  color:var(--skh-text,#334155);
+}
+
+.testNavButton:hover{
+  background:#f1f5f9;
+  color:#2563eb;
+}
+
+.testNavButton.active{
+  background:#eff6ff;
+  color:#1d4ed8;
+  font-weight:bold;
 }
 
 @media(max-width:900px){
   body{
     padding:18px;
+  }
+
+  .testLayout{
+    flex-direction:column;
+  }
+
+  .testSidebar{
+    width:auto;
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    padding:16px;
+  }
+
+  .testNavButton{
+    width:auto;
+    margin-bottom:0;
+    padding:8px 14px;
+    border:1px solid var(--skh-line,#cbd5e1);
   }
 
   .testTable{
@@ -133,24 +197,221 @@ body{
 
 <header class="testHeader">
   <h1>SKH CSS 測試頁</h1>
-  <p>一頁式測試：每個元件第一列都是「最原始基底」，後面才是疊加變化。</p>
+  <p>模組化 UI 元件測試，請從選單切換想檢視的元件。</p>
 </header>
 
-<?!= getUiTestPageContent('共用設定檔/UI設定/00_基礎/UiStyleTest') ?>
+<div class="testLayout">
+  <nav class="testSidebar" id="test-sidebar"></nav>
 
-<?!= getUiTestPageContent('共用設定檔/UI設定/01_按鈕/UiButtonTest') ?>
-
-<?!= getUiTestPageContent('共用設定檔/UI設定/02_表單/UiFormTest') ?>
-
-<?!= getUiTestPageContent('共用設定檔/UI設定/03_表格/UiTableTest') ?>
-
-<?!= getUiTestPageContent('共用設定檔/UI設定/04_提示/UiAlertTest') ?>
-
-<?!= getUiTestPageContent('共用設定檔/UI設定/05_互動/UiLoadingTest') ?>
-
-<?!= getUiTestPageContent('共用設定檔/UI設定/05_互動/UiModalTest') ?>
+  <div class="testContent" id="test-content">
+    <div style="padding:40px;text-align:center;color:#64748b;border:1px dashed var(--skh-line,#cbd5e1);border-radius:var(--skh-radius,8px);">
+      請從選單選擇要測試的元件
+    </div>
+  </div>
+</div>
 
 </main>
+
+<script>
+(function(){
+
+  var testPages = [
+    {
+      id:'UiStyleTest',
+      name:'00_基礎樣式',
+      path:'共用設定檔/UI設定/00_基礎/UiStyleTest'
+    },
+    {
+      id:'UiButtonTest',
+      name:'01_按鈕元件',
+      path:'共用設定檔/UI設定/01_按鈕/UiButtonTest'
+    },
+    {
+      id:'UiFormTest',
+      name:'02_表單元件',
+      path:'共用設定檔/UI設定/02_表單/UiFormTest'
+    },
+    {
+      id:'UiTableTest',
+      name:'03_表格元件',
+      path:'共用設定檔/UI設定/03_表格/UiTableTest'
+    },
+    {
+      id:'UiAlertTest',
+      name:'04_提示元件',
+      path:'共用設定檔/UI設定/04_提示/UiAlertTest'
+    },
+    {
+      id:'UiLoadingTest',
+      name:'05_載入互動',
+      path:'共用設定檔/UI設定/05_互動/UiLoadingTest'
+    },
+    {
+      id:'UiModalTest',
+      name:'06_彈跳視窗',
+      path:'共用設定檔/UI設定/05_互動/UiModalTest'
+    }
+  ];
+
+  var sidebar =
+    document.getElementById('test-sidebar');
+
+  var content =
+    document.getElementById('test-content');
+
+
+  function runInsertedScripts(container){
+
+    var scripts =
+      container.querySelectorAll('script');
+
+    scripts.forEach(function(oldScript){
+
+      var newScript =
+        document.createElement('script');
+
+      Array.prototype.slice
+        .call(oldScript.attributes)
+        .forEach(function(attr){
+          newScript.setAttribute(
+            attr.name,
+            attr.value
+          );
+        });
+
+      newScript.textContent =
+        oldScript.textContent;
+
+      oldScript.parentNode.replaceChild(
+        newScript,
+        oldScript
+      );
+
+    });
+
+  }
+
+
+  function activateButton(activeBtn){
+
+    var buttons =
+      sidebar.querySelectorAll('.testNavButton');
+
+    buttons.forEach(function(btn){
+      btn.classList.remove('active');
+    });
+
+    if(activeBtn){
+      activeBtn.classList.add('active');
+    }
+
+  }
+
+
+  function loadPage(pageObj, btn){
+
+    activateButton(btn);
+
+    content.innerHTML =
+      '<div style="padding:40px;text-align:center;color:#64748b;">載入中：' +
+      pageObj.name +
+      '...</div>';
+
+    google.script.run
+      .withSuccessHandler(function(html){
+
+        content.innerHTML =
+          html;
+
+        runInsertedScripts(
+          content
+        );
+
+        /*
+          AJAX 插入的子頁 script 不會吃到 DOMContentLoaded。
+          所以這裡針對 ButtonTest 手動啟動一次。
+        */
+        if(
+          pageObj.id === 'UiButtonTest' &&
+          typeof window.loadButtonTheme === 'function'
+        ){
+          window.loadButtonTheme();
+        }
+
+      })
+      .withFailureHandler(function(error){
+
+        content.innerHTML =
+          '<div style="color:red;padding:20px;">載入失敗：' +
+          (
+            error &&
+            error.message
+            ? error.message
+            : error
+          ) +
+          '</div>';
+
+      })
+      .getUiTestPageContent(
+        pageObj.path
+      );
+
+  }
+
+
+  function renderSidebar(){
+
+    sidebar.innerHTML =
+      '';
+
+    testPages.forEach(function(page,index){
+
+      var btn =
+        document.createElement('button');
+
+      btn.className =
+        'testNavButton';
+
+      btn.textContent =
+        page.name;
+
+      btn.onclick =
+        function(){
+          loadPage(
+            page,
+            btn
+          );
+        };
+
+      sidebar.appendChild(
+        btn
+      );
+
+      /*
+        預設先載入 Button，方便你現在測 primary。
+        之後穩定後可改成 index === 0。
+      */
+      if(page.id === 'UiButtonTest'){
+        setTimeout(function(){
+          loadPage(
+            page,
+            btn
+          );
+        },0);
+      }
+
+    });
+
+  }
+
+
+  document.addEventListener(
+    'DOMContentLoaded',
+    renderSidebar
+  );
+
+})();
+</script>
 
 </body>
 </html>

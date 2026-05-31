@@ -4,6 +4,10 @@
    01_按鈕 / UiButton
 ===================================== */
 
+:root{
+  --skh-btn-primary-bg:#344f9f;
+}
+
 .skh-btn{
   border:1px solid transparent;
   border-radius:var(--skh-radius);
@@ -53,13 +57,13 @@
 /* Role */
 
 .skh-btn-primary{
-  background:#344f9f;
-  color:#ffffff;
-  border-color:#344f9f;
+  background:var(--skh-btn-primary-bg);
+  color:var(--skh-btn-primary-text);
+  border-color:var(--skh-btn-primary-border);
 }
 
 .skh-btn-primary:hover{
-  background:#2f478f;
+  background:var(--skh-btn-primary-bg);
 }
 
 .skh-btn-secondary{
