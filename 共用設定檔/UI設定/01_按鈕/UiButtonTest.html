@@ -3,7 +3,7 @@
   <h2>01 UiButton Theme Editor</h2>
 
   <p class="testNote">
-    第一階段只測試 Primary。畫面會等 Sheet 樣式載入完成後才顯示，避免先出現舊樣式再跳新樣式。
+    第一階段測試 Primary。支援色票修改、CSS 直接貼回、即時套用、從 Sheet 重讀、儲存到 Sheet、恢復預設。
   </p>
 
   <div class="testCard">
@@ -11,7 +11,6 @@
     <h3>演示</h3>
 
     <div class="testRow">
-
       <button class="skh-btn skh-btn-primary">
         儲存
       </button>
@@ -24,6 +23,9 @@
         儲存中
       </button>
 
+      <button class="skh-btn skh-btn-primary skh-btn-full">
+        批次儲存
+      </button>
     </div>
 
   </div>
@@ -32,32 +34,55 @@
 
     <h3>目前設定</h3>
 
-    <label for="primaryBgPicker">
-      Primary 背景色
-    </label>
-
-    <input
-      id="primaryBgPicker"
-      type="color"
+    <div
       style="
-        width:120px;
-        height:50px;
-        margin-top:8px;
+        display:grid;
+        grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+        gap:14px;
       "
     >
 
-    <div style="margin-top:16px">
+      <label>
+        背景色 background
+        <input
+          id="primaryBgPicker"
+          type="color"
+          style="width:100%;height:48px;margin-top:8px;"
+        >
+      </label>
+
+      <label>
+        文字色 color
+        <input
+          id="primaryTextPicker"
+          type="color"
+          style="width:100%;height:48px;margin-top:8px;"
+        >
+      </label>
+
+      <label>
+        邊框色 border-color
+        <input
+          id="primaryBorderPicker"
+          type="color"
+          style="width:100%;height:48px;margin-top:8px;"
+        >
+      </label>
+
+    </div>
+
+    <div class="testRow" style="margin-top:16px;">
 
       <button
         class="skh-btn skh-btn-secondary"
-        onclick="applyPrimaryBg()"
+        onclick="applyPrimaryFromInputs()"
       >
         套用
       </button>
 
       <button
         class="skh-btn skh-btn-primary"
-        onclick="savePrimaryBg()"
+        onclick="savePrimaryTheme()"
       >
         儲存到 Sheet
       </button>
@@ -69,6 +94,13 @@
         從 Sheet 重讀
       </button>
 
+      <button
+        class="skh-btn skh-btn-danger"
+        onclick="resetPrimaryDefault()"
+      >
+        恢復預設
+      </button>
+
     </div>
 
   </div>
@@ -77,20 +109,42 @@
 
     <h3>目前 CSS</h3>
 
+    <p class="testNote">
+      這裡可以直接貼 CSS 回來。按「套用 CSS」只改畫面，不會存 Sheet。
+    </p>
+
     <textarea
       id="cssPreview"
-      readonly
       style="
         width:100%;
-        min-height:120px;
+        min-height:150px;
         padding:12px;
         border:1px solid #dbe4ef;
         border-radius:10px;
         font-family:monospace;
+        font-size:13px;
         resize:vertical;
         box-sizing:border-box;
       "
     ></textarea>
+
+    <div class="testRow" style="margin-top:12px;">
+
+      <button
+        class="skh-btn skh-btn-secondary"
+        onclick="applyPrimaryFromCss()"
+      >
+        套用 CSS
+      </button>
+
+      <button
+        class="skh-btn skh-btn-primary"
+        onclick="savePrimaryTheme()"
+      >
+        儲存 CSS 到 Sheet
+      </button>
+
+    </div>
 
   </div>
 
@@ -108,82 +162,279 @@
 <script>
 (function(){
 
-  function getPrimaryBg(){
+  var DEFAULT_PRIMARY = {
+    bg:'#344f9f',
+    text:'#ffffff',
+    border:'#344f9f'
+  };
 
-    var picker =
-      document.getElementById('primaryBgPicker');
+  var currentPrimary = {
+    bg:DEFAULT_PRIMARY.bg,
+    text:DEFAULT_PRIMARY.text,
+    border:DEFAULT_PRIMARY.border
+  };
 
-    return picker && picker.value
-      ? picker.value
-      : '#344f9f';
+
+  function getEl(id){
+    return document.getElementById(id);
+  }
+
+
+  function setStatus(message, tone){
+
+    var status =
+      getEl('themeStatus');
+
+    if(!status){
+      return;
+    }
+
+    status.textContent =
+      message || '';
+
+    if(tone === 'error'){
+      status.style.color = '#b42318';
+      return;
+    }
+
+    if(tone === 'success'){
+      status.style.color = '#15803d';
+      return;
+    }
+
+    if(tone === 'dirty'){
+      status.style.color = '#ca8a04';
+      return;
+    }
+
+    status.style.color = '#64748b';
 
   }
 
 
-  function setPrimaryBg(value){
+  function normalizeColor(value, fallback){
+
+    value =
+      String(value || '').trim();
+
+    if(/^#[0-9a-fA-F]{6}$/.test(value)){
+      return value.toLowerCase();
+    }
+
+    if(/^#[0-9a-fA-F]{3}$/.test(value)){
+      return (
+        '#' +
+        value[1] + value[1] +
+        value[2] + value[2] +
+        value[3] + value[3]
+      ).toLowerCase();
+    }
+
+    return fallback;
+
+  }
+
+
+  function setPrimaryVars(primary){
 
     document.documentElement.style.setProperty(
       '--skh-btn-primary-bg',
-      value
+      primary.bg
+    );
+
+    document.documentElement.style.setProperty(
+      '--skh-btn-primary-text',
+      primary.text
+    );
+
+    document.documentElement.style.setProperty(
+      '--skh-btn-primary-border',
+      primary.border
     );
 
   }
 
 
-  window.updateCssPreview =
-    function(){
+  function writeInputs(primary){
 
-      var bg =
-        getPrimaryBg();
+    var bgPicker =
+      getEl('primaryBgPicker');
 
-      var preview =
-        document.getElementById('cssPreview');
+    var textPicker =
+      getEl('primaryTextPicker');
 
-      if(!preview){
-        return;
-      }
+    var borderPicker =
+      getEl('primaryBorderPicker');
 
-      preview.value =
+    if(bgPicker){
+      bgPicker.value =
+        primary.bg;
+    }
+
+    if(textPicker){
+      textPicker.value =
+        primary.text;
+    }
+
+    if(borderPicker){
+      borderPicker.value =
+        primary.border;
+    }
+
+  }
+
+
+  function readInputs(){
+
+    return {
+      bg:normalizeColor(
+        getEl('primaryBgPicker') ? getEl('primaryBgPicker').value : '',
+        DEFAULT_PRIMARY.bg
+      ),
+      text:normalizeColor(
+        getEl('primaryTextPicker') ? getEl('primaryTextPicker').value : '',
+        DEFAULT_PRIMARY.text
+      ),
+      border:normalizeColor(
+        getEl('primaryBorderPicker') ? getEl('primaryBorderPicker').value : '',
+        DEFAULT_PRIMARY.border
+      )
+    };
+
+  }
+
+
+  function writeCssPreview(primary){
+
+    var preview =
+      getEl('cssPreview');
+
+    if(!preview){
+      return;
+    }
+
+    preview.value =
 `.skh-btn-primary{
-  background:${bg};
-  color:#ffffff;
-  border-color:${bg};
+  background:${primary.bg};
+  color:${primary.text};
+  border-color:${primary.border};
+}
+
+.skh-btn-primary:hover{
+  background:${primary.bg};
+  border-color:${primary.border};
 }`;
 
+  }
+
+
+  function parseCssPreview(){
+
+    var preview =
+      getEl('cssPreview');
+
+    var css =
+      preview
+      ? preview.value
+      : '';
+
+    var bgMatch =
+      css.match(/background\s*:\s*([^;]+)\s*;/i);
+
+    var colorMatch =
+      css.match(/(?:^|[\s{;])color\s*:\s*([^;]+)\s*;/i);
+
+    var borderMatch =
+      css.match(/border-color\s*:\s*([^;]+)\s*;/i);
+
+    return {
+      bg:normalizeColor(
+        bgMatch ? bgMatch[1] : '',
+        currentPrimary.bg
+      ),
+      text:normalizeColor(
+        colorMatch ? colorMatch[1] : '',
+        currentPrimary.text
+      ),
+      border:normalizeColor(
+        borderMatch ? borderMatch[1] : '',
+        currentPrimary.border
+      )
     };
+
+  }
+
+
+  function applyPrimary(primary, options){
+
+    options =
+      options || {};
+
+    currentPrimary = {
+      bg:primary.bg,
+      text:primary.text,
+      border:primary.border
+    };
+
+    setPrimaryVars(
+      currentPrimary
+    );
+
+    writeInputs(
+      currentPrimary
+    );
+
+    writeCssPreview(
+      currentPrimary
+    );
+
+    if(options.status){
+      setStatus(
+        options.status,
+        options.tone
+      );
+    }
+
+  }
 
 
   window.applyButtonTheme =
     function(data){
 
-      var bg =
-        data &&
-        data.primary &&
-        data.primary.bg
-        ? data.primary.bg
-        : '#344f9f';
+      var primary =
+        {
+          bg:DEFAULT_PRIMARY.bg,
+          text:DEFAULT_PRIMARY.text,
+          border:DEFAULT_PRIMARY.border
+        };
 
-      var picker =
-        document.getElementById('primaryBgPicker');
+      if(data && data.primary){
+        primary.bg =
+          normalizeColor(
+            data.primary.bg,
+            primary.bg
+          );
 
-      if(picker){
-        picker.value =
-          bg;
+        primary.text =
+          normalizeColor(
+            data.primary.text,
+            primary.text
+          );
+
+        primary.border =
+          normalizeColor(
+            data.primary.border,
+            primary.bg
+          );
       }
 
-      setPrimaryBg(
-        bg
+      applyPrimary(
+        primary,
+        {
+          status:'已從 Sheet 載入',
+          tone:'success'
+        }
       );
-
-      updateCssPreview();
-
-      var status =
-        document.getElementById('themeStatus');
-
-      if(status){
-        status.textContent =
-          '已從 Sheet 載入';
-      }
 
     };
 
@@ -191,13 +442,10 @@
   window.loadButtonTheme =
     function(done){
 
-      var status =
-        document.getElementById('themeStatus');
-
-      if(status){
-        status.textContent =
-          '讀取中...';
-      }
+      setStatus(
+        '讀取中...',
+        ''
+      );
 
       google.script.run
         .withSuccessHandler(function(data){
@@ -213,16 +461,16 @@
         })
         .withFailureHandler(function(err){
 
-          if(status){
-            status.textContent =
-              '讀取失敗：' +
-              (
-                err &&
-                err.message
-                ? err.message
-                : err
-              );
-          }
+          setStatus(
+            '讀取失敗：' +
+            (
+              err &&
+              err.message
+              ? err.message
+              : err
+            ),
+            'error'
+          );
 
           if(typeof done === 'function'){
             done();
@@ -234,89 +482,178 @@
     };
 
 
-  window.applyPrimaryBg =
+  window.applyPrimaryFromInputs =
     function(){
 
-      var value =
-        getPrimaryBg();
-
-      setPrimaryBg(
-        value
+      applyPrimary(
+        readInputs(),
+        {
+          status:'已套用，尚未儲存',
+          tone:'dirty'
+        }
       );
-
-      updateCssPreview();
-
-      var status =
-        document.getElementById('themeStatus');
-
-      if(status){
-        status.textContent =
-          '已套用，尚未儲存';
-      }
 
     };
 
 
-  window.savePrimaryBg =
+  window.applyPrimaryFromCss =
     function(){
 
-      var value =
-        getPrimaryBg();
-
-      setPrimaryBg(
-        value
+      applyPrimary(
+        parseCssPreview(),
+        {
+          status:'已套用 CSS，尚未儲存',
+          tone:'dirty'
+        }
       );
 
-      updateCssPreview();
+    };
 
-      var status =
-        document.getElementById('themeStatus');
 
-      if(status){
-        status.textContent =
-          '儲存中...';
+  window.resetPrimaryDefault =
+    function(){
+
+      applyPrimary(
+        DEFAULT_PRIMARY,
+        {
+          status:'已恢復預設，尚未儲存',
+          tone:'dirty'
+        }
+      );
+
+    };
+
+
+  function saveJobsSequentially(jobs, index, done){
+
+    if(index >= jobs.length){
+      if(typeof done === 'function'){
+        done();
       }
+      return;
+    }
 
-      google.script.run
-        .withSuccessHandler(function(){
+    var job =
+      jobs[index];
 
-          if(status){
-            status.textContent =
-              '已儲存到 Sheet';
-          }
+    google.script.run
+      .withSuccessHandler(function(){
+        saveJobsSequentially(
+          jobs,
+          index + 1,
+          done
+        );
+      })
+      .withFailureHandler(function(err){
 
-        })
-        .withFailureHandler(function(err){
-
-          if(status){
-            status.textContent =
-              '儲存失敗：' +
-              (
-                err &&
-                err.message
-                ? err.message
-                : err
-              );
-          }
-
-        })
-        .saveButtonCssSetting(
-          'primary',
-          'bg',
-          value
+        setStatus(
+          '儲存失敗：' +
+          (
+            err &&
+            err.message
+            ? err.message
+            : err
+          ),
+          'error'
         );
 
+      })
+      .saveButtonCssSetting(
+        job.className,
+        job.property,
+        job.value
+      );
+
+  }
+
+
+  window.savePrimaryTheme =
+    function(){
+
+      /*
+        儲存前先吃 textarea。
+        這樣如果你直接貼 CSS，按儲存也會存進 Sheet。
+      */
+      var primary =
+        parseCssPreview();
+
+      applyPrimary(
+        primary,
+        {
+          status:'儲存中...',
+          tone:''
+        }
+      );
+
+      var jobs = [
+        {
+          className:'primary',
+          property:'bg',
+          value:primary.bg
+        },
+        {
+          className:'primary',
+          property:'text',
+          value:primary.text
+        },
+        {
+          className:'primary',
+          property:'border',
+          value:primary.border
+        }
+      ];
+
+      saveJobsSequentially(
+        jobs,
+        0,
+        function(){
+
+          setStatus(
+            '已儲存 Primary 到 Sheet',
+            'success'
+          );
+
+        }
+      );
+
     };
 
 
-  var picker =
-    document.getElementById('primaryBgPicker');
+  var bgPicker =
+    getEl('primaryBgPicker');
 
-  if(picker){
-    picker.addEventListener(
+  var textPicker =
+    getEl('primaryTextPicker');
+
+  var borderPicker =
+    getEl('primaryBorderPicker');
+
+  [bgPicker,textPicker,borderPicker].forEach(function(input){
+
+    if(!input){
+      return;
+    }
+
+    input.addEventListener(
       'input',
       function(){
-        applyPrimaryBg();
+        applyPrimaryFromInputs();
+      }
+    );
+
+  });
+
+  var cssPreview =
+    getEl('cssPreview');
+
+  if(cssPreview){
+    cssPreview.addEventListener(
+      'input',
+      function(){
+        setStatus(
+          'CSS 已修改，按「套用 CSS」預覽，或按「儲存 CSS 到 Sheet」保存',
+          'dirty'
+        );
       }
     );
   }
