@@ -14,14 +14,6 @@
   window.__SKH_UI_THEME_LOADER_LOADED__ =
     true;
 
-  var COMPONENT_LOADERS = [
-    {
-      name:'button',
-      getter:'getButtonCssSettings',
-      prefix:'--skh-btn-'
-    }
-  ];
-
   function kebab(value){
     return String(value)
       .replace(/[A-Z]/g,function(match){
@@ -34,6 +26,106 @@
       name,
       value
     );
+  }
+
+  function applyBaseTheme(data){
+
+    if(!data){
+      return;
+    }
+
+    var map = {
+      brand:{
+        primary:'--skh-primary',
+        primarySoft:'--skh-primary-soft',
+        danger:'--skh-danger',
+        success:'--skh-success',
+        warning:'--skh-warning'
+      },
+      page:{
+        bg:'--skh-page-bg',
+        text:'--skh-page-text',
+        muted:'--skh-page-muted'
+      },
+      surface:{
+        bg:'--skh-surface-bg',
+        border:'--skh-surface-border',
+        shadow:'--skh-surface-shadow'
+      },
+      radius:{
+        base:'--skh-radius',
+        sm:'--skh-radius-sm',
+        lg:'--skh-radius-lg',
+        pill:'--skh-radius-pill'
+      },
+      space:{
+        xs:'--skh-space-xs',
+        sm:'--skh-space-sm',
+        md:'--skh-space-md',
+        lg:'--skh-space-lg',
+        xl:'--skh-space-xl'
+      },
+      font:{
+        family:'--skh-font-family',
+        size:'--skh-font-size',
+        sizeSm:'--skh-font-size-sm',
+        sizeLg:'--skh-font-size-lg',
+        weight:'--skh-font-weight',
+        weightBold:'--skh-font-weight-bold',
+        lineHeight:'--skh-line-height'
+      },
+      motion:{
+        duration:'--skh-transition-duration',
+        easing:'--skh-transition-easing'
+      },
+      layout:{
+        containerMaxWidth:'--skh-container-max-width',
+        containerPadding:'--skh-container-padding',
+        sectionGap:'--skh-section-gap'
+      }
+    };
+
+    Object.keys(data).forEach(function(className){
+
+      Object.keys(data[className] || {}).forEach(function(property){
+
+        if(
+          map[className] &&
+          map[className][property]
+        ){
+
+          setRootVar(
+            map[className][property],
+            data[className][property]
+          );
+
+        }
+        else{
+
+          setRootVar(
+            '--skh-' + className + '-' + kebab(property),
+            data[className][property]
+          );
+
+        }
+
+      });
+
+    });
+
+    if(
+      data.motion &&
+      data.motion.duration &&
+      data.motion.easing
+    ){
+
+      setRootVar(
+        '--skh-transition',
+        data.motion.duration + ' ' + data.motion.easing
+      );
+
+    }
+
   }
 
   function applyButtonTheme(data){
@@ -61,6 +153,12 @@
 
     if(!payload){
       return;
+    }
+
+    if(payload.base){
+      applyBaseTheme(
+        payload.base
+      );
     }
 
     if(payload.button){
@@ -134,14 +232,6 @@
 
     }
 
-    /*
-      優先走新版總入口：
-      ensureUiThemeDatabase()
-      - 沒有 Sheet 就建立
-      - 缺 token 就補齊
-      getUiThemeSettings()
-      - 一次回傳所有元件設定
-    */
     runGoogleFunction(
       'ensureUiThemeDatabase',
       function(){
@@ -159,10 +249,7 @@
           },
           function(){
 
-            /*
-              fallback：目前先支援 Button 舊入口。
-            */
-            loadButtonOnlyTheme(
+            loadLegacyTheme(
               finish
             );
 
@@ -172,19 +259,13 @@
       },
       function(){
 
-        /*
-          fallback：如果還沒建立總入口，就用舊 Button getter。
-        */
-        loadButtonOnlyTheme(
+        loadLegacyTheme(
           finish
         );
 
       }
     );
 
-    /*
-      保險：避免後端沒有回應時卡住頁面。
-    */
     setTimeout(function(){
 
       finish();
@@ -193,29 +274,66 @@
 
   }
 
-  function loadButtonOnlyTheme(done){
+  function loadLegacyTheme(done){
 
-    runGoogleFunction(
-      'getButtonCssSettings',
-      function(data){
+    var pending = 0;
+    var doneCalled = false;
 
-        applyButtonTheme(
-          data
-        );
+    function oneDone(){
 
-        if(typeof done === 'function'){
-          done();
-        }
+      pending -= 1;
 
-      },
-      function(){
+      if(pending <= 0 && !doneCalled){
+        doneCalled = true;
 
         if(typeof done === 'function'){
           done();
         }
-
       }
-    );
+
+    }
+
+    if(
+      typeof google !== 'undefined' &&
+      google.script &&
+      google.script.run
+    ){
+
+      if(typeof google.script.run.getBaseCssSettings === 'function'){
+        pending += 1;
+
+        runGoogleFunction(
+          'getBaseCssSettings',
+          function(data){
+            applyBaseTheme(data);
+            oneDone();
+          },
+          oneDone
+        );
+      }
+
+      if(typeof google.script.run.getButtonCssSettings === 'function'){
+        pending += 1;
+
+        runGoogleFunction(
+          'getButtonCssSettings',
+          function(data){
+            applyButtonTheme(data);
+            oneDone();
+          },
+          oneDone
+        );
+      }
+
+    }
+
+    if(pending === 0){
+      doneCalled = true;
+
+      if(typeof done === 'function'){
+        done();
+      }
+    }
 
   }
 
@@ -224,6 +342,9 @@
 
   window.applyUiThemePayload =
     applyUiThemePayload;
+
+  window.applyBaseThemeFromSheet =
+    applyBaseTheme;
 
   window.applyButtonThemeFromSheet =
     applyButtonTheme;
