@@ -1,0 +1,252 @@
+<script>
+/* =====================================
+   SKH Design System v1
+   00_基礎 / UiThemeLoader
+   頁面載入後自動讀取 UI Sheet 設定，覆蓋 CSS Variables
+===================================== */
+
+(function(){
+
+  if(window.__SKH_UI_THEME_LOADER_LOADED__){
+    return;
+  }
+
+  window.__SKH_UI_THEME_LOADER_LOADED__ =
+    true;
+
+  var COMPONENT_LOADERS = [
+    {
+      name:'button',
+      getter:'getButtonCssSettings',
+      prefix:'--skh-btn-'
+    }
+  ];
+
+  function kebab(value){
+    return String(value)
+      .replace(/[A-Z]/g,function(match){
+        return '-' + match.toLowerCase();
+      });
+  }
+
+  function setRootVar(name,value){
+    document.documentElement.style.setProperty(
+      name,
+      value
+    );
+  }
+
+  function applyButtonTheme(data){
+
+    if(!data){
+      return;
+    }
+
+    Object.keys(data).forEach(function(className){
+
+      Object.keys(data[className] || {}).forEach(function(property){
+
+        setRootVar(
+          '--skh-btn-' + className + '-' + kebab(property),
+          data[className][property]
+        );
+
+      });
+
+    });
+
+  }
+
+  function applyUiThemePayload(payload){
+
+    if(!payload){
+      return;
+    }
+
+    if(payload.button){
+      applyButtonTheme(
+        payload.button
+      );
+    }
+
+  }
+
+  function runGoogleFunction(functionName,onSuccess,onFailure){
+
+    if(
+      typeof google === 'undefined' ||
+      !google.script ||
+      !google.script.run ||
+      typeof google.script.run[functionName] !== 'function'
+    ){
+
+      if(typeof onFailure === 'function'){
+        onFailure(
+          new Error(functionName + ' not found')
+        );
+      }
+
+      return;
+
+    }
+
+    google.script.run
+      .withSuccessHandler(function(result){
+
+        if(typeof onSuccess === 'function'){
+          onSuccess(result);
+        }
+
+      })
+      .withFailureHandler(function(error){
+
+        if(typeof onFailure === 'function'){
+          onFailure(error);
+        }
+
+      })[functionName]();
+
+  }
+
+  function loadUiTheme(done){
+
+    var finished =
+      false;
+
+    function finish(){
+
+      if(finished){
+        return;
+      }
+
+      finished =
+        true;
+
+      if(typeof done === 'function'){
+        done();
+      }
+
+      window.dispatchEvent(
+        new CustomEvent(
+          'skh-ui-theme-loaded'
+        )
+      );
+
+    }
+
+    /*
+      優先走新版總入口：
+      ensureUiThemeDatabase()
+      - 沒有 Sheet 就建立
+      - 缺 token 就補齊
+      getUiThemeSettings()
+      - 一次回傳所有元件設定
+    */
+    runGoogleFunction(
+      'ensureUiThemeDatabase',
+      function(){
+
+        runGoogleFunction(
+          'getUiThemeSettings',
+          function(payload){
+
+            applyUiThemePayload(
+              payload
+            );
+
+            finish();
+
+          },
+          function(){
+
+            /*
+              fallback：目前先支援 Button 舊入口。
+            */
+            loadButtonOnlyTheme(
+              finish
+            );
+
+          }
+        );
+
+      },
+      function(){
+
+        /*
+          fallback：如果還沒建立總入口，就用舊 Button getter。
+        */
+        loadButtonOnlyTheme(
+          finish
+        );
+
+      }
+    );
+
+    /*
+      保險：避免後端沒有回應時卡住頁面。
+    */
+    setTimeout(function(){
+
+      finish();
+
+    },2500);
+
+  }
+
+  function loadButtonOnlyTheme(done){
+
+    runGoogleFunction(
+      'getButtonCssSettings',
+      function(data){
+
+        applyButtonTheme(
+          data
+        );
+
+        if(typeof done === 'function'){
+          done();
+        }
+
+      },
+      function(){
+
+        if(typeof done === 'function'){
+          done();
+        }
+
+      }
+    );
+
+  }
+
+  window.loadUiTheme =
+    loadUiTheme;
+
+  window.applyUiThemePayload =
+    applyUiThemePayload;
+
+  window.applyButtonThemeFromSheet =
+    applyButtonTheme;
+
+  function autoLoad(){
+
+    loadUiTheme();
+
+  }
+
+  if(document.readyState === 'loading'){
+
+    document.addEventListener(
+      'DOMContentLoaded',
+      autoLoad
+    );
+
+  }
+  else{
+
+    autoLoad();
+
+  }
+
+})();
+</script>
