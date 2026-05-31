@@ -3,8 +3,7 @@
   <h2>01 UiButton Theme Editor</h2>
 
   <p class="testNote">
-    第一階段只測試 Primary。
-    修改後可立即套用到畫面，確認沒問題再儲存到 Sheet。
+    第一階段只測試 Primary。畫面會等 Sheet 樣式載入完成後才顯示，避免先出現舊樣式再跳新樣式。
   </p>
 
   <div class="testCard">
@@ -33,7 +32,7 @@
 
     <h3>目前設定</h3>
 
-    <label>
+    <label for="primaryBgPicker">
       Primary 背景色
     </label>
 
@@ -89,6 +88,7 @@
         border-radius:10px;
         font-family:monospace;
         resize:vertical;
+        box-sizing:border-box;
       "
     ></textarea>
 
@@ -106,161 +106,220 @@
 </section>
 
 <script>
+(function(){
 
-function updateCssPreview(){
+  function getPrimaryBg(){
 
-  const bg =
-    document.getElementById(
-      'primaryBgPicker'
-    ).value;
+    var picker =
+      document.getElementById('primaryBgPicker');
 
-  document.getElementById(
-    'cssPreview'
-  ).value =
+    return picker && picker.value
+      ? picker.value
+      : '#344f9f';
+
+  }
+
+
+  function setPrimaryBg(value){
+
+    document.documentElement.style.setProperty(
+      '--skh-btn-primary-bg',
+      value
+    );
+
+  }
+
+
+  window.updateCssPreview =
+    function(){
+
+      var bg =
+        getPrimaryBg();
+
+      var preview =
+        document.getElementById('cssPreview');
+
+      if(!preview){
+        return;
+      }
+
+      preview.value =
 `.skh-btn-primary{
   background:${bg};
   color:#ffffff;
   border-color:${bg};
 }`;
 
-}
+    };
 
-function applyButtonTheme(data){
 
-  if(
-    data &&
-    data.primary &&
-    data.primary.bg
-  ){
+  window.applyButtonTheme =
+    function(data){
 
-    document.documentElement.style.setProperty(
-      '--skh-btn-primary-bg',
-      data.primary.bg
+      var bg =
+        data &&
+        data.primary &&
+        data.primary.bg
+        ? data.primary.bg
+        : '#344f9f';
+
+      var picker =
+        document.getElementById('primaryBgPicker');
+
+      if(picker){
+        picker.value =
+          bg;
+      }
+
+      setPrimaryBg(
+        bg
+      );
+
+      updateCssPreview();
+
+      var status =
+        document.getElementById('themeStatus');
+
+      if(status){
+        status.textContent =
+          '已從 Sheet 載入';
+      }
+
+    };
+
+
+  window.loadButtonTheme =
+    function(done){
+
+      var status =
+        document.getElementById('themeStatus');
+
+      if(status){
+        status.textContent =
+          '讀取中...';
+      }
+
+      google.script.run
+        .withSuccessHandler(function(data){
+
+          applyButtonTheme(
+            data
+          );
+
+          if(typeof done === 'function'){
+            done();
+          }
+
+        })
+        .withFailureHandler(function(err){
+
+          if(status){
+            status.textContent =
+              '讀取失敗：' +
+              (
+                err &&
+                err.message
+                ? err.message
+                : err
+              );
+          }
+
+          if(typeof done === 'function'){
+            done();
+          }
+
+        })
+        .getButtonCssSettings();
+
+    };
+
+
+  window.applyPrimaryBg =
+    function(){
+
+      var value =
+        getPrimaryBg();
+
+      setPrimaryBg(
+        value
+      );
+
+      updateCssPreview();
+
+      var status =
+        document.getElementById('themeStatus');
+
+      if(status){
+        status.textContent =
+          '已套用，尚未儲存';
+      }
+
+    };
+
+
+  window.savePrimaryBg =
+    function(){
+
+      var value =
+        getPrimaryBg();
+
+      setPrimaryBg(
+        value
+      );
+
+      updateCssPreview();
+
+      var status =
+        document.getElementById('themeStatus');
+
+      if(status){
+        status.textContent =
+          '儲存中...';
+      }
+
+      google.script.run
+        .withSuccessHandler(function(){
+
+          if(status){
+            status.textContent =
+              '已儲存到 Sheet';
+          }
+
+        })
+        .withFailureHandler(function(err){
+
+          if(status){
+            status.textContent =
+              '儲存失敗：' +
+              (
+                err &&
+                err.message
+                ? err.message
+                : err
+              );
+          }
+
+        })
+        .saveButtonCssSetting(
+          'primary',
+          'bg',
+          value
+        );
+
+    };
+
+
+  var picker =
+    document.getElementById('primaryBgPicker');
+
+  if(picker){
+    picker.addEventListener(
+      'input',
+      function(){
+        applyPrimaryBg();
+      }
     );
-
-    document.getElementById(
-      'primaryBgPicker'
-    ).value =
-      data.primary.bg;
-
-    updateCssPreview();
-
   }
 
-  document.getElementById(
-    'themeStatus'
-  ).textContent =
-    '已從 Sheet 載入';
-
-}
-
-function loadButtonTheme(done){
-
-  document.getElementById(
-    'themeStatus'
-  ).textContent =
-    '讀取中...';
-
-  google.script.run
-    .withSuccessHandler(function(data){
-
-      applyButtonTheme(data);
-
-      if(typeof done === 'function'){
-        done();
-      }
-
-    })
-    .withFailureHandler(function(err){
-
-      document.getElementById(
-        'themeStatus'
-      ).textContent =
-        '讀取失敗：' +
-        err.message;
-
-      if(typeof done === 'function'){
-        done();
-      }
-
-    })
-    .getButtonCssSettings();
-
-}
-
-function applyPrimaryBg(){
-
-  const value =
-    document.getElementById(
-      'primaryBgPicker'
-    ).value;
-
-  document.documentElement.style.setProperty(
-    '--skh-btn-primary-bg',
-    value
-  );
-
-  updateCssPreview();
-
-  document.getElementById(
-    'themeStatus'
-  ).textContent =
-    '已套用，尚未儲存';
-
-}
-
-function savePrimaryBg(){
-
-  const value =
-    document.getElementById(
-      'primaryBgPicker'
-    ).value;
-
-  document.getElementById(
-    'themeStatus'
-  ).textContent =
-    '儲存中...';
-
-  google.script.run
-    .withSuccessHandler(
-      function(){
-
-        document.getElementById(
-          'themeStatus'
-        ).textContent =
-          '已儲存到 Sheet';
-
-      }
-    )
-    .withFailureHandler(
-      function(err){
-
-        document.getElementById(
-          'themeStatus'
-        ).textContent =
-          '儲存失敗：' +
-          err.message;
-
-      }
-    )
-    .saveButtonCssSetting(
-      'primary',
-      'bg',
-      value
-    );
-
-}
-
-document
-  .getElementById(
-    'primaryBgPicker'
-  )
-  ?.addEventListener(
-    'input',
-    updateCssPreview
-  );
-
-window.loadButtonTheme =
-  loadButtonTheme;
-
+})();
 </script>

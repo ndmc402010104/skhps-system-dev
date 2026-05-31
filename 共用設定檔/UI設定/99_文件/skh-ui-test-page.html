@@ -221,52 +221,46 @@ body{
 
   function revealWhenThemeReady(pageObj, wrapper, loadingEl){
 
-    function reveal(){
-      if(loadingEl && loadingEl.parentNode){
-        loadingEl.parentNode.removeChild(loadingEl);
-      }
-
-      wrapper.style.display =
-        '';
-    }
+  function reveal(){
 
     if(
-      pageObj.id === 'UiButtonTest' &&
-      typeof window.loadButtonTheme === 'function'
+      loadingEl &&
+      loadingEl.parentNode
     ){
-
-      var revealed =
-        false;
-
-      function done(){
-        if(revealed){
-          return;
-        }
-
-        revealed =
-          true;
-
-        reveal();
-      }
-
-      /*
-        UiButtonTest 如果支援 callback，theme 載入完成才顯示。
-        如果舊版不支援 callback，0.8 秒後也會顯示，避免永遠卡住。
-      */
-      window.loadButtonTheme(done);
-
-      setTimeout(
-        done,
-        800
+      loadingEl.parentNode.removeChild(
+        loadingEl
       );
-
-      return;
     }
 
-    reveal();
+    wrapper.style.display =
+      '';
 
   }
 
+  /*
+    Button Theme：
+    一定等 Sheet Theme 載入完成才顯示。
+    不准先顯示舊樣式。
+  */
+  if(
+    pageObj.id === 'UiButtonTest' &&
+    typeof window.loadButtonTheme === 'function'
+  ){
+
+    window.loadButtonTheme(function(){
+
+      reveal();
+
+    });
+
+    return;
+
+  }
+
+  reveal();
+
+}
+  
   function loadPage(pageObj, btn){
 
     activateButton(btn);
