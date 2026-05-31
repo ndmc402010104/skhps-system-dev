@@ -136,6 +136,14 @@ function doGet(e){
 
 }
 
+function getUiTestPageContent(pageName) {
+  try {
+    return HtmlService.createTemplateFromFile(pageName).evaluate().getContent();
+  } catch (e) {
+    return '<h3>找不到測試頁面：</h3><p></p>';
+  }
+}
+
 function doPost(e){
 
   let action = '';
