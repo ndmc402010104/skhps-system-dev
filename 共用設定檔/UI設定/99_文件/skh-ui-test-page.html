@@ -250,6 +250,26 @@ body{
 }
 
 
+/*
+  防二次載入：
+  新頁面先放進 DOM 但保持不可見，讓 script/theme 可以先跑完。
+  等 callback + DOM 變動穩定後，再一次移除 loading 並顯示內容。
+*/
+.ui-test-stage.is-preparing{
+  visibility:hidden;
+  opacity:0;
+  pointer-events:none;
+}
+
+.ui-test-stage.is-ready{
+  visibility:visible;
+  opacity:1;
+  pointer-events:auto;
+  transition:opacity .12s ease;
+}
+
+
+
 .ui-loading-box{
   padding:40px;
   text-align:center;
@@ -507,21 +527,44 @@ body{
 
   function revealWhenThemeReady(pageObj, wrapper, loadingEl, requestId){
 
-    var revealed =
-      false;
+    var revealed = false;
+    var visualIdleTimer = null;
+    var visualIdleObserver = null;
+    var visualIdleHardTimer = null;
 
-    function reveal(){
+    function cleanupVisualWait(){
+      if(visualIdleTimer){
+        clearTimeout(visualIdleTimer);
+        visualIdleTimer = null;
+      }
+
+      if(visualIdleHardTimer){
+        clearTimeout(visualIdleHardTimer);
+        visualIdleHardTimer = null;
+      }
+
+      if(visualIdleObserver){
+        visualIdleObserver.disconnect();
+        visualIdleObserver = null;
+      }
+    }
+
+    function revealNow(){
 
       if(revealed){
         return;
       }
 
       if(requestId !== activeRequestId){
+        cleanupVisualWait();
         return;
       }
 
-      revealed =
-        true;
+      revealed = true;
+      cleanupVisualWait();
+
+      wrapper.classList.remove('is-preparing');
+      wrapper.classList.add('is-ready');
 
       if(
         loadingEl &&
@@ -532,43 +575,86 @@ body{
         );
       }
 
-      wrapper.style.display =
-        '';
-
       setSidebarLocked(false);
 
     }
 
-    function safeThemeLoad(loader){
+    function revealAfterPaint(){
+      requestAnimationFrame(function(){
+        requestAnimationFrame(function(){
+          revealNow();
+        });
+      });
+    }
 
-      var timeoutId =
-        setTimeout(function(){
+    function waitForVisualIdle(){
+      /*
+        關鍵：theme/builder 常常 callback 先回來，DOM style 或色塊再補一輪。
+        所以不是 callback 後立刻顯示，而是等 DOM 120ms 沒變動再顯示。
+        但最多等 2200ms，避免真的卡住。
+      */
+      if(requestId !== activeRequestId){
+        cleanupVisualWait();
+        return;
+      }
 
-          reveal();
+      function scheduleReveal(){
+        if(visualIdleTimer){
+          clearTimeout(visualIdleTimer);
+        }
 
-        },1800);
+        visualIdleTimer = setTimeout(function(){
+          revealAfterPaint();
+        },120);
+      }
 
       try{
-
-        loader(function(){
-
-          clearTimeout(
-            timeoutId
-          );
-
-          reveal();
-
+        visualIdleObserver = new MutationObserver(function(){
+          scheduleReveal();
         });
 
+        visualIdleObserver.observe(wrapper,{
+          childList:true,
+          subtree:true,
+          attributes:true,
+          attributeFilter:['class','style','disabled','checked','value']
+        });
       }
       catch(err){
+        revealAfterPaint();
+        return;
+      }
 
-        clearTimeout(
-          timeoutId
-        );
+      visualIdleHardTimer = setTimeout(function(){
+        revealAfterPaint();
+      },2200);
 
-        reveal();
+      scheduleReveal();
+    }
 
+    function safeThemeLoad(loader){
+
+      var doneCalled = false;
+
+      function done(){
+        if(doneCalled){
+          return;
+        }
+
+        doneCalled = true;
+        clearTimeout(timeoutId);
+        waitForVisualIdle();
+      }
+
+      var timeoutId = setTimeout(function(){
+        done();
+      },1800);
+
+      try{
+        loader(done);
+      }
+      catch(err){
+        done();
       }
 
     }
@@ -606,58 +692,47 @@ body{
 
     function runPageThemeLoader(){
 
-      var loader =
-        getThemeLoader();
+      var loader = getThemeLoader();
 
       if(loader){
-        safeThemeLoad(
-          loader
-        );
+        safeThemeLoad(loader);
         return;
       }
 
-      reveal();
+      waitForVisualIdle();
 
     }
 
-    /*
-      Future-ready:
-      若之後新增 00_基礎/UiThemeLoader.html 並提供 window.loadUiTheme(done)，
-      這裡會先載全站 token，再載入單頁 builder 自己的資料。
-      目前沒有 UiThemeLoader 也不會卡住。
-    */
     if(
       typeof window.loadUiTheme === 'function'
     ){
 
-      var globalTimeoutId =
-        setTimeout(function(){
+      var globalDoneCalled = false;
+      var globalTimeoutId = null;
 
-          runPageThemeLoader();
+      function globalDone(){
+        if(globalDoneCalled){
+          return;
+        }
 
-        },1200);
+        globalDoneCalled = true;
 
-      try{
-
-        window.loadUiTheme(function(){
-
-          clearTimeout(
-            globalTimeoutId
-          );
-
-          runPageThemeLoader();
-
-        });
-
-      }
-      catch(err){
-
-        clearTimeout(
-          globalTimeoutId
-        );
+        if(globalTimeoutId){
+          clearTimeout(globalTimeoutId);
+        }
 
         runPageThemeLoader();
+      }
 
+      globalTimeoutId = setTimeout(function(){
+        globalDone();
+      },1200);
+
+      try{
+        window.loadUiTheme(globalDone);
+      }
+      catch(err){
+        globalDone();
       }
 
       return;
@@ -716,8 +791,8 @@ body{
         var wrapper =
           document.createElement('div');
 
-        wrapper.style.display =
-          'none';
+        wrapper.className =
+          'ui-test-stage is-preparing';
 
         wrapper.innerHTML =
           html;
