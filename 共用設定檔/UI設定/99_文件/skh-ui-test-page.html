@@ -335,8 +335,48 @@ body{
           pageObj.id === 'UiButtonTest' &&
           typeof window.loadButtonTheme === 'function'
         ){
-          window.loadButtonTheme();
-        }
+          content.innerHTML =
+            '<div style="padding:40px;text-align:center;color:#64748b;">讀取樣式設定中...</div>';
+
+          var hiddenWrap =
+            document.createElement('div');
+
+          hiddenWrap.style.display =
+            'none';
+
+          hiddenWrap.innerHTML =
+            html;
+
+          content.innerHTML =
+            '';
+
+          content.appendChild(
+            hiddenWrap
+          );
+
+          runInsertedScripts(
+            hiddenWrap
+          );
+
+          if(
+            pageObj.id === 'UiButtonTest' &&
+            typeof window.loadButtonTheme === 'function'
+          ){
+
+            window.loadButtonTheme(function(){
+
+              hiddenWrap.style.display =
+                '';
+
+            });
+
+          }
+          else{
+
+            hiddenWrap.style.display =
+              '';
+
+          }
 
       })
       .withFailureHandler(function(error){

@@ -154,7 +154,7 @@ function applyButtonTheme(data){
 
 }
 
-function loadButtonTheme(){
+function loadButtonTheme(done){
 
   document.getElementById(
     'themeStatus'
@@ -162,20 +162,28 @@ function loadButtonTheme(){
     '讀取中...';
 
   google.script.run
-    .withSuccessHandler(
-      applyButtonTheme
-    )
-    .withFailureHandler(
-      function(err){
+    .withSuccessHandler(function(data){
 
-        document.getElementById(
-          'themeStatus'
-        ).textContent =
-          '讀取失敗：' +
-          err.message;
+      applyButtonTheme(data);
 
+      if(typeof done === 'function'){
+        done();
       }
-    )
+
+    })
+    .withFailureHandler(function(err){
+
+      document.getElementById(
+        'themeStatus'
+      ).textContent =
+        '讀取失敗：' +
+        err.message;
+
+      if(typeof done === 'function'){
+        done();
+      }
+
+    })
     .getButtonCssSettings();
 
 }
@@ -252,9 +260,7 @@ document
     updateCssPreview
   );
 
-window.addEventListener(
-  'DOMContentLoaded',
-  loadButtonTheme
-);
+window.loadButtonTheme =
+  loadButtonTheme;
 
 </script>
