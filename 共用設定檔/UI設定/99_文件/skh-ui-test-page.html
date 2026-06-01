@@ -326,6 +326,25 @@ body{
     max-height:62vh;
   }
 }
+
+/* =====================================
+   Anti flash：避免 input[type=color] 先顯示瀏覽器預設黑色
+   ===================================== */
+.ui-preload-wrapper{
+  min-width:0;
+}
+
+.ui-preload-wrapper.skh-theme-not-ready input[type="color"]{
+  opacity:0 !important;
+}
+
+.ui-preload-wrapper.skh-theme-not-ready .skh-color-swatch,
+.ui-preload-wrapper.skh-theme-not-ready .color-swatch,
+.ui-preload-wrapper.skh-theme-not-ready [data-color-preview],
+.ui-preload-wrapper.skh-theme-not-ready [data-theme-preview]{
+  opacity:0 !important;
+}
+
 </style>
 </head>
 
@@ -370,14 +389,12 @@ body{
   var isLoadingPage = false;
 
   /*
-    二次載入處理原則：
-    1. getUiTestPageContent 回來後，不直接顯示。
-    2. 先放進不可見但有 layout 的 preload wrapper。
-       不用 display:none，避免頁面內 script 量不到寬度。
-    3. 執行插入頁面的 script。
-    4. 先跑全域 theme loader，再跑單頁 theme loader。
-    5. 不由父層重跑 theme loader，避免二次把色塊重設成黑色。
-    6. 等 DOM mutation、字型、色塊值都穩定後，才一次 reveal。
+    修正策略：
+    1. 父頁只負責 AJAX include；不再主動重跑各元件 theme loader，避免重設成黑色。
+    2. 子頁先放進 visibility:hidden 的 wrapper，讓 script 可以量寬，但使用者看不到預設狀態。
+    3. UiStyleTest 的 input[type=color] 在 theme 未完成前額外 cloak，避免 #000000 閃一下。
+    4. 最多等待固定時間；等不到也會顯示內容，不會再卡在「讀取不到」。
+    5. 若顯示時色票仍未完成，色票會繼續隱藏；一旦變成非黑色就自動解除 cloak。
   */
 
   window.getCurrentUiTestState = function(){
@@ -389,10 +406,6 @@ body{
       hasLoadButtonTheme:typeof window.loadButtonTheme,
       hasLoadUiTheme:typeof window.loadUiTheme
     };
-  };
-
-  window.notifyUiTestReady = function(){
-    window.dispatchEvent(new CustomEvent('skh-ui-test-ready'));
   };
 
   function wrapTables(container){
@@ -408,14 +421,15 @@ body{
 
       var wrap = document.createElement('div');
       wrap.className = 'testTableScroll';
-
       table.parentNode.insertBefore(wrap, table);
       wrap.appendChild(table);
     });
   }
 
   function runInsertedScripts(container){
-    var scripts = container.querySelectorAll('script');
+    var scripts = Array.prototype.slice.call(
+      container.querySelectorAll('script')
+    );
 
     scripts.forEach(function(oldScript){
       var newScript = document.createElement('script');
@@ -458,23 +472,6 @@ body{
     }
   }
 
-  function forceUnlockIfStuck(requestId){
-    setTimeout(function(){
-      if(
-        isLoadingPage &&
-        requestId === activeRequestId
-      ){
-        setSidebarLocked(false);
-
-        var loadingEl = content.querySelector('[data-ui-loading]');
-        if(loadingEl){
-          loadingEl.querySelector('div:last-child').textContent =
-            '讀取較久，已解除選單鎖定；可重新選擇頁面。';
-        }
-      }
-    },5000);
-  }
-
   function showLoading(message){
     content.innerHTML =
       '<div class="ui-loading-box" data-ui-loading="1">' +
@@ -487,12 +484,15 @@ body{
 
   function updateLoading(message){
     var loadingEl = content.querySelector('[data-ui-loading]');
+
     if(loadingEl){
       loadingEl.querySelector('div:last-child').textContent = message;
     }
   }
 
   function showError(error){
+    setSidebarLocked(false);
+
     content.innerHTML =
       '<div class="ui-error-box">載入失敗：' +
       (error && error.message ? error.message : error) +
@@ -502,7 +502,9 @@ body{
   function makePreloadWrapper(html){
     var wrapper = document.createElement('div');
 
+    wrapper.className = 'ui-preload-wrapper skh-theme-not-ready';
     wrapper.setAttribute('data-ui-preload-wrapper','1');
+
     wrapper.style.visibility = 'hidden';
     wrapper.style.pointerEvents = 'none';
     wrapper.style.position = 'absolute';
@@ -517,7 +519,149 @@ body{
     return wrapper;
   }
 
-  function revealPreloadedWrapper(wrapper, requestId){
+  function waitFrames(count, done){
+    if(count <= 0){
+      done();
+      return;
+    }
+
+    requestAnimationFrame(function(){
+      waitFrames(count - 1, done);
+    });
+  }
+
+  function getColorInputs(wrapper){
+    return Array.prototype.slice.call(
+      wrapper.querySelectorAll('input[type="color"]')
+    );
+  }
+
+  function colorInputsReady(wrapper){
+    var inputs = getColorInputs(wrapper);
+
+    if(inputs.length < 2){
+      return true;
+    }
+
+    var nonBlackCount = 0;
+
+    inputs.forEach(function(input){
+      var value = String(input.value || '').toLowerCase();
+
+      if(
+        value &&
+        value !== '#000000' &&
+        value !== '#000'
+      ){
+        nonBlackCount += 1;
+      }
+    });
+
+    return nonBlackCount > 0;
+  }
+
+  function releaseColorCloakWhenReady(wrapper, requestId){
+    var start = Date.now();
+    var maxWait = 8000;
+
+    function check(){
+      if(requestId !== activeRequestId){
+        return;
+      }
+
+      if(
+        colorInputsReady(wrapper) ||
+        Date.now() - start >= maxWait
+      ){
+        wrapper.classList.remove('skh-theme-not-ready');
+        return;
+      }
+
+      setTimeout(check,120);
+    }
+
+    check();
+  }
+
+  function waitDomQuiet(wrapper, done){
+    var start = Date.now();
+    var lastChange = Date.now();
+    var maxWait = 2200;
+    var minWait = 450;
+    var quietWait = 180;
+
+    var observer = new MutationObserver(function(){
+      lastChange = Date.now();
+    });
+
+    try{
+      observer.observe(wrapper, {
+        childList:true,
+        subtree:true,
+        attributes:true,
+        characterData:true
+      });
+    }
+    catch(err){}
+
+    function finish(){
+      try{ observer.disconnect(); }catch(err){}
+      done();
+    }
+
+    function check(){
+      var now = Date.now();
+
+      if(
+        (now - start >= minWait && now - lastChange >= quietWait) ||
+        now - start >= maxWait
+      ){
+        finish();
+        return;
+      }
+
+      setTimeout(check,70);
+    }
+
+    check();
+  }
+
+  function waitVisualReady(pageObj, wrapper, done){
+    var start = Date.now();
+    var minWait = 550;
+    var maxWait = 2600;
+    var readyPass = 0;
+
+    function check(){
+      var elapsed = Date.now() - start;
+      var ready = true;
+
+      if(pageObj.id === 'UiStyleTest'){
+        ready = colorInputsReady(wrapper);
+      }
+
+      if(ready){
+        readyPass += 1;
+      }
+      else{
+        readyPass = 0;
+      }
+
+      if(
+        (elapsed >= minWait && readyPass >= 2) ||
+        elapsed >= maxWait
+      ){
+        done();
+        return;
+      }
+
+      setTimeout(check,100);
+    }
+
+    check();
+  }
+
+  function revealWrapper(wrapper, requestId){
     if(requestId !== activeRequestId){
       return;
     }
@@ -537,220 +681,8 @@ body{
     wrapper.style.minHeight = '';
 
     setSidebarLocked(false);
-  }
 
-  function waitAnimationFrames(count, done){
-    if(count <= 0){
-      done();
-      return;
-    }
-
-    requestAnimationFrame(function(){
-      waitAnimationFrames(count - 1, done);
-    });
-  }
-
-  function waitFontsReady(done){
-    if(
-      document.fonts &&
-      typeof document.fonts.ready === 'object' &&
-      typeof document.fonts.ready.then === 'function'
-    ){
-      document.fonts.ready.then(function(){
-        done();
-      }).catch(function(){
-        done();
-      });
-      return;
-    }
-
-    done();
-  }
-
-  function waitDomQuiet(container, options, done){
-    var minWait = options.minWait || 450;
-    var quietWait = options.quietWait || 260;
-    var maxWait = options.maxWait || 2800;
-
-    var start = Date.now();
-    var lastChange = Date.now();
-    var stopped = false;
-
-    var observer = new MutationObserver(function(){
-      lastChange = Date.now();
-    });
-
-    try{
-      observer.observe(container, {
-        childList:true,
-        subtree:true,
-        attributes:true,
-        characterData:true
-      });
-    }
-    catch(err){}
-
-    function finish(){
-      if(stopped){
-        return;
-      }
-      stopped = true;
-      try{ observer.disconnect(); }catch(err){}
-      done();
-    }
-
-    function check(){
-      var now = Date.now();
-      var passedMin = now - start >= minWait;
-      var quiet = now - lastChange >= quietWait;
-      var timeout = now - start >= maxWait;
-
-      if(
-        (passedMin && quiet) ||
-        timeout
-      ){
-        finish();
-        return;
-      }
-
-      setTimeout(check,80);
-    }
-
-    check();
-  }
-
-  function hasMostlyBlackColorControls(wrapper){
-    var colorInputs = Array.prototype.slice.call(
-      wrapper.querySelectorAll('input[type="color"]')
-    );
-
-    if(colorInputs.length < 2){
-      return false;
-    }
-
-    var blackCount = 0;
-    var nonBlackCount = 0;
-
-    colorInputs.forEach(function(input){
-      var value = String(input.value || '').toLowerCase();
-
-      if(
-        value === '#000000' ||
-        value === '#000' ||
-        value === ''
-      ){
-        blackCount += 1;
-      }
-      else{
-        nonBlackCount += 1;
-      }
-    });
-
-    /*
-      UiStyleTest 的色塊如果全部或幾乎全部是 #000000，通常不是設計稿顏色，
-      而是 input[type=color] 的瀏覽器預設值尚未被 theme 資料覆蓋。
-    */
-    return (
-      blackCount >= 2 &&
-      nonBlackCount === 0
-    );
-  }
-
-  function waitVisualReady(pageObj, wrapper, done){
-    var start = Date.now();
-    var minWait = 900;
-    var maxWait = 9000;
-    var stablePass = 0;
-
-    function isReady(){
-      if(pageObj.id === 'UiStyleTest'){
-        if(hasMostlyBlackColorControls(wrapper)){
-          return false;
-        }
-      }
-
-      return true;
-    }
-
-    function poll(){
-      var elapsed = Date.now() - start;
-
-      if(isReady()){
-        stablePass += 1;
-      }
-      else{
-        stablePass = 0;
-      }
-
-      if(
-        (elapsed >= minWait && stablePass >= 4) ||
-        elapsed >= maxWait
-      ){
-        done();
-        return;
-      }
-
-      setTimeout(poll,120);
-    }
-
-    poll();
-  }
-
-  function waitThemeAndPageSettled(pageObj, wrapper, requestId, done){
-    var customReadyResolved = false;
-
-    function onCustomReady(){
-      customReadyResolved = true;
-    }
-
-    window.addEventListener('skh-ui-test-ready', onCustomReady, {once:true});
-    window.addEventListener('ui-theme-ready', onCustomReady, {once:true});
-    window.addEventListener('skh-theme-ready', onCustomReady, {once:true});
-
-    /*
-      重要：這裡不再由父層主動呼叫 window.loadUiStyleTheme / loadBaseTheme / loadButtonTheme。
-      原因是插入的測試頁 script 通常已經會自己載入 theme。
-      父層再呼叫一次，會造成：先套瀏覽器預設黑色 → 再被 theme 改色，
-      使用者看到的就是「黑黑的才改顏色」。
-
-      父層現在只負責：
-      1. 先把頁面放在不可見 preload wrapper。
-      2. 執行頁面 script 一次。
-      3. 等 DOM / 字型 / 顏色控制項穩定。
-      4. 最後一次 reveal。
-    */
-    if(requestId !== activeRequestId){
-      return;
-    }
-
-    updateLoading('等待頁面樣式完成...');
-
-    waitDomQuiet(
-      wrapper,
-      {
-        minWait:900,
-        quietWait:420,
-        maxWait:5000
-      },
-      function(){
-        waitVisualReady(pageObj, wrapper, function(){
-          waitFontsReady(function(){
-            waitAnimationFrames(3,function(){
-              window.removeEventListener('skh-ui-test-ready', onCustomReady);
-              window.removeEventListener('ui-theme-ready', onCustomReady);
-              window.removeEventListener('skh-theme-ready', onCustomReady);
-
-              if(customReadyResolved){
-                waitAnimationFrames(2,done);
-                return;
-              }
-
-              done();
-            });
-          });
-        });
-      }
-    );
+    releaseColorCloakWhenReady(wrapper, requestId);
   }
 
   function loadPage(pageObj, btn){
@@ -763,9 +695,7 @@ body{
     var requestId = activeRequestId;
 
     setSidebarLocked(true);
-    forceUnlockIfStuck(requestId);
     activateButton(btn);
-
     showLoading('載入中：' + pageObj.name + '...');
 
     google.script.run
@@ -782,21 +712,21 @@ body{
         wrapTables(wrapper);
         runInsertedScripts(wrapper);
 
-        waitThemeAndPageSettled(
-          pageObj,
-          wrapper,
-          requestId,
-          function(){
-            revealPreloadedWrapper(wrapper, requestId);
-          }
-        );
+        updateLoading('等待樣式套用完成...');
+
+        waitDomQuiet(wrapper,function(){
+          waitVisualReady(pageObj, wrapper, function(){
+            waitFrames(2,function(){
+              revealWrapper(wrapper, requestId);
+            });
+          });
+        });
       })
       .withFailureHandler(function(error){
         if(requestId !== activeRequestId){
           return;
         }
 
-        setSidebarLocked(false);
         showError(error);
       })
       .getUiTestPageContent(pageObj.path);
