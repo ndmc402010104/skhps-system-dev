@@ -1,7 +1,7 @@
 ﻿<!DOCTYPE html>
 <!--
 檔案位置：科室系統用戶端/DressingFront.html
-時間戳記：2026-06-02 00:57 UTC+8
+時間戳記：2026-06-02 01:08 UTC+8
 用途：敷料領用/建檔前端；修正庫存入口 JS 載入錯誤，扣庫單位改為選單，入庫數量改為「盒＋單位」直覺輸入，盒裝缺少一盒數量時提示補登。
 -->
 <html>
@@ -3006,6 +3006,17 @@ function searchDressingMaster(query, limit){
     .map(function(entry){ return entry.item; });
 }
 
+function findDressingMasterItemByHospitalCode(hospitalCode){
+  hospitalCode = String(hospitalCode || '').trim();
+  if(!hospitalCode || !Array.isArray(dressingMasterCache)){
+    return null;
+  }
+
+  return dressingMasterCache.find(function(item){
+    return String(item && item.hospitalCode || '').trim() === hospitalCode;
+  }) || null;
+}
+
 function getSearchSuggestBox(context){
   return document.getElementById(context === 'inventory' ? 'inventorySearchSuggest' : 'dictSearchSuggest');
 }
@@ -5470,7 +5481,7 @@ if (window.location.hostname.includes('github.io')) {
   ghFooter.innerHTML = `
     <div style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">
       <span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>
-      <span>v.2.27.3-202606020058</span>
+      <span>v.2.27.3-202606020106</span>
     </div>
   `;
   document.body.appendChild(ghFooter);
@@ -5487,5 +5498,6 @@ function normalizeTextForCompare(value){
 
 </body>
 </html>
+
 
 
