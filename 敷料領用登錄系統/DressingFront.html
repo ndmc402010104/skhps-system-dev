@@ -1,8 +1,8 @@
 ﻿<!DOCTYPE html>
 <!--
 檔案位置：科室系統用戶端/DressingFront.html
-時間戳記：2026-06-02 00:45 UTC+8
-用途：敷料領用/建檔前端；恢復院內碼可輸入英文與數字，保留敷料庫存 MVP、搜尋候選與商品總量＋批號明細欄位。
+時間戳記：2026-06-02 00:50 UTC+8
+用途：敷料領用/建檔前端；庫存入庫改為庫存位置選單、盒數＋單位數輸入；盒裝GTIN缺少一盒數量時詢問並回寫主檔。
 -->
 <html>
 <head>
@@ -1070,7 +1070,11 @@ function goHome(){
     </div>
     <div class="inventoryField">
       <label>扣庫單位</label>
-      <input id="inventoryUnit" placeholder="例如 5A護理站">
+      <select id="inventoryUnit">
+        <option value="">請選擇</option>
+        <option value="5A">5A</option>
+        <option value="傷口照護中心">傷口照護中心</option>
+      </select>
     </div>
     <div class="inventoryField">
       <label>批號</label>
@@ -1080,19 +1084,16 @@ function goHome(){
       <label>效期</label>
       <input id="inventoryExp" type="date">
     </div>
-    <div class="inventoryField">
-      <label>入庫計算單位</label>
-      <select id="inventoryQtyMode" onchange="renderInventoryQuantityHint()">
-        <option value="unit">單位</option>
-        <option value="box">盒</option>
-      </select>
+    <div class="inventoryField" id="inventoryBoxQtyField" style="display:none;">
+      <label>本次入庫盒數</label>
+      <input id="inventoryBoxQty" type="number" inputmode="decimal" min="0" step="0.01" placeholder="例如 1" oninput="renderInventoryQuantityHint()">
     </div>
     <div class="inventoryField">
-      <label>本次數量</label>
-      <input id="inventoryQty" type="number" inputmode="decimal" min="0" step="0.01" placeholder="例如 1">
+      <label>本次入庫單位數</label>
+      <input id="inventoryUnitQty" type="number" inputmode="decimal" min="0" step="0.01" placeholder="例如 1" oninput="renderInventoryQuantityHint()">
     </div>
     <div class="inventoryField">
-      <label>換算後庫存數量</label>
+      <label>實際增加庫存</label>
       <input id="inventoryFinalQty" readonly>
     </div>
     <div class="inventoryField">
@@ -4786,27 +4787,139 @@ function renderInventoryLookupBox(){
   box.innerHTML = `
     <div class="inventoryLookupTitle">${escapeHtml(item.dressingName || '已找到敷料')} ${escapeHtml(item.size || '')}</div>
     <div>院內碼：${escapeHtml(item.hospitalCode || '')}</div>
-    <div>本次掃描判斷：${escapeHtml(packageText)}；換算數量：${escapeHtml(unitQty)}</div>
+    <div>本次掃描判斷：${escapeHtml(packageText)}${Number(item.boxQuantity || 0) > 0 ? '；一盒 ' + escapeHtml(item.boxQuantity) + ' 單位' : ''}</div>
     <div>GTIN：${escapeHtml(parsed.gtin || '')}</div>
     <div>批號：${escapeHtml(parsed.lot || '') || '尚未帶入'}；效期：${escapeHtml(parsed.exp || '') || '尚未帶入'}</div>
   `;
 }
 
-function renderInventoryQuantityHint(){
-  const qtyInput = document.getElementById('inventoryQty');
-  const modeInput = document.getElementById('inventoryQtyMode');
-  const finalInput = document.getElementById('inventoryFinalQty');
-  const qty = Number(qtyInput ? qtyInput.value : 0) || 0;
-  const boxQty = Number(inventoryLookupState && inventoryLookupState.item ? inventoryLookupState.item.boxQuantity : 1) || 1;
-  const mode = modeInput ? modeInput.value : 'unit';
-  const finalQty = mode === 'box' ? qty * boxQty : qty;
-  if(finalInput) finalInput.value = finalQty ? String(finalQty) : '';
+function getInventoryBoxQuantity(){
+  const item = inventoryLookupState && inventoryLookupState.item ? inventoryLookupState.item : null;
+  const boxQty = Number(item && item.boxQuantity ? item.boxQuantity : 0);
+  return Number.isFinite(boxQty) && boxQty > 0 ? boxQty : 0;
 }
 
-function fillInventoryFormFromLookup(result, parsed){
+function calculateInventoryFinalQty(){
+  const boxQty = getInventoryBoxQuantity();
+  const boxInput = document.getElementById('inventoryBoxQty');
+  const unitInput = document.getElementById('inventoryUnitQty');
+
+  const boxCount = boxQty > 0 ? (Number(boxInput ? boxInput.value : 0) || 0) : 0;
+  const unitCount = Number(unitInput ? unitInput.value : 0) || 0;
+  const finalQty = boxCount * boxQty + unitCount;
+
+  return Number.isFinite(finalQty) ? finalQty : 0;
+}
+
+function renderInventoryQuantityHint(){
+  const boxQty = getInventoryBoxQuantity();
+  const boxField = document.getElementById('inventoryBoxQtyField');
+  const boxInput = document.getElementById('inventoryBoxQty');
+  const finalInput = document.getElementById('inventoryFinalQty');
+
+  if(boxField){
+    boxField.style.display = boxQty > 0 ? '' : 'none';
+  }
+
+  if(boxQty <= 0 && boxInput){
+    boxInput.value = '';
+  }
+
+  const finalQty = calculateInventoryFinalQty();
+
+  if(finalInput){
+    if(finalQty > 0 && boxQty > 0){
+      const boxCount = Number(boxInput ? boxInput.value : 0) || 0;
+      const unitCount = Number(document.getElementById('inventoryUnitQty') ? document.getElementById('inventoryUnitQty').value : 0) || 0;
+      const parts = [];
+      if(boxCount > 0) parts.push(boxCount + '盒 × ' + boxQty);
+      if(unitCount > 0) parts.push(unitCount + '單位');
+      finalInput.value = String(finalQty) + ' 單位' + (parts.length ? '（' + parts.join(' + ') + '）' : '');
+    } else {
+      finalInput.value = finalQty > 0 ? String(finalQty) + ' 單位' : '';
+    }
+  }
+}
+
+async function ensureInventoryBoxQuantityForBoxScan(result, parsed){
+  result = result || {};
+  parsed = parsed || {};
+  const item = result.data || result.item || null;
+
+  if(!item){
+    return null;
+  }
+
+  const scannedGtin = parsed.gtin || '';
+  const isBoxScan =
+    result.packageType === 'box' ||
+    (scannedGtin && sameGtin(scannedGtin, item.boxGtin || ''));
+
+  if(!isBoxScan){
+    return item;
+  }
+
+  const currentBoxQty = Number(item.boxQuantity || 0);
+  if(Number.isFinite(currentBoxQty) && currentBoxQty > 0){
+    return item;
+  }
+
+  const answer = await showInputDialog(
+    '盒裝數量未設定',
+    describeDressingItem(item) +
+      '\n\n偵測到這次掃描的是盒裝GTIN，但敷料主檔尚未設定「一盒幾單位」。\n\n請輸入一盒包含幾個最小單位：',
+    ''
+  );
+
+  if(answer === null){
+    showNotice('已取消盒裝入庫；請先設定一盒數量後再入庫。', 'warning', '已取消');
+    return null;
+  }
+
+  const boxQty = Number(String(answer || '').trim());
+  if(!Number.isFinite(boxQty) || boxQty <= 0){
+    showNotice('一盒數量必須大於 0。', 'warning', '數量錯誤');
+    return null;
+  }
+
+  const updatedItem = Object.assign({}, item, {
+    boxQuantity:String(boxQty),
+    boxGtin:item.boxGtin || scannedGtin
+  });
+
+  try{
+    const saveRes = await saveBarcode({
+      originalGtin:item.singleGtin || item.gtin || '',
+      originalBoxGtin:item.boxGtin || '',
+      hospitalCode:item.hospitalCode || '',
+      singleGtin:item.singleGtin || item.gtin || '',
+      gtin:item.singleGtin || item.gtin || '',
+      dressingName:item.dressingName || '',
+      size:item.size || '',
+      category:item.category || '',
+      boxGtin:updatedItem.boxGtin || '',
+      boxQuantity:String(boxQty),
+      status:item.status || '使用中'
+    });
+
+    if(!saveRes || !saveRes.ok){
+      throw new Error((saveRes && saveRes.message) || '一盒數量回寫失敗');
+    }
+
+    updateDressingMasterCacheItem(updatedItem);
+    showNotice('已回寫主檔：一盒 ' + boxQty + ' 單位', 'success', '盒裝數量已設定');
+  } catch(error){
+    showNotice('一盒數量回寫失敗：' + (error.message || error), 'error', '主檔更新失敗');
+    return null;
+  }
+
+  return updatedItem;
+}
+
+async function fillInventoryFormFromLookup(result, parsed){
   result = result || {};
   parsed = parsed || result.parsed || {};
-  const item = result.data || result.item || null;
+  let item = result.data || result.item || null;
 
   if(!item || !item.hospitalCode){
     inventoryLookupState = null;
@@ -4815,32 +4928,36 @@ function fillInventoryFormFromLookup(result, parsed){
     return;
   }
 
+  item = await ensureInventoryBoxQuantityForBoxScan(result, parsed);
+  if(!item){
+    inventoryLookupState = null;
+    renderInventoryLookupBox();
+    renderInventoryQuantityHint();
+    return;
+  }
+
+  const boxQty = Number(item.boxQuantity || 0) || 0;
+
   inventoryLookupState = {
     item:item,
     parsed:parsed,
     packageType:result.packageType || '',
-    unitQuantity:Number(result.unitQuantity || item.boxQuantity || 1) || 1
+    unitQuantity:boxQty > 0 ? boxQty : 1
   };
 
   document.getElementById('inventoryHospitalCode').value = item.hospitalCode || '';
   if(parsed.lot) document.getElementById('inventoryLot').value = parsed.lot;
   if(parsed.exp) document.getElementById('inventoryExp').value = parsed.exp;
 
-  const boxQty = Number(item.boxQuantity || 1) || 1;
-  const modeSelect = document.getElementById('inventoryQtyMode');
-  if(modeSelect){
-    if(boxQty > 1){
-      modeSelect.disabled = false;
-      modeSelect.value = result.packageType === 'box' ? 'box' : 'unit';
-    } else {
-      modeSelect.value = 'unit';
-      modeSelect.disabled = true;
-    }
+  const boxInput = document.getElementById('inventoryBoxQty');
+  const unitInput = document.getElementById('inventoryUnitQty');
+
+  if(boxInput && !boxInput.value){
+    boxInput.value = (result.packageType === 'box' && boxQty > 0) ? '1' : '';
   }
 
-  const qtyInput = document.getElementById('inventoryQty');
-  if(qtyInput && !qtyInput.value){
-    qtyInput.value = '1';
+  if(unitInput && !unitInput.value){
+    unitInput.value = (result.packageType === 'box' && boxQty > 0) ? '' : '1';
   }
 
   renderInventoryLookupBox();
@@ -4851,7 +4968,7 @@ function fillInventoryFormFromLookup(result, parsed){
   showNotice('已帶入敷料主檔資料，庫存清單已彙總到商品層', 'success', '查詢成功');
 }
 
-async function lookupInventoryFromInput(){
+async async function lookupInventoryFromInput(){
   const input = document.getElementById('inventoryBarcodeInput');
   const raw = String(input ? input.value : '').trim();
   if(!raw){
@@ -4872,7 +4989,7 @@ async function lookupInventoryFromInput(){
 
   try{
     const res = await lookupBarcode(parsed.gtin);
-    fillInventoryFormFromLookup(res, parsed);
+    await fillInventoryFormFromLookup(res, parsed);
   } catch(error){
     showNotice('查詢失敗：' + (error.message || error), 'error', '查詢錯誤');
   }
@@ -4900,21 +5017,18 @@ function triggerInventoryTest(type){
   lookupInventoryFromInput();
 }
 
-async function addInventoryStockFromForm(){
+async async function addInventoryStockFromForm(){
   const hospitalCode = String(document.getElementById('inventoryHospitalCode').value || '').trim();
   const stockUnit = String(document.getElementById('inventoryUnit').value || '').trim();
   const lot = String(document.getElementById('inventoryLot').value || '').trim();
   const exp = String(document.getElementById('inventoryExp').value || '').trim();
-  const qty = Number(document.getElementById('inventoryQty').value || 0);
-  const mode = String(document.getElementById('inventoryQtyMode').value || 'unit');
-  const boxQty = Number(inventoryLookupState && inventoryLookupState.item ? inventoryLookupState.item.boxQuantity : 1) || 1;
-  const finalQty = mode === 'box' ? qty * boxQty : qty;
+  const finalQty = calculateInventoryFinalQty();
 
   if(!hospitalCode){ showNotice('請先查詢敷料主檔', 'warning'); return; }
-  if(!stockUnit){ showNotice('請輸入扣庫單位，例如 5A護理站', 'warning'); return; }
+  if(!stockUnit){ showNotice('請選擇扣庫單位', 'warning'); return; }
   if(!lot){ showNotice('請輸入批號', 'warning'); return; }
   if(!exp){ showNotice('請輸入效期', 'warning'); return; }
-  if(!Number.isFinite(finalQty) || finalQty <= 0){ showNotice('請輸入有效數量', 'warning'); return; }
+  if(!Number.isFinite(finalQty) || finalQty <= 0){ showNotice('請輸入有效入庫數量', 'warning'); return; }
 
   try{
     const res = await addInventoryStock({
@@ -4929,8 +5043,11 @@ async function addInventoryStockFromForm(){
       throw new Error((res && res.message) || '入庫失敗');
     }
 
-    showNotice('已入庫，庫存數量 +' + finalQty, 'success', res.merged ? '已累加既有批號' : '已新增批號庫存');
-    document.getElementById('inventoryQty').value = '';
+    showNotice('已入庫，庫存數量 +' + finalQty + ' 單位', 'success', res.merged ? '已累加既有批號' : '已新增批號庫存');
+    const boxInput = document.getElementById('inventoryBoxQty');
+    const unitInput = document.getElementById('inventoryUnitQty');
+    if(boxInput) boxInput.value = '';
+    if(unitInput) unitInput.value = '';
     renderInventoryQuantityHint();
     await loadInventoryList({ hospitalCode:hospitalCode });
   } catch(error){
@@ -5350,7 +5467,7 @@ if (window.location.hostname.includes('github.io')) {
   ghFooter.innerHTML = `
     <div style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">
       <span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>
-      <span>v.2.27.3-202606020046</span>
+      <span>v.2.27.3-202606020052</span>
     </div>
   `;
   document.body.appendChild(ghFooter);
