@@ -1,3 +1,33 @@
+<!--
+檔案位置：共用設定檔/UI設定/00_基礎/UiStyleTest.html
+時間戳記：2026-06-01 17:30
+用途：UiStyle Theme Editor；顯示與編輯 00_基礎 Sheet 的 Brand / Page / Surface / Radius / Spacing / Font / Motion / Layout tokens。初次 render 後會先套 fallback，再自動讀取 Sheet 設定覆蓋，避免 color input 停在瀏覽器預設 #000000。
+
+依賴後端檔案：
+- 共用設定檔/UI設定/00_基礎/UiStyleCssSetting.gs
+
+依賴後端函式：
+- getBaseCssSettings()：讀取目前系統設定。
+- getBaseDefaultCssSettings()：讀取 default 設定。
+- saveBaseCssSetting(className, property, value)：儲存目前系統設定。
+- saveBaseDefaultCssSetting(className, property, value)：儲存新的 default 設定。
+
+初始化流程：
+1. bootBaseEditor()
+2. render() 建立編輯器 DOM。
+3. init() 建立前端 state。
+4. bind() 綁定按鈕、input、CSS textarea 事件。
+5. applyLoaded(localThemeData(), localThemeData()) 先套本頁 fallback，讓色票立即不是 #000000。
+6. loadBaseTheme() 呼叫後端 getBaseCssSettings() / getBaseDefaultCssSettings()。
+7. applyLoaded(currentData, defaultData) 將 Sheet 設定寫入 state、CSS variables、color input、CSS preview。
+8. dispatchUiStyleReady() 發出 skh-ui-style-ready / skh-ui-test-ready，供父頁或其他測試工具監聽。
+
+2026-06-01 除錯紀錄：
+- 症狀：UiStyleTest 初次載入時 Brand 色票全為 #000000，按下「編輯」後才變成 Sheet 顏色。
+- 根因：本頁只定義 window.loadBaseTheme()，但 render 後沒有主動呼叫。
+- 修正：bootBaseEditor() render/init/bind 後，先套 fallback，再主動呼叫 window.loadBaseTheme()。
+- 若復發：優先檢查 bootBaseEditor() 是否執行，以及 loadBaseTheme() 是否成功進到 applyLoaded() / writeInputs()。
+-->
 <section class="testSection">
 
   <h2>00 UiStyle / 基礎樣式 Theme Editor</h2>
@@ -326,6 +356,32 @@
 
 <script>
 (function(){
+
+  /*
+    UiStyleTest 前端責任邊界
+
+    本檔負責：
+    - 建立 Theme Editor 畫面。
+    - 從 00_基礎 Sheet 讀取 current/default token。
+    - 將 token 寫入 CSS variables、表單 input、CSS preview。
+    - 儲存 current/default token。
+
+    本檔不負責：
+    - 左側頁面選單。
+    - 動態 include 其他測試頁。
+    - 跨元件全域 ThemeLoader 的 button/form/table 設定。
+
+    資料流：
+    00_基礎 Sheet
+      ↓ UiStyleCssSetting.gs
+    getBaseCssSettings() / getBaseDefaultCssSettings()
+      ↓ google.script.run
+    loadBaseTheme()
+      ↓
+    applyLoaded()
+      ↓
+    writeInputs() + writeCss() + setVars()
+  */
 
   var SHADOW_PRESETS = {
     none:'none',
@@ -2086,6 +2142,25 @@
     });
   }
 
+  /*
+    將後端回傳資料套入整個編輯器。
+
+    currentData 來源：
+    - 後端 getBaseCssSettings()
+    - Sheet：00_基礎
+    - 代表目前系統正在使用的 token。
+
+    defaultData 來源：
+    - 後端 getBaseDefaultCssSettings()
+    - Sheet：00_基礎
+    - 代表 default token。
+
+    本函式會同步更新：
+    - state[key].current / original / defaultValue
+    - :root CSS variables
+    - color input / number input / select
+    - CSS preview textarea
+  */
   function applyLoaded(currentData,defaultData){
     CONFIG.forEach(function(cfg){
       var key = cfg.key;
@@ -2146,6 +2221,27 @@
     return data;
   }
 
+  /*
+    Theme 初始化入口。
+
+    呼叫來源：
+    - bootBaseEditor()：本頁初次載入時自動呼叫。
+    - 外部工具也可手動呼叫 window.loadBaseTheme(done)。
+
+    後端依賴：
+    1. getBaseCssSettings()
+       讀取目前 Sheet 設定。
+    2. getBaseDefaultCssSettings()
+       讀取 default Sheet 設定。
+
+    成功後：
+    - applyLoaded(currentData, defaultData)
+    - setBusy(false)
+    - 執行 done callback
+
+    失敗時：
+    - 套用 localThemeData() fallback，避免畫面停在 #000000 或空白。
+  */
   window.loadBaseTheme = function(done){
 
     function finish(){
@@ -2539,17 +2635,82 @@
     CONFIG_BY_KEY[cfg.key] = cfg;
   });
 
-  render();
-  init();
-  bind();
+  function dispatchUiStyleReady(detail){
+    try{
+      window.dispatchEvent(
+        new CustomEvent(
+          'skh-ui-style-ready',
+          {
+            detail:detail || {}
+          }
+        )
+      );
 
-  CONFIG.forEach(function(cfg){
-    setInputsEnabled(cfg.key,false);
-    setCssLocked(cfg.key,true);
-    refresh(cfg.key);
-  });
+      window.dispatchEvent(
+        new CustomEvent(
+          'skh-ui-test-ready',
+          {
+            detail:detail || {}
+          }
+        )
+      );
+    }
+    catch(err){}
+  }
 
-  updateBasePlayground();
+  function bootBaseEditor(){
+    /*
+      2026-06-01 關鍵修正：
+
+      原本 UiStyleTest 只定義 window.loadBaseTheme / window.loadUiStyleTheme，
+      但本頁自己沒有在 render 後主動呼叫，所以 input[type=color] 會維持
+      瀏覽器預設 #000000，直到按「編輯」後才被其他流程寫入。
+
+      正確流程：
+      1. render()：先建立全部 DOM。
+      2. init()：建立 state。
+      3. bind()：綁定事件。
+      4. applyLoaded(localThemeData(), localThemeData())：立即套 fallback。
+      5. loadBaseTheme()：非同步向後端 getBaseCssSettings() / getBaseDefaultCssSettings() 讀 Sheet。
+      6. applyLoaded(currentData, defaultData)：Sheet 回來後覆蓋 fallback。
+
+      若未來再次出現黑色色票，先檢查這段是否仍有執行。
+    */
+
+    render();
+    init();
+    bind();
+
+    applyLoaded(
+      localThemeData(),
+      localThemeData()
+    );
+
+    setStatus(
+      '讀取 Sheet 設定中...',
+      ''
+    );
+
+    window.__SKH_UISTYLE_AUTOLOAD__ = {
+      startedAt:new Date().toISOString(),
+      source:'UiStyleTest bootBaseEditor'
+    };
+
+    window.loadBaseTheme(function(){
+      window.__SKH_UISTYLE_AUTOLOAD__.finishedAt =
+        new Date().toISOString();
+
+      dispatchUiStyleReady({
+        source:'loadBaseTheme',
+        page:'UiStyleTest',
+        finishedAt:window.__SKH_UISTYLE_AUTOLOAD__.finishedAt
+      });
+    });
+
+    updateBasePlayground();
+  }
+
+  bootBaseEditor();
 
 })();
 </script>

@@ -1,9 +1,27 @@
 <script>
-/* =====================================
-   SKH Design System v1
-   00_基礎 / UiThemeLoader
-   Debug version：載入 UI Sheet 設定並發出 timing event
-===================================== */
+/*
+檔案位置：共用設定檔/UI設定/00_基礎/UiThemeLoader.html
+時間戳記：2026-06-01 17:30
+用途：全域 Theme Loader；頁面載入時讀取 UI Sheet 設定，寫入 :root CSS variables，並發出 theme ready event。正式版無 alert。
+
+依賴後端函式：
+- ensureUiThemeDatabase()：確認 UI Theme Sheet / token 結構存在。
+- getUiThemeSettings()：讀取整包 Theme payload，建議回傳 { base:{...}, button:{...} }。
+
+Legacy fallback：
+- getBaseCssSettings()：讀取 00_基礎 current 設定。
+- getButtonCssSettings()：讀取 01_按鈕 current 設定。
+
+事件：
+- skh-ui-theme-loaded：ThemeLoader 流程結束時發出。
+- skh-ui-theme-sheet-applied：成功套用 getUiThemeSettings() payload 時發出。
+- skh-ui-theme-error：後端逾時或失敗時發出。
+- skh-ui-theme-fallback-used：改走 legacy fallback 時發出。
+
+2026-06-01 除錯紀錄：
+- UiStyleTest 黑色色票的根因不是本檔，而是 UiStyleTest 沒有主動呼叫 loadBaseTheme()。
+- 本檔保留較長 timeout，避免 Sheet 回傳超過 2500ms 時被過早判定完成。
+*/
 
 (function(){
 
@@ -247,16 +265,38 @@
       if(run.finishedAt){
         return;
       }
-      run.source = run.source || 'timeout-before-sheet-returned';
-      run.error = run.error || 'loadUiTheme timeout 2500ms before Sheet payload completed';
+
+      /*
+        重要修正：
+        原本 2500ms 會直接 finish，導致 Sheet 還沒回來就宣告 theme loaded。
+        你的實測 ensureUiThemeDatabase 約 8 秒、getUiThemeSettings 約 9 秒，
+        所以這裡只發 warning event，不提早 finish。
+        真正 finish 只在 Sheet payload 成功 apply、legacy 成功、或 15000ms hard timeout。
+      */
       dispatchThemeEvent('skh-ui-theme-error', {
         runId:run.runId,
-        source:run.source,
-        error:run.error,
+        source:'still-waiting-for-sheet',
+        error:'Sheet payload not returned after 3000ms; keep waiting',
         timings:{totalMs:now() - run.startedAt}
       });
-      finish();
-    },2500);
+
+      timeoutId = setTimeout(function(){
+        if(run.finishedAt){
+          return;
+        }
+
+        run.source = run.source || 'hard-timeout-before-sheet-returned';
+        run.error = run.error || 'loadUiTheme hard timeout 15000ms before Sheet payload completed';
+        dispatchThemeEvent('skh-ui-theme-error', {
+          runId:run.runId,
+          source:run.source,
+          error:run.error,
+          timings:{totalMs:now() - run.startedAt}
+        });
+        finish();
+      },12000);
+
+    },3000);
 
     run.ensureStartAt = now();
 
