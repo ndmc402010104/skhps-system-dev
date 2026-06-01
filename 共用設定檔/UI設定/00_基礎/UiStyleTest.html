@@ -1,6 +1,6 @@
 <!--
 檔案位置：共用設定檔/UI設定/00_基礎/UiStyleTest.html
-時間戳記：2026-06-01 17:30
+時間戳記：2026-06-01 23:59
 用途：UiStyle Theme Editor；顯示與編輯 00_基礎 Sheet 的 Brand / Page / Surface / Radius / Spacing / Font / Motion / Layout tokens。初次 render 後會先套 fallback，再自動讀取 Sheet 設定覆蓋，避免 color input 停在瀏覽器預設 #000000。
 
 依賴後端檔案：
@@ -20,13 +20,14 @@
 5. applyLoaded(localThemeData(), localThemeData()) 先套本頁 fallback，讓色票立即不是 #000000。
 6. loadBaseTheme() 呼叫後端 getBaseCssSettings() / getBaseDefaultCssSettings()。
 7. applyLoaded(currentData, defaultData) 將 Sheet 設定寫入 state、CSS variables、color input、CSS preview。
-8. dispatchUiStyleReady() 發出 skh-ui-style-ready / skh-ui-test-ready，供父頁或其他測試工具監聽。
+8. dispatchUiStyleReady() 發出 skh-ui-style-ready / skh-ui-test-ready，通知父頁「Sheet Theme 已套用，可以顯示畫面」。
 
 2026-06-01 除錯紀錄：
 - 症狀：UiStyleTest 初次載入時 Brand 色票全為 #000000，按下「編輯」後才變成 Sheet 顏色。
 - 根因：本頁只定義 window.loadBaseTheme()，但 render 後沒有主動呼叫。
-- 修正：bootBaseEditor() render/init/bind 後，先套 fallback，再主動呼叫 window.loadBaseTheme()。
-- 若復發：優先檢查 bootBaseEditor() 是否執行，以及 loadBaseTheme() 是否成功進到 applyLoaded() / writeInputs()。
+- 第一階段修正：bootBaseEditor() render/init/bind 後，先套 fallback，再主動呼叫 window.loadBaseTheme()。
+- 第二階段修正：父頁 skh-ui-test-page.html 會等本頁發出 skh-ui-test-ready 才 reveal，避免使用者看到 fallback → Sheet 顏色跳動。
+- 若復發：優先檢查 bootBaseEditor() 是否執行，以及 loadBaseTheme() 是否成功進到 applyLoaded() / writeInputs() / dispatchUiStyleReady()。
 -->
 <section class="testSection">
 
@@ -159,6 +160,140 @@
   display:grid;
   gap:10px;
   min-width:0;
+}
+
+#baseEditorRoot{
+  position:relative;
+  min-height:280px;
+}
+
+#baseEditorRoot.is-theme-loading{
+  display:grid;
+  place-items:center;
+}
+
+#baseEditorRoot.is-theme-loading > :not(.themeLoadingCard){
+  display:none;
+}
+
+.themeLoadingCard{
+  width:min(380px,100%);
+  display:grid;
+  justify-items:center;
+  gap:14px;
+  padding:30px 28px;
+  border:1px solid #dbe4ef;
+  border-radius:14px;
+  background:#fff;
+  box-shadow:0 14px 34px rgba(15,23,42,.08);
+  box-sizing:border-box;
+  color:#64748b;
+}
+
+.themeLoadingSpinner{
+  width:34px;
+  height:34px;
+  border-radius:50%;
+  border:4px solid #dbeafe;
+  border-top-color:#2563eb;
+  animation:themeSpin .75s linear infinite;
+}
+
+.themeLoadingTitle{
+  font-weight:800;
+  color:#334155;
+}
+
+.themeLoadingTitle::after{
+  content:"";
+  display:inline-block;
+  width:1.5em;
+  text-align:left;
+  animation:themeDots 1.2s steps(4,end) infinite;
+}
+
+.themeLoadingNote{
+  font-size:13px;
+  line-height:1.5;
+  text-align:center;
+}
+
+.themeLoadingBar{
+  width:100%;
+  height:6px;
+  overflow:hidden;
+  border-radius:999px;
+  background:#e2e8f0;
+}
+
+.themeLoadingBar::before{
+  content:"";
+  display:block;
+  width:42%;
+  height:100%;
+  border-radius:999px;
+  background:#2563eb;
+  animation:themeBar 1.15s ease-in-out infinite;
+}
+
+#baseThemeStatus.is-loading::before{
+  content:"";
+  display:inline-block;
+  width:14px;
+  height:14px;
+  margin-right:8px;
+  border-radius:50%;
+  border:2px solid #dbeafe;
+  border-top-color:#2563eb;
+  vertical-align:-2px;
+  animation:themeSpin .75s linear infinite;
+}
+
+#baseThemeStatus.is-loading::after{
+  content:"";
+  display:inline-block;
+  width:1.5em;
+  text-align:left;
+  animation:themeDots 1.2s steps(4,end) infinite;
+}
+
+#baseEditorRoot [data-action-pending="1"],
+#baseEditorRoot .is-action-loading{
+  position:relative;
+  cursor:wait;
+  opacity:.86;
+}
+
+#baseEditorRoot [data-action-pending="1"]::before,
+#baseEditorRoot .is-action-loading::before{
+  content:"";
+  display:inline-block;
+  width:14px;
+  height:14px;
+  margin-right:7px;
+  border-radius:50%;
+  border:2px solid rgba(255,255,255,.45);
+  border-top-color:currentColor;
+  vertical-align:-2px;
+  animation:themeSpin .75s linear infinite;
+}
+
+@keyframes themeSpin{
+  to{transform:rotate(360deg);}
+}
+
+@keyframes themeDots{
+  0%{content:"";}
+  25%{content:".";}
+  50%{content:"..";}
+  75%,
+  100%{content:"...";}
+}
+
+@keyframes themeBar{
+  0%{transform:translateX(-120%);}
+  55%{transform:translateX(80%);}
+  100%{transform:translateX(240%);}
 }
 
 .themeControlRow{
@@ -590,6 +725,26 @@
   var state = {};
   var isBusy = false;
   var MAX_HISTORY = 20;
+  var activeActionButton = null;
+  var resetWriteSerial = 0;
+  var pendingNativeColorInput = null;
+
+  /*
+    Native color picker action guard.
+
+    input[type="color"] 選色後若直接點「恢復 default / 復原上一動」，
+    Chrome 可能會在 action 執行後才補送 change / blur。reset 類動作要短暫忽略
+    這些晚到事件；save 類動作則先等 picker 收尾，再同步目前控制器值。
+  */
+  var actionGuard = {
+    key:null,
+    action:null,
+    suppressUntil:0
+  };
+
+  var ACTION_DELAY_MS = 40;
+  var ACTION_SUPPRESS_MS = 280;
+  var ACTION_SETTLE_TIMEOUT_MS = 320;
 
   function getEl(id){ return document.getElementById(id); }
 
@@ -1278,6 +1433,40 @@
     if(!el) return;
     el.textContent = msg || '';
     el.style.color = tone === 'error' ? '#b42318' : (tone === 'success' ? '#15803d' : '#64748b');
+    el.classList.toggle('is-loading',tone === 'loading');
+  }
+
+  function showThemeLoading(message){
+    var root = getEl('baseEditorRoot');
+    if(!root) return;
+
+    root.classList.add('is-theme-loading');
+
+    if(!root.querySelector('.themeLoadingCard')){
+      var card = document.createElement('div');
+      card.className = 'themeLoadingCard';
+      card.innerHTML =
+        '<div class="themeLoadingSpinner"></div>' +
+        '<div class="themeLoadingTitle"></div>' +
+        '<div class="themeLoadingNote">正在跟 Sheet 讀取目前設定與 default，完成後才會顯示編輯器。</div>' +
+        '<div class="themeLoadingBar"></div>';
+      root.insertBefore(card,root.firstChild);
+    }
+
+    var title = root.querySelector('.themeLoadingTitle');
+    if(title) title.textContent = message || '讀取 Sheet 設定中';
+  }
+
+  function hideThemeLoading(){
+    var root = getEl('baseEditorRoot');
+    if(!root) return;
+
+    var card = root.querySelector('.themeLoadingCard');
+    if(card && card.parentNode){
+      card.parentNode.removeChild(card);
+    }
+
+    root.classList.remove('is-theme-loading');
   }
 
   function show(id,on){
@@ -1292,9 +1481,18 @@
     var btn = getEl(key + '_editButton');
     if(btn) btn.textContent = s.isEditing ? '返回' : '編輯';
 
-    show(key + '_undoButton', s.isEditing && s.history.length > 0);
+    show(
+      key + '_undoButton',
+      s.isEditing &&
+        s.undoStack.length > 0 &&
+        !same(
+          s.current,
+          s.undoStack[s.undoStack.length - 1],
+          key
+        )
+    );
     show(key + '_restoreSystemButton', s.isEditing && isDirty(key) && !systemIsDefault(key));
-    show(key + '_restoreDefaultButton', s.isEditing && !isDefault(key));
+    show(key + '_restoreDefaultButton', s.isEditing);
     show(key + '_setDefaultButton', s.isEditing && !isDefault(key));
     show(key + '_saveButton', s.isEditing && isDirty(key));
     show(key + '_cssApplyButton', s.cssDirty);
@@ -1356,6 +1554,10 @@
   function setBusy(busy,msg){
     isBusy = !!busy;
 
+    if(!isBusy){
+      clearActiveActionButton();
+    }
+
     CONFIG.forEach(function(cfg){
       var key = cfg.key;
 
@@ -1379,13 +1581,15 @@
       }
     });
 
-    if(msg) setStatus(msg,'');
+    if(msg) setStatus(msg,'loading');
   }
 
   function apply(key,vals,opt){
     opt = opt || {};
 
-    if(opt.recordHistory) pushHistorySnapshot(key,state[key].current);
+    if(opt.recordHistory){
+      pushUndoSnapshot(key,state[key].current);
+    }
 
     state[key].current = clone(vals);
     setVars(key,state[key].current);
@@ -1400,8 +1604,8 @@
     updateBasePlayground();
   }
 
-  function pushHistorySnapshot(key,snap){
-    if(!snap || same(snap,state[key].current,key)) return;
+  function commitHistoryState(key,snap){
+    if(!snap) return;
 
     var h = state[key].history;
 
@@ -1414,9 +1618,542 @@
     }
   }
 
-  function clearUndo(key){
+  function resetHistory(key,snap){
     state[key].history = [];
+    commitHistoryState(
+      key,
+      snap || state[key].current
+    );
     state[key].colorDragSnapshot = null;
+  }
+
+  function pushUndoSnapshot(key,snap){
+    if(!snap) return;
+
+    var stack = state[key].undoStack;
+
+    if(
+      stack.length &&
+      same(stack[stack.length - 1],snap,key)
+    ){
+      return;
+    }
+
+    stack.push(clone(snap));
+
+    if(stack.length > MAX_HISTORY){
+      stack.shift();
+    }
+  }
+
+  function resetUndoStack(key){
+    state[key].undoStack = [];
+    state[key].colorDragSnapshot = null;
+  }
+
+  function clearUndo(key){
+    resetHistory(key,state[key].current);
+    resetUndoStack(key);
+  }
+
+  function syncPendingInputs(key){
+    var s = state[key];
+
+    if(
+      isBusy ||
+      !s ||
+      !s.isEditing
+    ){
+      return;
+    }
+
+    var vals = readInputs(key);
+
+    if(same(vals,s.current,key)){
+      commitHistoryState(key,s.current);
+      return;
+    }
+
+    if(
+      s.colorDragSnapshot &&
+      !same(s.colorDragSnapshot,vals,key)
+    ){
+      pushUndoSnapshot(key,s.colorDragSnapshot);
+    }
+    else{
+      pushUndoSnapshot(key,s.current);
+    }
+
+    apply(
+      key,
+      vals,
+      {
+        recordHistory:false,
+        lockCss:false
+      }
+    );
+
+    commitHistoryState(key,state[key].current);
+  }
+
+  function nowMs(){
+    return new Date().getTime();
+  }
+
+  function isControlEventSuppressed(key){
+    return (
+      actionGuard.key === key &&
+      actionGuard.suppressUntil &&
+      nowMs() < actionGuard.suppressUntil
+    );
+  }
+
+  function beginSuppressingControlEvents(key,action){
+    actionGuard.key = key;
+    actionGuard.action = action || null;
+    actionGuard.suppressUntil =
+      nowMs() + ACTION_SUPPRESS_MS;
+  }
+
+  function extendSuppressingControlEvents(key){
+    if(actionGuard.key !== key) return;
+
+    actionGuard.suppressUntil =
+      nowMs() + ACTION_SUPPRESS_MS;
+  }
+
+  function clearSuppressingControlEvents(key){
+    if(actionGuard.key !== key) return;
+
+    actionGuard.key = null;
+    actionGuard.action = null;
+    actionGuard.suppressUntil = 0;
+  }
+
+  function captureSuppressedControlEvent(key){
+    var s = state[key];
+
+    if(
+      actionGuard.action !== 'restoreDefaultButton' ||
+      !s ||
+      !s.isEditing
+    ){
+      return;
+    }
+
+    var latest = readInputs(key);
+
+    if(
+      same(latest,s.current,key) ||
+      same(latest,s.defaultValue,key)
+    ){
+      return;
+    }
+
+    pushUndoSnapshot(key,latest);
+
+    apply(
+      key,
+      s.defaultValue,
+      {
+        recordHistory:false,
+        lockCss:false
+      }
+    );
+  }
+
+  function blurActiveControl(){
+    var active = document.activeElement;
+
+    if(
+      active &&
+      typeof active.blur === 'function' &&
+      active !== document.body
+    ){
+      active.blur();
+    }
+  }
+
+  function isNativeColorInput(el){
+    return !!(
+      el &&
+      el.tagName === 'INPUT' &&
+      String(el.type || '').toLowerCase() === 'color'
+    );
+  }
+
+  function colorInputBelongsToKey(el,key){
+    return !!(
+      el &&
+      key &&
+      String(el.id || '').indexOf(key + '_') === 0
+    );
+  }
+
+  function waitForNativePickerCommit(key){
+    return new Promise(function(resolve){
+      var active = document.activeElement;
+      var target = null;
+
+      if(
+        isNativeColorInput(pendingNativeColorInput) &&
+        colorInputBelongsToKey(pendingNativeColorInput,key)
+      ){
+        target = pendingNativeColorInput;
+      }
+      else if(
+        isNativeColorInput(active) &&
+        colorInputBelongsToKey(active,key)
+      ){
+        target = active;
+      }
+
+      var done = false;
+      var timer = null;
+
+      function cleanup(){
+        if(!target) return;
+        target.removeEventListener('input',finish,true);
+        target.removeEventListener('change',finish,true);
+        target.removeEventListener('blur',finish,true);
+      }
+
+      function finish(){
+        if(done) return;
+
+        done = true;
+        cleanup();
+
+        if(timer){
+          clearTimeout(timer);
+          timer = null;
+        }
+
+        pendingNativeColorInput = null;
+
+        requestAnimationFrame(function(){
+          requestAnimationFrame(resolve);
+        });
+      }
+
+      if(!target){
+        blurActiveControl();
+        setTimeout(finish,ACTION_DELAY_MS);
+        return;
+      }
+
+      target.addEventListener('input',finish,true);
+      target.addEventListener('change',finish,true);
+      target.addEventListener('blur',finish,true);
+
+      if(typeof target.blur === 'function'){
+        target.blur();
+      }
+
+      timer = setTimeout(finish,ACTION_SETTLE_TIMEOUT_MS);
+    });
+  }
+
+  function flushPendingInputBeforeAction(key){
+    syncPendingInputs(key);
+
+    if(state[key]){
+      var s = state[key];
+
+      if(
+        s.colorDragSnapshot &&
+        !same(s.colorDragSnapshot,s.current,key)
+      ){
+        pushUndoSnapshot(key,s.colorDragSnapshot);
+      }
+
+      state[key].colorDragSnapshot = null;
+    }
+
+    refresh(key);
+  }
+
+  function commitControlValuesAsUndoTarget(key){
+    var s = state[key];
+
+    if(
+      isBusy ||
+      !s ||
+      !s.isEditing
+    ){
+      return;
+    }
+
+    var latest = readInputs(key);
+
+    if(!same(latest,s.current,key)){
+      if(
+        s.colorDragSnapshot &&
+        !same(s.colorDragSnapshot,latest,key)
+      ){
+        pushUndoSnapshot(key,s.colorDragSnapshot);
+      }
+      else{
+        pushUndoSnapshot(key,s.current);
+      }
+
+      s.current = clone(latest);
+      setVars(key,s.current);
+      writeCss(key,s.current);
+      commitHistoryState(key,s.current);
+    }
+    else{
+      commitHistoryState(key,s.current);
+    }
+
+    s.colorDragSnapshot = null;
+  }
+
+  function resetNativeColorPickerState(key,vals){
+    var cfg = CONFIG_BY_KEY[key];
+
+    if(!cfg) return;
+
+    cfg.props.forEach(function(p){
+      var colorInput = null;
+      var nextValue = '';
+
+      if(p.type === 'color'){
+        colorInput = getEl(inputId(key,p.key));
+        nextValue = colorPickerFallback(vals[p.key]);
+      }
+
+      if(p.type === 'shadow'){
+        colorInput = getEl(auxId(key,p.key,'color'));
+        nextValue = colorPickerFallback(
+          parseBoxShadow(vals[p.key]).color
+        );
+      }
+
+      if(
+        !colorInput ||
+        colorInput.type !== 'color'
+      ){
+        return;
+      }
+
+      /*
+        Chrome 的原生色票在未失焦時可能還握著 pending value。
+        暫時切成 text 再切回 color，可以斷開原生 picker 對此 input 的補寫。
+      */
+      try{
+        var wasDisabled = colorInput.disabled;
+        colorInput.blur();
+        colorInput.type = 'text';
+        colorInput.value = nextValue;
+        void colorInput.offsetWidth;
+        colorInput.type = 'color';
+        colorInput.disabled = wasDisabled;
+        colorInput.value = nextValue;
+      }
+      catch(error){
+        colorInput.value = nextValue;
+      }
+    });
+  }
+
+  function forceWriteDefaultAfterNativePicker(key,serial){
+    var s = state[key];
+
+    if(
+      !s ||
+      !s.isEditing ||
+      serial !== resetWriteSerial
+    ){
+      return;
+    }
+
+    s.current = clone(s.defaultValue);
+    setVars(key,s.current);
+    resetNativeColorPickerState(key,s.current);
+    writeInputs(key,s.current);
+    writeCss(key,s.current);
+    refresh(key);
+    updateBasePlayground();
+  }
+
+  function scheduleDefaultRewrite(key){
+    var serial = ++resetWriteSerial;
+
+    forceWriteDefaultAfterNativePicker(key,serial);
+
+    [0,60,140,260,420].forEach(function(delay){
+      setTimeout(function(){
+        forceWriteDefaultAfterNativePicker(key,serial);
+      },delay);
+    });
+  }
+
+  function isResetLikeAction(action,key){
+    if(action === 'undoButton') return true;
+    if(action === 'restoreSystemButton') return true;
+    if(action === 'restoreDefaultButton') return true;
+
+    if(action === 'editButton'){
+      return !!(
+        state[key] &&
+        state[key].isEditing
+      );
+    }
+
+    return false;
+  }
+
+  function setActionButtonBusy(btn,on){
+    if(!btn) return;
+
+    btn.disabled = !!on;
+
+    if(on){
+      btn.setAttribute('data-action-pending','1');
+      btn.classList.add('skh-btn-loading');
+      btn.classList.add('is-action-loading');
+      activeActionButton = btn;
+    }
+    else{
+      var originalText = btn.getAttribute('data-original-text');
+
+      if(originalText !== null){
+        btn.textContent = originalText;
+        btn.removeAttribute('data-original-text');
+      }
+
+      btn.removeAttribute('data-action-pending');
+      btn.classList.remove('skh-btn-loading');
+      btn.classList.remove('is-action-loading');
+
+      if(activeActionButton === btn){
+        activeActionButton = null;
+      }
+    }
+  }
+
+  function actionLoadingText(action){
+    if(action === 'saveButton') return '儲存中';
+    if(action === 'cssSaveButton') return '儲存 CSS 中';
+    if(action === 'setDefaultButton') return '設定 default 中';
+    if(action === 'restoreDefaultButton') return '恢復中';
+    if(action === 'restoreSystemButton') return '恢復中';
+    if(action === 'undoButton') return '復原中';
+    return '';
+  }
+
+  function clearActiveActionButton(){
+    if(!activeActionButton) return;
+
+    setActionButtonBusy(activeActionButton,false);
+  }
+
+  function beginActionLoading(btn,text){
+    if(!btn) return;
+
+    if(text && !btn.getAttribute('data-original-text')){
+      btn.setAttribute('data-original-text',btn.textContent || '');
+    }
+
+    setActionButtonBusy(btn,true);
+
+    if(text){
+      btn.textContent = text;
+    }
+  }
+
+  function endActionLoading(btn){
+    if(btn){
+      setActionButtonBusy(btn,false);
+      return;
+    }
+
+    clearActiveActionButton();
+  }
+
+  function runAction(key,action,btn){
+    if(action !== 'restoreDefaultButton'){
+      resetWriteSerial++;
+    }
+
+    if(action === 'editButton') toggleEdit(key);
+    if(action === 'undoButton') undoChange(key);
+    if(action === 'restoreSystemButton') restoreSystem(key);
+    if(action === 'restoreDefaultButton') restoreDefault(key,{force:true});
+    if(action === 'setDefaultButton') saveAsDefault(key,btn);
+    if(action === 'saveButton') saveTheme(key,btn);
+    if(action === 'cssEditButton') toggleCssEdit(key);
+    if(action === 'cssApplyButton') applyFromCss(key);
+    if(action === 'cssSaveButton') saveTheme(key,btn);
+  }
+
+  function runActionAfterNativePickerSettles(key,action,btn){
+    var suppressLateColorEvents =
+      isResetLikeAction(action,key);
+
+    if(action === 'restoreDefaultButton'){
+      beginActionLoading(btn,actionLoadingText(action));
+
+      waitForNativePickerCommit(key).then(function(){
+        /*
+          先等 Chrome 原生 color picker 回傳 input/change/blur 或短 timeout。
+          commitControlValuesAsUndoTarget() 會把該顏色收進 undoStack；
+          接著才恢復 default，避免第一下被 pending color 覆寫。
+        */
+        commitControlValuesAsUndoTarget(key);
+        beginSuppressingControlEvents(key,action);
+        resetNativeColorPickerState(key,state[key].defaultValue);
+        restoreDefault(key,{force:true});
+        scheduleDefaultRewrite(key);
+        extendSuppressingControlEvents(key);
+
+        setTimeout(function(){
+          scheduleDefaultRewrite(key);
+          clearSuppressingControlEvents(key);
+          setActionButtonBusy(btn,false);
+        },ACTION_SUPPRESS_MS);
+      });
+
+      return;
+    }
+
+    var loadingText = actionLoadingText(action);
+    beginActionLoading(btn,loadingText);
+
+    waitForNativePickerCommit(key).then(function(){
+      if(suppressLateColorEvents){
+        /*
+          重要：reset / undo 不能在 color input 回傳前就 suppress。
+          使用者選完色票直接按 action 時，blur/change 正是把新色票寫進
+          undoStack 的那一步；要先讓它完成，再開始忽略 reset 之後晚到的事件。
+        */
+        flushPendingInputBeforeAction(key);
+        beginSuppressingControlEvents(key,action);
+        runAction(key,action,btn);
+        extendSuppressingControlEvents(key);
+
+        setTimeout(function(){
+          if(action === 'restoreDefaultButton'){
+            scheduleDefaultRewrite(key);
+          }
+
+          clearSuppressingControlEvents(key);
+          setActionButtonBusy(btn,false);
+        },ACTION_SUPPRESS_MS);
+
+        return;
+      }
+
+      flushPendingInputBeforeAction(key);
+      runAction(key,action,btn);
+
+      if(isBusy){
+        return;
+      }
+
+      setActionButtonBusy(btn,false);
+    });
   }
 
   function jobs(key,vals){
@@ -1980,6 +2717,7 @@
         original:clone(cfg.fallback),
         current:clone(cfg.fallback),
         history:[],
+        undoStack:[],
         isEditing:false,
         themeEditSnapshot:null,
         colorDragSnapshot:null,
@@ -2015,6 +2753,7 @@
           if(!el) return;
 
           el.addEventListener('focus',function(){
+            if(isControlEventSuppressed(key)) return;
             if(isBusy || !state[key].isEditing) return;
 
             if(!state[key].colorDragSnapshot){
@@ -2024,6 +2763,10 @@
           });
 
           el.addEventListener('change',function(){
+            if(isControlEventSuppressed(key)){
+              captureSuppressedControlEvent(key);
+              return;
+            }
             if(isBusy || !state[key].isEditing) return;
 
             if(p.type === 'fontWeight' && id === modeId(key,p.key)){
@@ -2033,6 +2776,10 @@
           });
 
           el.addEventListener('input',function(){
+            if(isControlEventSuppressed(key)){
+              captureSuppressedControlEvent(key);
+              return;
+            }
             if(isBusy || !state[key].isEditing) return;
 
             apply(
@@ -2048,6 +2795,10 @@
           });
 
           el.addEventListener('change',function(){
+            if(isControlEventSuppressed(key)){
+              captureSuppressedControlEvent(key);
+              return;
+            }
             if(isBusy || !state[key].isEditing) return;
 
             apply(
@@ -2069,18 +2820,65 @@
                 key
               )
             ){
-              pushHistorySnapshot(
+              pushUndoSnapshot(
                 key,
                 state[key].colorDragSnapshot
               );
             }
+
+            commitHistoryState(key,state[key].current);
 
             state[key].colorDragSnapshot = null;
             refresh(key);
           });
 
           el.addEventListener('blur',function(){
+            if(isControlEventSuppressed(key)){
+              captureSuppressedControlEvent(key);
+              return;
+            }
+
+            if(
+              isBusy ||
+              !state[key] ||
+              !state[key].isEditing
+            ){
+              if(state[key]){
+                state[key].colorDragSnapshot = null;
+              }
+              return;
+            }
+
+            var latest = readInputs(key);
+
+            if(!same(latest,state[key].current,key)){
+              apply(
+                key,
+                latest,
+                {
+                  recordHistory:false,
+                  lockCss:false
+                }
+              );
+            }
+
+            if(
+              state[key].colorDragSnapshot &&
+              !same(
+                state[key].colorDragSnapshot,
+                state[key].current,
+                key
+              )
+            ){
+              pushUndoSnapshot(
+                key,
+                state[key].colorDragSnapshot
+              );
+            }
+
+            commitHistoryState(key,state[key].current);
             state[key].colorDragSnapshot = null;
+            refresh(key);
           });
         });
       });
@@ -2102,26 +2900,47 @@
 
     document.addEventListener('pointerdown',function(e){
       var btn = e.target.closest('[data-action][data-key]');
-      if(!btn) return;
-      e.preventDefault();
-    });
+      var active = document.activeElement;
+
+      if(
+        !btn ||
+        !isNativeColorInput(active)
+      ){
+        return;
+      }
+
+      pendingNativeColorInput = active;
+
+      if(typeof active.blur === 'function'){
+        active.blur();
+      }
+    },true);
 
     document.addEventListener('click',function(e){
       var btn = e.target.closest('[data-action][data-key]');
       if(!btn) return;
 
+      e.preventDefault();
+      e.stopPropagation();
+
+      if(btn.getAttribute('data-action-pending') === '1'){
+        return;
+      }
+
       var key = btn.getAttribute('data-key');
       var action = btn.getAttribute('data-action');
 
-      if(action === 'editButton') toggleEdit(key);
-      if(action === 'undoButton') undoChange(key);
-      if(action === 'restoreSystemButton') restoreSystem(key);
-      if(action === 'restoreDefaultButton') restoreDefault(key);
-      if(action === 'setDefaultButton') saveAsDefault(key);
-      if(action === 'saveButton') saveTheme(key);
-      if(action === 'cssEditButton') toggleCssEdit(key);
-      if(action === 'cssApplyButton') applyFromCss(key);
-      if(action === 'cssSaveButton') saveTheme(key);
+      if(action === 'editButton'){
+        resetWriteSerial++;
+        toggleEdit(key);
+        return;
+      }
+
+      runActionAfterNativePickerSettles(
+        key,
+        action,
+        btn
+      );
     });
 
     document.querySelectorAll('[data-base-free-group]').forEach(function(group){
@@ -2161,7 +2980,9 @@
     - color input / number input / select
     - CSS preview textarea
   */
-  function applyLoaded(currentData,defaultData){
+  function applyLoaded(currentData,defaultData,opt){
+    opt = opt || {};
+
     CONFIG.forEach(function(cfg){
       var key = cfg.key;
 
@@ -2183,6 +3004,7 @@
         clone(state[key].original);
 
       state[key].history = [];
+      state[key].undoStack = [];
       state[key].isEditing = false;
       state[key].themeEditSnapshot = null;
       state[key].colorDragSnapshot = null;
@@ -2194,10 +3016,16 @@
       writeCss(key,state[key].current);
       setInputsEnabled(key,false);
       setCssLocked(key,true);
+      resetHistory(key,state[key].current);
+      resetUndoStack(key);
       refresh(key);
     });
 
-    setStatus('','');
+    if(!opt.keepLoading){
+      setStatus('','');
+      hideThemeLoading();
+    }
+
     updateBasePlayground();
   }
 
@@ -2265,69 +3093,75 @@
       return;
     }
 
+    var hasDefaultReader =
+      hasGoogleFunction('getBaseDefaultCssSettings');
+    var currentDone = false;
+    var defaultDone = !hasDefaultReader;
+    var currentDataResult = null;
+    var defaultDataResult = localThemeData();
+    var loadError = null;
+
+    function errorText(err){
+      return err && err.message
+        ? err.message
+        : err;
+    }
+
+    function completeWhenReady(){
+      if(!currentDone || !defaultDone){
+        return;
+      }
+
+      applyLoaded(
+        currentDataResult || localThemeData(),
+        defaultDataResult || localThemeData()
+      );
+
+      setBusy(false);
+
+      if(!hasDefaultReader){
+        setStatus('使用本頁 default：尚未偵測到 getBaseDefaultCssSettings()','');
+      }
+      else if(loadError){
+        setStatus(loadError,'error');
+      }
+
+      finish();
+    }
+
     google.script.run
       .withSuccessHandler(function(currentData){
-
-        if(!hasGoogleFunction('getBaseDefaultCssSettings')){
-          applyLoaded(currentData || localThemeData(),localThemeData());
-          setBusy(false);
-          setStatus('使用本頁 default：尚未偵測到 getBaseDefaultCssSettings()','');
-          finish();
-          return;
-        }
-
-        google.script.run
-          .withSuccessHandler(function(defaultData){
-            applyLoaded(
-              currentData || localThemeData(),
-              defaultData || localThemeData()
-            );
-
-            setBusy(false);
-            finish();
-          })
-          .withFailureHandler(function(err){
-            applyLoaded(
-              currentData || localThemeData(),
-              localThemeData()
-            );
-
-            setBusy(false);
-            setStatus(
-              '讀取 default 失敗，已先使用本頁 default：' +
-              (
-                err &&
-                err.message
-                ? err.message
-                : err
-              ),
-              'error'
-            );
-
-            finish();
-          })
-          .getBaseDefaultCssSettings();
-
+        currentDataResult = currentData;
+        currentDone = true;
+        completeWhenReady();
       })
       .withFailureHandler(function(err){
-        applyLoaded(localThemeData(),localThemeData());
-        setBusy(false);
-
-        setStatus(
-          '讀取失敗，已先使用本頁預設值：' +
-          (
-            err &&
-            err.message
-            ? err.message
-            : err
-          ),
-          'error'
-        );
-
-        finish();
-
+        currentDataResult = localThemeData();
+        currentDone = true;
+        loadError =
+          '讀取目前設定失敗，已先使用本頁預設值：' +
+          errorText(err);
+        completeWhenReady();
       })
       .getBaseCssSettings();
+
+    if(hasDefaultReader){
+      google.script.run
+        .withSuccessHandler(function(defaultData){
+          defaultDataResult = defaultData;
+          defaultDone = true;
+          completeWhenReady();
+        })
+        .withFailureHandler(function(err){
+          defaultDataResult = localThemeData();
+          defaultDone = true;
+          loadError =
+            '讀取 default 失敗，已先使用本頁 default：' +
+            errorText(err);
+          completeWhenReady();
+        })
+        .getBaseDefaultCssSettings();
+    }
 
   };
 
@@ -2350,6 +3184,8 @@
     if(!s.isEditing){
       s.isEditing = true;
       s.themeEditSnapshot = clone(s.current);
+      resetHistory(key,s.current);
+      resetUndoStack(key);
       setInputsEnabled(key,true);
       refresh(key);
       return;
@@ -2379,15 +3215,27 @@
     if(
       isBusy ||
       !s ||
-      !s.isEditing ||
-      s.history.length === 0
+      !s.isEditing
     ){
       return;
     }
 
+    if(
+      s.undoStack.length === 0 ||
+      same(
+        s.current,
+        s.undoStack[s.undoStack.length - 1],
+        key
+      )
+    ){
+      return;
+    }
+
+    var target = s.undoStack.pop();
+
     apply(
       key,
-      s.history.pop(),
+      target,
       {
         recordHistory:false,
         lockCss:false
@@ -2407,9 +3255,9 @@
       return;
     }
 
-    pushHistorySnapshot(
+    pushUndoSnapshot(
       key,
-      clone(state[key].current)
+      state[key].current
     );
 
     apply(
@@ -2421,23 +3269,34 @@
       }
     );
 
+    commitHistoryState(key,state[key].current);
     refresh(key);
   }
 
-  function restoreDefault(key){
+  function restoreDefault(key,opt){
+    opt = opt || {};
+
     if(
       isBusy ||
       !state[key] ||
       !state[key].isEditing ||
-      isDefault(key)
+      (
+        !opt.force &&
+        isDefault(key)
+      )
     ){
       return;
     }
 
-    pushHistorySnapshot(
-      key,
-      clone(state[key].current)
-    );
+    if(
+      !opt.silentHistory &&
+      !same(state[key].current,state[key].defaultValue,key)
+    ){
+      pushUndoSnapshot(
+        key,
+        state[key].current
+      );
+    }
 
     apply(
       key,
@@ -2448,6 +3307,8 @@
       }
     );
 
+    commitHistoryState(key,state[key].current);
+    setStatus('已恢復 default','success');
     refresh(key);
   }
 
@@ -2499,10 +3360,17 @@
     refresh(key);
   }
 
-  function saveTheme(key){
+  function saveTheme(key,btn){
     var s = state[key];
 
     if(isBusy || !s) return;
+
+    beginActionLoading(
+      btn || getEl(key + '_saveButton'),
+      btn && btn.getAttribute('data-action') === 'cssSaveButton'
+        ? '儲存 CSS 中'
+        : '儲存中'
+    );
 
     var vals = clone(s.current);
 
@@ -2510,6 +3378,7 @@
       !s.cssDirty &&
       same(vals,s.original,key)
     ){
+      endActionLoading(btn);
       refresh(key);
       return;
     }
@@ -2525,6 +3394,7 @@
     function afterSave(message,tone){
       s.original = clone(vals);
       s.history = [];
+      s.undoStack = [];
       s.themeEditSnapshot = null;
       s.isEditing = false;
       s.cssEditSnapshot = null;
@@ -2534,6 +3404,7 @@
       setCssLocked(key,true);
       setBusy(false);
       setStatus(message,tone || 'success');
+      endActionLoading(btn);
       refresh(key);
     }
 
@@ -2554,7 +3425,7 @@
     );
   }
 
-  function saveAsDefault(key){
+  function saveAsDefault(key,btn){
     var s = state[key];
 
     if(isBusy || !s || isDefault(key)) return;
@@ -2567,12 +3438,18 @@
       return;
     }
 
+    beginActionLoading(
+      btn || getEl(key + '_setDefaultButton'),
+      '設定 default 中'
+    );
+
     setBusy(true,'設定 default 中...');
 
     if(!hasGoogleFunction('saveBaseDefaultCssSetting')){
       s.defaultValue = clone(vals);
       setBusy(false);
       setStatus('已設為本頁 default：尚未偵測到 saveBaseDefaultCssSetting()','');
+      endActionLoading(btn);
       refresh(key);
       return;
     }
@@ -2585,6 +3462,7 @@
         s.defaultValue = clone(vals);
         setBusy(false);
         setStatus('已設為新 default','success');
+        endActionLoading(btn);
         refresh(key);
       }
     );
@@ -2681,14 +3559,21 @@
     init();
     bind();
 
+    showThemeLoading('讀取 Sheet 設定中');
+
     applyLoaded(
       localThemeData(),
-      localThemeData()
+      localThemeData(),
+      {
+        keepLoading:true
+      }
     );
+
+    showThemeLoading('讀取 Sheet 設定中');
 
     setStatus(
       '讀取 Sheet 設定中...',
-      ''
+      'loading'
     );
 
     window.__SKH_UISTYLE_AUTOLOAD__ = {
@@ -2703,6 +3588,7 @@
       dispatchUiStyleReady({
         source:'loadBaseTheme',
         page:'UiStyleTest',
+        readyForReveal:true,
         finishedAt:window.__SKH_UISTYLE_AUTOLOAD__.finishedAt
       });
     });

@@ -1,8 +1,52 @@
 <style>
+/*
+檔案位置：共用設定檔/UI設定/01_按鈕/UiButton.html
+時間戳記：2026-06-01 18:55
+用途：SKH Design System 按鈕元件；以 UiStyle Theme Token 驅動按鈕顏色，避免 Button 與全站 Theme 各自維護重複色票。
+
+依賴檔案：
+- 共用設定檔/UI設定/00_基礎/UiStyle.html
+  提供全站基礎 CSS variables，例如：
+  --skh-primary
+  --skh-primary-soft
+  --skh-danger
+  --skh-success
+  --skh-warning
+  --skh-bg
+  --skh-text
+  --skh-muted
+  --skh-line
+  --skh-radius
+  --skh-transition
+
+載入流程：
+UiStyle.html 先宣告全站 Theme Token
+↓
+UiThemeLoader.html / UiStyleTest.html 從 Sheet 載入並覆蓋 Theme Token
+↓
+UiButton.html 讀取 Theme Token 產生按鈕樣式
+↓
+UiButtonTest.html 若作為 Builder 測試頁，會在 getButtonCssSettings() / getButtonDefaultCssSettings() 回傳並套用後，才發出 skh-ui-test-ready 讓父頁顯示
+
+2026-06-01 調整紀錄：
+1. 移除 Button 內部重複硬寫的 primary / danger 主色。
+2. Primary / Ghost / Camera / Selected 改吃 --skh-primary 與 --skh-primary-soft。
+3. Danger / Success / Warning 改吃 UiStyle 的語意色。
+4. Secondary 改吃頁面與 surface token，與整體 Design System 同步。
+5. 保留所有原本 class 名稱，避免既有頁面壞掉。
+6. Button Builder 顯示時序改由 UiButtonTest.html 控制：等 Sheet 設定套入後才 reveal，避免 fallback → Sheet 顏色跳動。
+
+注意：
+如果 Button 顏色與 Theme 不同步，請優先檢查：
+1. UiStyle 是否有宣告對應 CSS variable。
+2. UiThemeLoader 是否成功覆蓋 :root variable。
+3. 本檔 :root 中對應的 --skh-btn-* 是否仍指向 UiStyle token。
+*/
+
 /* =====================================
    SKH Design System v1
    01_按鈕 / UiButton
-   Variable-driven full component
+   Theme-token-driven component
 ===================================== */
 
 :root{
@@ -11,61 +55,89 @@
   --skh-btn-base-border-width:1px;
   --skh-btn-base-border-style:solid;
   --skh-btn-base-border-color:transparent;
-  --skh-btn-base-radius:var(--skh-radius);
+  --skh-btn-base-radius:var(--skh-radius,10px);
   --skh-btn-base-padding-y:10px;
   --skh-btn-base-padding-x:16px;
-  --skh-btn-base-font-size:14px;
+  --skh-btn-base-font-size:var(--skh-font-size,14px);
   --skh-btn-base-font-weight:700;
   --skh-btn-base-gap:6px;
   --skh-btn-base-line-height:1.2;
   --skh-btn-base-hover-shadow:0 8px 20px rgba(15,23,42,.08);
   --skh-btn-base-active-shadow:0 3px 10px rgba(15,23,42,.06);
-  --skh-btn-base-focus-outline:3px solid rgba(37,99,235,.25);
+  --skh-btn-base-focus-outline:3px solid rgba(52,79,159,.25);
   --skh-btn-base-focus-outline-offset:2px;
 
-  /* Primary */
-  --skh-btn-primary-bg:#344f9f;
+  /*
+    Role / Primary
+    來源：UiStyle Brand Token
+    - --skh-primary 由 UiStyle / Sheet Theme 控制
+    - 這裡不要再硬寫另一份品牌色，避免 Button 與全站 Theme 不同步
+  */
+  --skh-btn-primary-bg:var(--skh-primary,#344f9f);
   --skh-btn-primary-text:#ffffff;
-  --skh-btn-primary-border:#344f9f;
-  --skh-btn-primary-hover-bg:#344f9f;
-  --skh-btn-primary-hover-border:#344f9f;
+  --skh-btn-primary-border:var(--skh-primary,#344f9f);
+  --skh-btn-primary-hover-bg:var(--skh-primary,#344f9f);
+  --skh-btn-primary-hover-border:var(--skh-primary,#344f9f);
 
-  /* Secondary */
-  --skh-btn-secondary-bg:#ffffff;
-  --skh-btn-secondary-text:#475569;
-  --skh-btn-secondary-border:#cbd5e1;
-  --skh-btn-secondary-hover-bg:#f8fafc;
-  --skh-btn-secondary-hover-border:#94a3b8;
+  /*
+    Role / Secondary
+    來源：UiStyle Page / Surface Token
+  */
+  --skh-btn-secondary-bg:var(--skh-surface-bg,#ffffff);
+  --skh-btn-secondary-text:var(--skh-text,#475569);
+  --skh-btn-secondary-border:var(--skh-line,#cbd5e1);
+  --skh-btn-secondary-hover-bg:var(--skh-bg,#f8fafc);
+  --skh-btn-secondary-hover-border:var(--skh-muted,#94a3b8);
 
-  /* Danger */
+  /* Role / Danger */
   --skh-btn-danger-bg:#fff7f7;
-  --skh-btn-danger-text:#b42318;
+  --skh-btn-danger-text:var(--skh-danger,#b42318);
   --skh-btn-danger-border:#f4b4ae;
   --skh-btn-danger-hover-bg:#feeceb;
-  --skh-btn-danger-hover-border:#e98078;
+  --skh-btn-danger-hover-border:var(--skh-danger,#b42318);
 
-  /* Ghost */
+  /* Role / Success */
+  --skh-btn-success-bg:#f0fdf4;
+  --skh-btn-success-text:var(--skh-success,#15803d);
+  --skh-btn-success-border:#bbf7d0;
+  --skh-btn-success-hover-bg:#dcfce7;
+  --skh-btn-success-hover-border:var(--skh-success,#15803d);
+
+  /* Role / Warning */
+  --skh-btn-warning-bg:#fffbeb;
+  --skh-btn-warning-text:var(--skh-warning,#b45309);
+  --skh-btn-warning-border:#fde68a;
+  --skh-btn-warning-hover-bg:#fef3c7;
+  --skh-btn-warning-hover-border:var(--skh-warning,#b45309);
+
+  /*
+    Role / Ghost
+    來源：UiStyle Brand Token
+  */
   --skh-btn-ghost-bg:transparent;
-  --skh-btn-ghost-text:#344f9f;
+  --skh-btn-ghost-text:var(--skh-primary,#344f9f);
   --skh-btn-ghost-border:transparent;
-  --skh-btn-ghost-hover-bg:#eef3ff;
+  --skh-btn-ghost-hover-bg:var(--skh-primary-soft,#eef3ff);
   --skh-btn-ghost-hover-border:transparent;
 
-  /* Camera */
-  --skh-btn-camera-bg:#eef6ff;
-  --skh-btn-camera-text:#1d4ed8;
+  /*
+    Role / Camera
+    保留 skh-btn-camera 既有 class，但改為跟隨 primary theme。
+  */
+  --skh-btn-camera-bg:var(--skh-primary-soft,#eef3ff);
+  --skh-btn-camera-text:var(--skh-primary,#1d4ed8);
   --skh-btn-camera-border:#bfdbfe;
-  --skh-btn-camera-hover-bg:#dbeafe;
-  --skh-btn-camera-hover-border:#93c5fd;
+  --skh-btn-camera-hover-bg:var(--skh-primary-soft,#dbeafe);
+  --skh-btn-camera-hover-border:var(--skh-primary,#93c5fd);
 
   /* Size */
   --skh-btn-sm-padding-y:6px;
   --skh-btn-sm-padding-x:10px;
-  --skh-btn-sm-font-size:13px;
+  --skh-btn-sm-font-size:var(--skh-font-size-sm,13px);
 
   --skh-btn-lg-padding-y:14px;
   --skh-btn-lg-padding-x:20px;
-  --skh-btn-lg-font-size:16px;
+  --skh-btn-lg-font-size:var(--skh-font-size-lg,16px);
 
   --skh-btn-full-width:100%;
 
@@ -74,12 +146,12 @@
   --skh-btn-icon-height:36px;
   --skh-btn-icon-padding:0;
 
-  --skh-btn-pill-radius:999px;
+  --skh-btn-pill-radius:var(--skh-radius-pill,999px);
 
   /* State */
-  --skh-btn-selected-bg:var(--skh-primary);
+  --skh-btn-selected-bg:var(--skh-primary,#344f9f);
   --skh-btn-selected-text:#ffffff;
-  --skh-btn-selected-border:var(--skh-primary);
+  --skh-btn-selected-border:var(--skh-primary,#344f9f);
 
   --skh-btn-loading-opacity:.85;
   --skh-btn-loading-spinner-size:14px;
@@ -115,11 +187,11 @@
   font-weight:var(--skh-btn-base-font-weight);
   cursor:pointer;
   transition:
-    transform var(--skh-transition),
-    box-shadow var(--skh-transition),
-    background var(--skh-transition),
-    border-color var(--skh-transition),
-    color var(--skh-transition);
+    transform var(--skh-transition,.18s ease),
+    box-shadow var(--skh-transition,.18s ease),
+    background var(--skh-transition,.18s ease),
+    border-color var(--skh-transition,.18s ease),
+    color var(--skh-transition,.18s ease);
   display:inline-flex;
   align-items:center;
   justify-content:center;
@@ -186,6 +258,28 @@
 .skh-btn-danger:hover{
   background:var(--skh-btn-danger-hover-bg);
   border-color:var(--skh-btn-danger-hover-border);
+}
+
+.skh-btn-success{
+  background:var(--skh-btn-success-bg);
+  color:var(--skh-btn-success-text);
+  border-color:var(--skh-btn-success-border);
+}
+
+.skh-btn-success:hover{
+  background:var(--skh-btn-success-hover-bg);
+  border-color:var(--skh-btn-success-hover-border);
+}
+
+.skh-btn-warning{
+  background:var(--skh-btn-warning-bg);
+  color:var(--skh-btn-warning-text);
+  border-color:var(--skh-btn-warning-border);
+}
+
+.skh-btn-warning:hover{
+  background:var(--skh-btn-warning-hover-bg);
+  border-color:var(--skh-btn-warning-hover-border);
 }
 
 .skh-btn-ghost{

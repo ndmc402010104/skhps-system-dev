@@ -1,3 +1,46 @@
+<!--
+檔案位置：共用設定檔/UI設定/01_按鈕/UiButtonTest.html
+時間戳記：2026-06-01 18:18 UTC+8
+用途：UiButton Theme Editor / Button Builder；保留 ready event gating，並修正 native color picker 尚未關閉時直接按「恢復 default / 復原上一動 / 儲存」造成狀態不同步的問題。
+
+依賴檔案：
+- 共用設定檔/UI設定/01_按鈕/UiButton.html
+  提供 .skh-btn / .skh-btn-primary / .skh-btn-secondary / .skh-btn-danger / .skh-btn-camera 等實際 CSS class。
+
+依賴後端：
+- getButtonCssSettings()
+  來源：UI設定/01_按鈕/ButtonCssSetting.gs
+  用途：讀取目前 Button Sheet 設定。
+
+- getButtonDefaultCssSettings()
+  來源：UI設定/01_按鈕/ButtonCssSetting.gs
+  用途：讀取 Button default 設定。
+
+- saveButtonCssSetting(className, property, value)
+  來源：UI設定/01_按鈕/ButtonCssSetting.gs
+  用途：儲存目前 Button 設定。
+
+- saveButtonDefaultCssSetting(className, property, value)
+  來源：UI設定/01_按鈕/ButtonCssSetting.gs
+  用途：儲存新的 Button default 設定。
+
+初始化流程：
+1. bootButtonEditor()
+2. render() 建立 Button Builder DOM。
+3. init() 建立前端 state。
+4. bind() 綁定按鈕、input、CSS textarea 事件。
+5. applyLoaded(null, null) 先在隱藏狀態套原本 fallback。
+6. loadButtonTheme() 呼叫後端 getButtonCssSettings() / getButtonDefaultCssSettings()。
+7. applyLoaded(currentData, defaultData) 將 Sheet 設定寫入 state、CSS variables、color input、CSS preview。
+8. dispatchButtonReady() 發出 skh-ui-button-ready / skh-ui-test-ready，通知父頁「Button Sheet 設定已套用，可以顯示畫面」。
+
+重要維護紀錄：
+- 2026-06-01 17:47：修正色票選完後若未點空白處，直接按「恢復 default」可能失敗。
+- 2026-06-01 18:18：改為 action guard 機制；動作鍵不再於 pointerdown preventDefault。
+- 根因：native color picker 的 input/change/blur 可能晚於 action button 執行，導致 restoreDefault() 先成功，晚到的色票 change 又覆蓋 default。
+- 修正：新增 action guard。恢復 default / 恢復系統 / 復原上一動 / 返回會先 blur 關閉 native picker，短暫忽略晚到的色票事件，再執行動作。儲存 / 設為新 default 則先 blur 等 commit，再 flush 最新控制器值後執行。
+- 若「恢復 default / 復原上一動」又出問題，優先檢查 beginSuppressingControlEvents()、isControlEventSuppressed()、runActionAfterNativePickerSettles()。
+-->
 <section class="testSection">
 
   <h2>01 UiButton / 按鈕 Theme Editor</h2>
@@ -776,6 +819,33 @@
   var state = {};
   var isBusy = false;
   var MAX_HISTORY = 20;
+
+  /*
+    Native color picker action guard
+
+    為什麼需要：
+    input[type="color"] 在 Chrome / Android / 部分 WebView 裡，使用者選色後立刻按功能鍵時，
+    color input 的 input / change / blur 事件可能晚於功能鍵 click。
+
+    以前會發生：
+    restoreDefault() 已經把 default 寫回畫面，
+    但晚到的 color change 又把剛剛選的顏色寫回 state，
+    所以看起來第一次恢復 default 失敗、第二次才成功。
+
+    原則：
+    - reset 類動作：restoreDefault / restoreSystem / undo / 返回
+      動作鍵優先，短暫忽略晚到的色票事件。
+
+    - commit 類動作：save / setDefault
+      先 blur 等瀏覽器 commit 色票，再 flush 目前控制器值後執行。
+  */
+  var actionGuard = {
+    key:null,
+    suppressUntil:0
+  };
+
+  var ACTION_DELAY_MS = 140;
+  var ACTION_SUPPRESS_MS = 700;
 
   function getEl(id){ return document.getElementById(id); }
 
@@ -1648,6 +1718,204 @@
     state[key].colorDragSnapshot = null;
   }
 
+  /*
+    動作按鈕前的控制器同步保護。
+
+    問題背景：
+    input[type="color"] 在部分瀏覽器中，使用者選完顏色後，若沒有先點空白處，
+    change / blur 可能尚未完整送出。此時直接點「恢復 default」或「復原上一動」，
+    舊版流程可能發生：
+    1. restoreDefault() 先把 default 寫回畫面。
+    2. 色票控制器稍後才送出最後一次 change。
+    3. 舊色票值又覆蓋 default，看起來像恢復 default 失敗。
+
+    修正策略：
+    所有 data-action 按鈕執行前，先主動讀取目前畫面控制器 readInputs(key)，
+    將尚未 commit 的 input 值同步進 state.current，必要時補一筆 undo history，
+    再 blur activeElement，最後才讓 restoreDefault / undo / save 等動作執行。
+  */
+  function nowMs(){
+    return new Date().getTime();
+  }
+
+  function isControlEventSuppressed(key){
+    return (
+      actionGuard.key === key &&
+      actionGuard.suppressUntil &&
+      nowMs() < actionGuard.suppressUntil
+    );
+  }
+
+  function beginSuppressingControlEvents(key){
+    actionGuard.key = key;
+    actionGuard.suppressUntil =
+      nowMs() + ACTION_SUPPRESS_MS;
+  }
+
+  function extendSuppressingControlEvents(key){
+    if(actionGuard.key !== key) return;
+
+    actionGuard.suppressUntil =
+      nowMs() + ACTION_SUPPRESS_MS;
+  }
+
+  function clearSuppressingControlEvents(key){
+    if(actionGuard.key !== key) return;
+
+    actionGuard.key = null;
+    actionGuard.suppressUntil = 0;
+  }
+
+  function blurActiveControl(){
+    var active = document.activeElement;
+
+    if(
+      active &&
+      typeof active.blur === 'function' &&
+      active !== document.body
+    ){
+      active.blur();
+    }
+  }
+
+  /*
+    動作按鈕前的控制器同步保護。
+
+    這支只用於「要保存目前色票結果」的動作，例如儲存 / 設為新 default。
+    對於恢復 default / 復原上一動，不應該再讀 color input，
+    因為那時候 native picker 可能還沒真正把最後狀態 commit，讀到的值不可信。
+  */
+  function flushPendingInputBeforeAction(key){
+    var s = state[key];
+
+    if(
+      isBusy ||
+      !s ||
+      !s.isEditing
+    ){
+      return;
+    }
+
+    var latest = readInputs(key);
+
+    if(!same(latest,s.current,key)){
+      if(
+        s.colorDragSnapshot &&
+        !same(s.colorDragSnapshot,latest,key)
+      ){
+        pushHistorySnapshot(
+          key,
+          s.colorDragSnapshot
+        );
+      }
+      else{
+        pushHistorySnapshot(
+          key,
+          clone(s.current)
+        );
+      }
+
+      apply(
+        key,
+        latest,
+        {
+          recordHistory:false,
+          lockCss:false
+        }
+      );
+    }
+    else if(
+      s.colorDragSnapshot &&
+      !same(s.colorDragSnapshot,s.current,key)
+    ){
+      pushHistorySnapshot(
+        key,
+        s.colorDragSnapshot
+      );
+    }
+
+    s.colorDragSnapshot = null;
+    refresh(key);
+  }
+
+  function isResetLikeAction(action,key){
+    if(action === 'undoButton') return true;
+    if(action === 'restoreSystemButton') return true;
+    if(action === 'restoreDefaultButton') return true;
+
+    if(action === 'editButton'){
+      return !!(
+        state[key] &&
+        state[key].isEditing
+      );
+    }
+
+    return false;
+  }
+
+  function runAction(key,action){
+    if(action === 'editButton') toggleEdit(key);
+    if(action === 'undoButton') undoChange(key);
+    if(action === 'restoreSystemButton') restoreSystem(key);
+    if(action === 'restoreDefaultButton') restoreDefault(key);
+    if(action === 'setDefaultButton') saveAsDefault(key);
+    if(action === 'saveButton') saveTheme(key);
+    if(action === 'cssEditButton') toggleCssEdit(key);
+    if(action === 'cssApplyButton') applyFromCss(key);
+    if(action === 'cssSaveButton') saveTheme(key);
+  }
+
+  function setActionButtonBusy(btn,on){
+    if(!btn) return;
+
+    btn.disabled = !!on;
+
+    if(on){
+      btn.setAttribute('data-action-pending','1');
+    }
+    else{
+      btn.removeAttribute('data-action-pending');
+    }
+  }
+
+  function runActionAfterNativePickerSettles(key,action,btn){
+    var suppressLateColorEvents =
+      isResetLikeAction(action,key);
+
+    if(suppressLateColorEvents){
+      beginSuppressingControlEvents(key);
+
+      if(state[key]){
+        state[key].colorDragSnapshot = null;
+      }
+    }
+
+    blurActiveControl();
+    setActionButtonBusy(btn,true);
+
+    setTimeout(function(){
+      if(suppressLateColorEvents){
+        if(state[key]){
+          state[key].colorDragSnapshot = null;
+        }
+
+        runAction(key,action);
+        extendSuppressingControlEvents(key);
+
+        setTimeout(function(){
+          clearSuppressingControlEvents(key);
+          setActionButtonBusy(btn,false);
+        },ACTION_SUPPRESS_MS);
+
+        return;
+      }
+
+      flushPendingInputBeforeAction(key);
+      runAction(key,action);
+      setActionButtonBusy(btn,false);
+    },ACTION_DELAY_MS);
+  }
+
   function jobs(key,vals){
     var cfg = CONFIG_BY_KEY[key];
 
@@ -2239,6 +2507,7 @@
           if(!el) return;
 
           el.addEventListener('change',function(){
+            if(isControlEventSuppressed(key)) return;
             if(isBusy || !state[key].isEditing) return;
 
             if(p.type === 'fontWeight' && id === modeId(key,p.key)){
@@ -2248,6 +2517,7 @@
           });
 
           el.addEventListener('focus',function(){
+            if(isControlEventSuppressed(key)) return;
             if(isBusy || !state[key].isEditing) return;
 
             if(!state[key].colorDragSnapshot){
@@ -2257,6 +2527,7 @@
           });
 
           el.addEventListener('input',function(){
+            if(isControlEventSuppressed(key)) return;
             if(isBusy || !state[key].isEditing) return;
 
             apply(
@@ -2272,6 +2543,7 @@
           });
 
           el.addEventListener('change',function(){
+            if(isControlEventSuppressed(key)) return;
             if(isBusy || !state[key].isEditing) return;
 
             apply(
@@ -2304,7 +2576,53 @@
           });
 
           el.addEventListener('blur',function(){
+            if(isControlEventSuppressed(key)){
+              if(state[key]){
+                state[key].colorDragSnapshot = null;
+              }
+              return;
+            }
+
+            if(
+              isBusy ||
+              !state[key] ||
+              !state[key].isEditing
+            ){
+              if(state[key]){
+                state[key].colorDragSnapshot = null;
+              }
+              return;
+            }
+
+            var latest = readInputs(key);
+
+            if(!same(latest,state[key].current,key)){
+              apply(
+                key,
+                latest,
+                {
+                  recordHistory:false,
+                  lockCss:false
+                }
+              );
+            }
+
+            if(
+              state[key].colorDragSnapshot &&
+              !same(
+                state[key].colorDragSnapshot,
+                state[key].current,
+                key
+              )
+            ){
+              pushHistorySnapshot(
+                key,
+                state[key].colorDragSnapshot
+              );
+            }
+
             state[key].colorDragSnapshot = null;
+            refresh(key);
           });
         });
       });
@@ -2324,28 +2642,36 @@
       }
     });
 
-    document.addEventListener('pointerdown',function(e){
-      var btn = e.target.closest('[data-action][data-key]');
-      if(!btn) return;
-      e.preventDefault();
-    });
-
     document.addEventListener('click',function(e){
       var btn = e.target.closest('[data-action][data-key]');
       if(!btn) return;
 
+      e.preventDefault();
+
+      if(btn.getAttribute('data-action-pending') === '1'){
+        return;
+      }
+
       var key = btn.getAttribute('data-key');
       var action = btn.getAttribute('data-action');
 
-      if(action === 'editButton') toggleEdit(key);
-      if(action === 'undoButton') undoChange(key);
-      if(action === 'restoreSystemButton') restoreSystem(key);
-      if(action === 'restoreDefaultButton') restoreDefault(key);
-      if(action === 'setDefaultButton') saveAsDefault(key);
-      if(action === 'saveButton') saveTheme(key);
-      if(action === 'cssEditButton') toggleCssEdit(key);
-      if(action === 'cssApplyButton') applyFromCss(key);
-      if(action === 'cssSaveButton') saveTheme(key);
+      /*
+        重要：不要在 pointerdown preventDefault。
+
+        原因：
+        color input 的 native picker 需要先有機會關閉並送出 change / blur。
+        如果在 pointerdown 阻止預設行為，第一次按恢復 default 時常會出現：
+        default 已套用，但晚到的色票事件又把舊顏色覆蓋回去。
+
+        現在改由 click 進入 runActionAfterNativePickerSettles()：
+        - reset 類動作會短暫忽略晚到色票事件。
+        - save 類動作會先等色票 commit，再 flush 控制器值。
+      */
+      runActionAfterNativePickerSettles(
+        key,
+        action,
+        btn
+      );
     });
 
     document.querySelectorAll('[data-free-group]').forEach(function(group){
@@ -2772,17 +3098,69 @@
     CONFIG_BY_KEY[cfg.key] = cfg;
   });
 
-  render();
-  init();
-  bind();
+  function dispatchButtonReady(detail){
+    try{
+      window.dispatchEvent(
+        new CustomEvent(
+          'skh-ui-button-ready',
+          {
+            detail:detail || {}
+          }
+        )
+      );
 
-  CONFIG.forEach(function(cfg){
-    setInputsEnabled(cfg.key,false);
-    setCssLocked(cfg.key,true);
-    refresh(cfg.key);
-  });
+      window.dispatchEvent(
+        new CustomEvent(
+          'skh-ui-test-ready',
+          {
+            detail:detail || {}
+          }
+        )
+      );
+    }
+    catch(err){}
+  }
 
-  updateFreeButton();
+  function bootButtonEditor(){
+    /*
+      ready event gating：
+
+      父頁 skh-ui-test-page.html 會先隱藏 UiButtonTest wrapper，
+      等本頁 dispatch skh-ui-test-ready 後才顯示畫面。
+
+      這裡只處理「何時通知父頁可以顯示」，
+      不處理恢復 default / 儲存 / 設為 default 的業務邏輯。
+    */
+
+    render();
+    init();
+    bind();
+
+    // 1. 先在隱藏狀態套原本 fallback，避免 color input 空白變 #000000。
+    applyLoaded(null, null);
+
+    // 2. 讀 Sheet。完成後才通知父頁 reveal。
+    if(typeof window.loadButtonTheme === 'function'){
+      window.loadButtonTheme(function(){
+        dispatchButtonReady({
+          source:'loadButtonTheme',
+          page:'UiButtonTest',
+          readyForReveal:true,
+          finishedAt:new Date().toISOString()
+        });
+      });
+    }
+    else{
+      dispatchButtonReady({
+        source:'fallback',
+        page:'UiButtonTest',
+        readyForReveal:true,
+        finishedAt:new Date().toISOString()
+      });
+    }
+  }
+
+  bootButtonEditor();
 
 })();
 </script>
