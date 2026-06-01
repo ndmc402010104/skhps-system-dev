@@ -2,7 +2,7 @@
 /* =====================================
    SKH Design System v1
    00_基礎 / UiThemeLoader
-   頁面載入後自動讀取 UI Sheet 設定，覆蓋 CSS Variables
+   Debug version：載入 UI Sheet 設定並發出 timing event
 ===================================== */
 
 (function(){
@@ -11,8 +11,14 @@
     return;
   }
 
-  window.__SKH_UI_THEME_LOADER_LOADED__ =
-    true;
+  window.__SKH_UI_THEME_LOADER_LOADED__ = true;
+  window.__SKH_UI_THEME_DEBUG__ = window.__SKH_UI_THEME_DEBUG__ || {
+    runs:[]
+  };
+
+  function now(){
+    return Math.round(performance.now());
+  }
 
   function kebab(value){
     return String(value)
@@ -22,14 +28,19 @@
   }
 
   function setRootVar(name,value){
-    document.documentElement.style.setProperty(
-      name,
-      value
-    );
+    document.documentElement.style.setProperty(name,value);
+  }
+
+  function dispatchThemeEvent(name,detail){
+    try{
+      window.dispatchEvent(
+        new CustomEvent(name,{detail:detail || {}})
+      );
+    }
+    catch(err){}
   }
 
   function applyBaseTheme(data){
-
     if(!data){
       return;
     }
@@ -86,222 +97,256 @@
     };
 
     Object.keys(data).forEach(function(className){
-
       Object.keys(data[className] || {}).forEach(function(property){
-
-        if(
-          map[className] &&
-          map[className][property]
-        ){
-
-          setRootVar(
-            map[className][property],
-            data[className][property]
-          );
-
+        if(map[className] && map[className][property]){
+          setRootVar(map[className][property], data[className][property]);
         }
         else{
-
-          setRootVar(
-            '--skh-' + className + '-' + kebab(property),
-            data[className][property]
-          );
-
+          setRootVar('--skh-' + className + '-' + kebab(property), data[className][property]);
         }
-
       });
-
     });
 
-    if(
-      data.motion &&
-      data.motion.duration &&
-      data.motion.easing
-    ){
-
-      setRootVar(
-        '--skh-transition',
-        data.motion.duration + ' ' + data.motion.easing
-      );
-
+    if(data.motion && data.motion.duration && data.motion.easing){
+      setRootVar('--skh-transition', data.motion.duration + ' ' + data.motion.easing);
     }
-
   }
 
   function applyButtonTheme(data){
-
     if(!data){
       return;
     }
 
     Object.keys(data).forEach(function(className){
-
       Object.keys(data[className] || {}).forEach(function(property){
-
-        setRootVar(
-          '--skh-btn-' + className + '-' + kebab(property),
-          data[className][property]
-        );
-
+        setRootVar('--skh-btn-' + className + '-' + kebab(property), data[className][property]);
       });
-
     });
-
   }
 
   function applyUiThemePayload(payload){
-
     if(!payload){
       return;
     }
 
     if(payload.base){
-      applyBaseTheme(
-        payload.base
-      );
+      applyBaseTheme(payload.base);
     }
 
     if(payload.button){
-      applyButtonTheme(
-        payload.button
-      );
+      applyButtonTheme(payload.button);
     }
-
   }
 
   function runGoogleFunction(functionName,onSuccess,onFailure){
-
     if(
       typeof google === 'undefined' ||
       !google.script ||
       !google.script.run ||
       typeof google.script.run[functionName] !== 'function'
     ){
-
       if(typeof onFailure === 'function'){
-        onFailure(
-          new Error(functionName + ' not found')
-        );
+        onFailure(new Error(functionName + ' not found'));
       }
-
       return;
-
     }
 
     google.script.run
       .withSuccessHandler(function(result){
-
         if(typeof onSuccess === 'function'){
           onSuccess(result);
         }
-
       })
       .withFailureHandler(function(error){
-
         if(typeof onFailure === 'function'){
           onFailure(error);
         }
-
       })[functionName]();
+  }
 
+  function summarizePayload(payload){
+    var summary = {};
+
+    if(payload && payload.base){
+      summary.baseGroups = Object.keys(payload.base || {});
+    }
+
+    if(payload && payload.button){
+      summary.buttonGroups = Object.keys(payload.button || {});
+    }
+
+    if(payload && payload.base && payload.base.brand){
+      summary.brand = payload.base.brand;
+    }
+
+    return summary;
+  }
+
+  function makeRun(done){
+    return {
+      runId:'theme-' + Date.now() + '-' + Math.floor(Math.random()*10000),
+      startedAt:now(),
+      ensureStartAt:null,
+      ensureDoneAt:null,
+      settingsStartAt:null,
+      settingsDoneAt:null,
+      legacyStartAt:null,
+      legacyDoneAt:null,
+      appliedAt:null,
+      finishedAt:null,
+      source:null,
+      error:null,
+      payloadSummary:null,
+      done:done
+    };
+  }
+
+  function finishRun(run){
+    if(run.finishedAt){
+      return;
+    }
+
+    run.finishedAt = now();
+
+    window.__SKH_UI_THEME_DEBUG__.runs.push(run);
+
+    var detail = {
+      runId:run.runId,
+      source:run.source || 'unknown',
+      error:run.error || '',
+      timings:{
+        totalMs:run.finishedAt - run.startedAt,
+        ensureMs:(run.ensureDoneAt && run.ensureStartAt) ? run.ensureDoneAt - run.ensureStartAt : null,
+        settingsMs:(run.settingsDoneAt && run.settingsStartAt) ? run.settingsDoneAt - run.settingsStartAt : null,
+        legacyMs:(run.legacyDoneAt && run.legacyStartAt) ? run.legacyDoneAt - run.legacyStartAt : null,
+        applyMs:(run.appliedAt ? run.appliedAt - run.startedAt : null)
+      },
+      payloadSummary:run.payloadSummary || null
+    };
+
+    dispatchThemeEvent('skh-ui-theme-loaded', detail);
+
+    if(typeof run.done === 'function'){
+      run.done(detail);
+    }
   }
 
   function loadUiTheme(done){
-
-    var finished =
-      false;
+    var run = makeRun(done);
+    var timeoutId = null;
 
     function finish(){
+      if(timeoutId){
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+      finishRun(run);
+    }
 
-      if(finished){
+    timeoutId = setTimeout(function(){
+      if(run.finishedAt){
         return;
       }
+      run.source = run.source || 'timeout-before-sheet-returned';
+      run.error = run.error || 'loadUiTheme timeout 2500ms before Sheet payload completed';
+      dispatchThemeEvent('skh-ui-theme-error', {
+        runId:run.runId,
+        source:run.source,
+        error:run.error,
+        timings:{totalMs:now() - run.startedAt}
+      });
+      finish();
+    },2500);
 
-      finished =
-        true;
-
-      if(typeof done === 'function'){
-        done();
-      }
-
-      window.dispatchEvent(
-        new CustomEvent(
-          'skh-ui-theme-loaded'
-        )
-      );
-
-    }
+    run.ensureStartAt = now();
 
     runGoogleFunction(
       'ensureUiThemeDatabase',
       function(){
+        run.ensureDoneAt = now();
+        run.settingsStartAt = now();
 
         runGoogleFunction(
           'getUiThemeSettings',
           function(payload){
+            run.settingsDoneAt = now();
+            run.source = 'getUiThemeSettings';
+            run.payloadSummary = summarizePayload(payload);
 
-            applyUiThemePayload(
-              payload
-            );
+            applyUiThemePayload(payload);
+            run.appliedAt = now();
+
+            dispatchThemeEvent('skh-ui-theme-sheet-applied', {
+              runId:run.runId,
+              source:run.source,
+              timings:{
+                totalMs:run.appliedAt - run.startedAt,
+                ensureMs:run.ensureDoneAt - run.ensureStartAt,
+                settingsMs:run.settingsDoneAt - run.settingsStartAt,
+                applyMs:run.appliedAt - run.startedAt
+              },
+              payloadSummary:run.payloadSummary
+            });
 
             finish();
-
           },
-          function(){
+          function(error){
+            run.settingsDoneAt = now();
+            run.error = 'getUiThemeSettings failed: ' + (error && error.message ? error.message : error);
+            run.legacyStartAt = now();
+            run.source = 'legacy-after-getUiThemeSettings-failure';
+            dispatchThemeEvent('skh-ui-theme-fallback-used', {
+              runId:run.runId,
+              source:run.source,
+              error:run.error
+            });
 
-            loadLegacyTheme(
-              finish
-            );
-
+            loadLegacyTheme(function(){
+              run.legacyDoneAt = now();
+              run.appliedAt = now();
+              finish();
+            });
           }
         );
-
       },
-      function(){
+      function(error){
+        run.ensureDoneAt = now();
+        run.error = 'ensureUiThemeDatabase failed: ' + (error && error.message ? error.message : error);
+        run.legacyStartAt = now();
+        run.source = 'legacy-after-ensureUiThemeDatabase-failure';
+        dispatchThemeEvent('skh-ui-theme-fallback-used', {
+          runId:run.runId,
+          source:run.source,
+          error:run.error
+        });
 
-        loadLegacyTheme(
-          finish
-        );
-
+        loadLegacyTheme(function(){
+          run.legacyDoneAt = now();
+          run.appliedAt = now();
+          finish();
+        });
       }
     );
-
-    setTimeout(function(){
-
-      finish();
-
-    },2500);
-
   }
 
   function loadLegacyTheme(done){
-
     var pending = 0;
     var doneCalled = false;
 
     function oneDone(){
-
       pending -= 1;
 
       if(pending <= 0 && !doneCalled){
         doneCalled = true;
-
         if(typeof done === 'function'){
           done();
         }
       }
-
     }
 
-    if(
-      typeof google !== 'undefined' &&
-      google.script &&
-      google.script.run
-    ){
-
+    if(typeof google !== 'undefined' && google.script && google.script.run){
       if(typeof google.script.run.getBaseCssSettings === 'function'){
         pending += 1;
-
         runGoogleFunction(
           'getBaseCssSettings',
           function(data){
@@ -314,7 +359,6 @@
 
       if(typeof google.script.run.getButtonCssSettings === 'function'){
         pending += 1;
-
         runGoogleFunction(
           'getButtonCssSettings',
           function(data){
@@ -324,49 +368,30 @@
           oneDone
         );
       }
-
     }
 
     if(pending === 0){
       doneCalled = true;
-
       if(typeof done === 'function'){
         done();
       }
     }
-
   }
 
-  window.loadUiTheme =
-    loadUiTheme;
-
-  window.applyUiThemePayload =
-    applyUiThemePayload;
-
-  window.applyBaseThemeFromSheet =
-    applyBaseTheme;
-
-  window.applyButtonThemeFromSheet =
-    applyButtonTheme;
+  window.loadUiTheme = loadUiTheme;
+  window.applyUiThemePayload = applyUiThemePayload;
+  window.applyBaseThemeFromSheet = applyBaseTheme;
+  window.applyButtonThemeFromSheet = applyButtonTheme;
 
   function autoLoad(){
-
     loadUiTheme();
-
   }
 
   if(document.readyState === 'loading'){
-
-    document.addEventListener(
-      'DOMContentLoaded',
-      autoLoad
-    );
-
+    document.addEventListener('DOMContentLoaded', autoLoad);
   }
   else{
-
     autoLoad();
-
   }
 
 })();

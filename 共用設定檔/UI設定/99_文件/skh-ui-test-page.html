@@ -327,22 +327,8 @@ body{
   }
 }
 
-/* =====================================
-   Anti flash：避免 input[type=color] 先顯示瀏覽器預設黑色
-   ===================================== */
 .ui-preload-wrapper{
   min-width:0;
-}
-
-.ui-preload-wrapper.skh-theme-not-ready input[type="color"]{
-  opacity:0 !important;
-}
-
-.ui-preload-wrapper.skh-theme-not-ready .skh-color-swatch,
-.ui-preload-wrapper.skh-theme-not-ready .color-swatch,
-.ui-preload-wrapper.skh-theme-not-ready [data-color-preview],
-.ui-preload-wrapper.skh-theme-not-ready [data-theme-preview]{
-  opacity:0 !important;
 }
 
 </style>
@@ -386,27 +372,368 @@ body{
   var content = document.getElementById('test-content');
 
   var activeRequestId = 0;
-  var isLoadingPage = false;
+  var activeProbe = null;
+  var latestThemeEvent = null;
 
   /*
-    修正策略：
-    1. 父頁只負責 AJAX include；不再主動重跑各元件 theme loader，避免重設成黑色。
-    2. 子頁先放進 visibility:hidden 的 wrapper，讓 script 可以量寬，但使用者看不到預設狀態。
-    3. UiStyleTest 的 input[type=color] 在 theme 未完成前額外 cloak，避免 #000000 閃一下。
-    4. 最多等待固定時間；等不到也會顯示內容，不會再卡在「讀取不到」。
-    5. 若顯示時色票仍未完成，色票會繼續隱藏；一旦變成非黑色就自動解除 cloak。
+    2026-06-01 debug strategy:
+    - 取消前面幾版的鎖定、白畫面 gate、父頁猜色、硬等 Sheet。
+    - 回到快速載入：HTML 拿到後立刻顯示，讓黑色到真色的過程可以被觀察。
+    - 新增 probe：記錄 click、HTML 回來、script 執行、第一次看到黑色色票、第一次看到品牌色票變成非黑、theme loader 事件。
+    - probe 完成後用 alert 顯示實測毫秒數，幫助判斷到底是「後端沒抓到」、「事件太早 finish」，還是「子頁色票自己的資料晚回來」。
   */
+
+  window.__SKH_UI_TEST_DEBUG__ = window.__SKH_UI_TEST_DEBUG__ || {
+    probes:[],
+    themeEvents:[]
+  };
+
+  function now(){
+    return Math.round(performance.now());
+  }
+
+  function normalizeHex(value){
+    value = String(value || '').trim().toLowerCase();
+
+    if(/^#[0-9a-f]{6}$/.test(value)){
+      return value;
+    }
+
+    if(/^#[0-9a-f]{3}$/.test(value)){
+      return '#' + value[1] + value[1] + value[2] + value[2] + value[3] + value[3];
+    }
+
+    return '';
+  }
+
+  function isBlackOrEmpty(value){
+    var hex = normalizeHex(value);
+    return !hex || hex === '#000000';
+  }
+
+  function getColorInputs(root){
+    if(!root){
+      return [];
+    }
+    return Array.prototype.slice.call(
+      root.querySelectorAll('input[type="color"]')
+    );
+  }
+
+  function getBrandInputs(root){
+    var inputs = Array.prototype.slice.call(
+      root.querySelectorAll('input[type="color"][id^="brand_"]')
+    );
+
+    if(inputs.length){
+      return inputs;
+    }
+
+    return getColorInputs(root);
+  }
+
+  function summarizeColors(root){
+    var inputs = getBrandInputs(root);
+    return inputs.map(function(input){
+      return (input.id || input.name || '(no id)') + '=' + String(input.value || '');
+    });
+  }
+
+  function countColorState(root){
+    var inputs = getBrandInputs(root);
+    var black = 0;
+    var nonBlack = 0;
+
+    inputs.forEach(function(input){
+      if(isBlackOrEmpty(input.value)){
+        black += 1;
+      }
+      else{
+        nonBlack += 1;
+      }
+    });
+
+    return {
+      total:inputs.length,
+      black:black,
+      nonBlack:nonBlack,
+      values:summarizeColors(root)
+    };
+  }
+
+  function recordThemeEvent(name, detail){
+    latestThemeEvent = {
+      name:name,
+      at:now(),
+      detail:detail || null
+    };
+
+    window.__SKH_UI_TEST_DEBUG__.themeEvents.push(latestThemeEvent);
+
+    if(activeProbe){
+      activeProbe.themeEvents.push(latestThemeEvent);
+    }
+
+    console.log('[SKH UI theme event]', latestThemeEvent);
+  }
+
+  [
+    'skh-ui-theme-loaded',
+    'skh-ui-theme-sheet-applied',
+    'skh-ui-theme-fallback-used',
+    'skh-ui-theme-error',
+    'skh-ui-test-ready',
+    'skh-theme-ready',
+    'ui-theme-ready'
+  ].forEach(function(eventName){
+    window.addEventListener(eventName,function(event){
+      recordThemeEvent(eventName, event && event.detail ? event.detail : null);
+    });
+  });
 
   window.getCurrentUiTestState = function(){
     return {
       activeRequestId:activeRequestId,
-      isLoadingPage:isLoadingPage,
+      activeProbe:activeProbe,
+      latestThemeEvent:latestThemeEvent,
       hasLoadUiStyleTheme:typeof window.loadUiStyleTheme,
       hasLoadBaseTheme:typeof window.loadBaseTheme,
       hasLoadButtonTheme:typeof window.loadButtonTheme,
       hasLoadUiTheme:typeof window.loadUiTheme
     };
   };
+
+  function makeProbe(pageObj){
+    var probe = {
+      requestId:activeRequestId,
+      pageId:pageObj.id,
+      pageName:pageObj.name,
+      path:pageObj.path,
+      clickAt:now(),
+      htmlBackAt:null,
+      wrapperInsertedAt:null,
+      scriptsStartAt:null,
+      scriptsDoneAt:null,
+      firstVisibleAt:null,
+      firstBlackAt:null,
+      firstNonBlackAt:null,
+      stableNonBlackAt:null,
+      alertAt:null,
+      initialColorState:null,
+      finalColorState:null,
+      themeEvents:[],
+      notes:[]
+    };
+
+    window.__SKH_UI_TEST_DEBUG__.probes.push(probe);
+    activeProbe = probe;
+    return probe;
+  }
+
+  function buildProbeMessage(probe){
+    var themeEvent = null;
+    var sheetApplied = null;
+
+    probe.themeEvents.forEach(function(event){
+      if(event.name === 'skh-ui-theme-sheet-applied'){
+        sheetApplied = event;
+      }
+      if(event.name === 'skh-ui-theme-loaded'){
+        themeEvent = event;
+      }
+    });
+
+    var referenceEvent = sheetApplied || themeEvent;
+
+    function diff(at){
+      if(typeof at !== 'number'){
+        return '尚未偵測';
+      }
+      return (at - probe.clickAt) + ' ms';
+    }
+
+    function diffBetween(a,b){
+      if(typeof a !== 'number' || typeof b !== 'number'){
+        return '無法計算';
+      }
+      return (b - a) + ' ms';
+    }
+
+    var lines = [];
+    lines.push('SKH UI Theme Debug');
+    lines.push('頁面：' + probe.pageName);
+    lines.push('');
+    lines.push('Click → HTML 回來：' + diff(probe.htmlBackAt));
+    lines.push('Click → wrapper 顯示：' + diff(probe.firstVisibleAt));
+    lines.push('Click → 第一次偵測黑色色票：' + diff(probe.firstBlackAt));
+    lines.push('Click → 第一次偵測非黑色票：' + diff(probe.firstNonBlackAt));
+    lines.push('Click → 穩定非黑色票：' + diff(probe.stableNonBlackAt));
+    lines.push('Click → Theme event：' + diff(referenceEvent ? referenceEvent.at : null));
+    lines.push('黑色 → 非黑：' + diffBetween(probe.firstBlackAt, probe.firstNonBlackAt));
+    lines.push('黑色 → Theme event：' + diffBetween(probe.firstBlackAt, referenceEvent ? referenceEvent.at : null));
+    lines.push('');
+    lines.push('Theme event：' + (referenceEvent ? referenceEvent.name : '沒有收到'));
+
+    if(referenceEvent && referenceEvent.detail){
+      if(referenceEvent.detail.source){
+        lines.push('Theme source：' + referenceEvent.detail.source);
+      }
+      if(referenceEvent.detail.error){
+        lines.push('Theme error：' + referenceEvent.detail.error);
+      }
+      if(referenceEvent.detail.timings){
+        lines.push('Theme timings：' + JSON.stringify(referenceEvent.detail.timings));
+      }
+    }
+
+    lines.push('');
+    lines.push('目前色票：');
+    (probe.finalColorState && probe.finalColorState.values || []).forEach(function(v){
+      lines.push('  ' + v);
+    });
+
+    if(probe.notes.length){
+      lines.push('');
+      lines.push('Notes：');
+      probe.notes.forEach(function(note){
+        lines.push('  - ' + note);
+      });
+    }
+
+    lines.push('');
+    lines.push('完整資料可在 console 輸入：window.__SKH_UI_TEST_DEBUG__');
+
+    return lines.join('\n');
+  }
+
+  function maybeFinishProbe(probe, wrapper, reason){
+    if(!probe || probe.alertAt){
+      return;
+    }
+
+    probe.finalColorState = countColorState(wrapper);
+
+    var readyEnough = false;
+
+    if(probe.pageId !== 'UiStyleTest'){
+      readyEnough = true;
+    }
+    else if(probe.stableNonBlackAt){
+      readyEnough = true;
+    }
+    else if(now() - probe.clickAt >= 5000){
+      readyEnough = true;
+      probe.notes.push('超過 5 秒仍未達穩定非黑，可能沒有抓到後台資料或子頁沒有把 Sheet 值寫回 color input。');
+    }
+
+    if(!readyEnough){
+      return;
+    }
+
+    probe.notes.push('完成原因：' + reason);
+    probe.alertAt = now();
+
+    console.log('[SKH UI probe result]', probe);
+
+    setTimeout(function(){
+      alert(buildProbeMessage(probe));
+    },0);
+  }
+
+  function startProbeObserver(probe, wrapper){
+    var stablePass = 0;
+    var stopped = false;
+    var observer = null;
+    var timer = null;
+
+    function cleanup(){
+      stopped = true;
+      if(observer){
+        try{ observer.disconnect(); }catch(err){}
+        observer = null;
+      }
+      if(timer){
+        clearTimeout(timer);
+        timer = null;
+      }
+    }
+
+    function check(reason){
+      if(stopped || probe.requestId !== activeRequestId){
+        cleanup();
+        return;
+      }
+
+      var state = countColorState(wrapper);
+
+      if(!probe.initialColorState){
+        probe.initialColorState = state;
+      }
+
+      if(state.black > 0 && !probe.firstBlackAt){
+        probe.firstBlackAt = now();
+        console.log('[SKH UI probe] first black color detected', state);
+      }
+
+      if(state.total > 0 && state.nonBlack > 0 && !probe.firstNonBlackAt){
+        probe.firstNonBlackAt = now();
+        console.log('[SKH UI probe] first non-black color detected', state);
+      }
+
+      if(probe.pageId === 'UiStyleTest'){
+        if(state.total >= 5 && state.nonBlack >= Math.min(5,state.total)){
+          stablePass += 1;
+        }
+        else{
+          stablePass = 0;
+        }
+
+        if(stablePass >= 3 && !probe.stableNonBlackAt){
+          probe.stableNonBlackAt = now();
+          console.log('[SKH UI probe] stable non-black colors detected', state);
+        }
+      }
+      else{
+        probe.stableNonBlackAt = probe.stableNonBlackAt || now();
+      }
+
+      probe.finalColorState = state;
+      maybeFinishProbe(probe, wrapper, reason);
+
+      if(probe.alertAt){
+        cleanup();
+      }
+    }
+
+    try{
+      observer = new MutationObserver(function(){
+        check('MutationObserver');
+      });
+      observer.observe(wrapper, {
+        subtree:true,
+        childList:true,
+        attributes:true,
+        characterData:true,
+        attributeFilter:['value','style','class','disabled']
+      });
+    }
+    catch(err){
+      probe.notes.push('MutationObserver 啟動失敗：' + err.message);
+    }
+
+    function poll(){
+      if(stopped){
+        return;
+      }
+      check('poll');
+      timer = setTimeout(poll,100);
+    }
+
+    requestAnimationFrame(function(){
+      probe.firstVisibleAt = now();
+      poll();
+    });
+  }
 
   function wrapTables(container){
     var tables = container.querySelectorAll('table.testTable');
@@ -426,10 +753,10 @@ body{
     });
   }
 
-  function runInsertedScripts(container){
-    var scripts = Array.prototype.slice.call(
-      container.querySelectorAll('script')
-    );
+  function runInsertedScripts(container, probe){
+    var scripts = Array.prototype.slice.call(container.querySelectorAll('script'));
+
+    probe.scriptsStartAt = now();
 
     scripts.forEach(function(oldScript){
       var newScript = document.createElement('script');
@@ -441,6 +768,8 @@ body{
       newScript.textContent = oldScript.textContent;
       oldScript.parentNode.replaceChild(newScript, oldScript);
     });
+
+    probe.scriptsDoneAt = now();
   }
 
   function activateButton(activeBtn){
@@ -455,23 +784,6 @@ body{
     }
   }
 
-  function setSidebarLocked(locked){
-    isLoadingPage = !!locked;
-
-    var buttons = sidebar.querySelectorAll('.testNavButton');
-
-    buttons.forEach(function(btn){
-      btn.disabled = !!locked;
-    });
-
-    if(locked){
-      content.classList.add('is-loading');
-    }
-    else{
-      content.classList.remove('is-loading');
-    }
-  }
-
   function showLoading(message){
     content.innerHTML =
       '<div class="ui-loading-box" data-ui-loading="1">' +
@@ -482,219 +794,27 @@ body{
       '</div>';
   }
 
-  function updateLoading(message){
-    var loadingEl = content.querySelector('[data-ui-loading]');
-
-    if(loadingEl){
-      loadingEl.querySelector('div:last-child').textContent = message;
-    }
-  }
-
   function showError(error){
-    setSidebarLocked(false);
-
     content.innerHTML =
       '<div class="ui-error-box">載入失敗：' +
       (error && error.message ? error.message : error) +
       '</div>';
   }
 
-  function makePreloadWrapper(html){
+  function makeWrapper(html){
     var wrapper = document.createElement('div');
-
-    wrapper.className = 'ui-preload-wrapper skh-theme-not-ready';
-    wrapper.setAttribute('data-ui-preload-wrapper','1');
-
-    wrapper.style.visibility = 'hidden';
-    wrapper.style.pointerEvents = 'none';
-    wrapper.style.position = 'absolute';
-    wrapper.style.left = '24px';
-    wrapper.style.right = '24px';
-    wrapper.style.top = '24px';
-    wrapper.style.width = 'calc(100% - 48px)';
-    wrapper.style.minHeight = '1px';
-
+    wrapper.className = 'ui-preload-wrapper';
+    wrapper.setAttribute('data-ui-wrapper','1');
     wrapper.innerHTML = html;
-
     return wrapper;
   }
 
-  function waitFrames(count, done){
-    if(count <= 0){
-      done();
-      return;
-    }
-
-    requestAnimationFrame(function(){
-      waitFrames(count - 1, done);
-    });
-  }
-
-  function getColorInputs(wrapper){
-    return Array.prototype.slice.call(
-      wrapper.querySelectorAll('input[type="color"]')
-    );
-  }
-
-  function colorInputsReady(wrapper){
-    var inputs = getColorInputs(wrapper);
-
-    if(inputs.length < 2){
-      return true;
-    }
-
-    var nonBlackCount = 0;
-
-    inputs.forEach(function(input){
-      var value = String(input.value || '').toLowerCase();
-
-      if(
-        value &&
-        value !== '#000000' &&
-        value !== '#000'
-      ){
-        nonBlackCount += 1;
-      }
-    });
-
-    return nonBlackCount > 0;
-  }
-
-  function releaseColorCloakWhenReady(wrapper, requestId){
-    var start = Date.now();
-    var maxWait = 8000;
-
-    function check(){
-      if(requestId !== activeRequestId){
-        return;
-      }
-
-      if(
-        colorInputsReady(wrapper) ||
-        Date.now() - start >= maxWait
-      ){
-        wrapper.classList.remove('skh-theme-not-ready');
-        return;
-      }
-
-      setTimeout(check,120);
-    }
-
-    check();
-  }
-
-  function waitDomQuiet(wrapper, done){
-    var start = Date.now();
-    var lastChange = Date.now();
-    var maxWait = 2200;
-    var minWait = 450;
-    var quietWait = 180;
-
-    var observer = new MutationObserver(function(){
-      lastChange = Date.now();
-    });
-
-    try{
-      observer.observe(wrapper, {
-        childList:true,
-        subtree:true,
-        attributes:true,
-        characterData:true
-      });
-    }
-    catch(err){}
-
-    function finish(){
-      try{ observer.disconnect(); }catch(err){}
-      done();
-    }
-
-    function check(){
-      var now = Date.now();
-
-      if(
-        (now - start >= minWait && now - lastChange >= quietWait) ||
-        now - start >= maxWait
-      ){
-        finish();
-        return;
-      }
-
-      setTimeout(check,70);
-    }
-
-    check();
-  }
-
-  function waitVisualReady(pageObj, wrapper, done){
-    var start = Date.now();
-    var minWait = 550;
-    var maxWait = 2600;
-    var readyPass = 0;
-
-    function check(){
-      var elapsed = Date.now() - start;
-      var ready = true;
-
-      if(pageObj.id === 'UiStyleTest'){
-        ready = colorInputsReady(wrapper);
-      }
-
-      if(ready){
-        readyPass += 1;
-      }
-      else{
-        readyPass = 0;
-      }
-
-      if(
-        (elapsed >= minWait && readyPass >= 2) ||
-        elapsed >= maxWait
-      ){
-        done();
-        return;
-      }
-
-      setTimeout(check,100);
-    }
-
-    check();
-  }
-
-  function revealWrapper(wrapper, requestId){
-    if(requestId !== activeRequestId){
-      return;
-    }
-
-    var loadingEl = content.querySelector('[data-ui-loading]');
-    if(loadingEl && loadingEl.parentNode){
-      loadingEl.parentNode.removeChild(loadingEl);
-    }
-
-    wrapper.style.visibility = '';
-    wrapper.style.pointerEvents = '';
-    wrapper.style.position = '';
-    wrapper.style.left = '';
-    wrapper.style.right = '';
-    wrapper.style.top = '';
-    wrapper.style.width = '';
-    wrapper.style.minHeight = '';
-
-    setSidebarLocked(false);
-
-    releaseColorCloakWhenReady(wrapper, requestId);
-  }
-
   function loadPage(pageObj, btn){
-    if(isLoadingPage){
-      return;
-    }
-
     activeRequestId += 1;
 
     var requestId = activeRequestId;
+    var probe = makeProbe(pageObj);
 
-    setSidebarLocked(true);
     activateButton(btn);
     showLoading('載入中：' + pageObj.name + '...');
 
@@ -704,29 +824,23 @@ body{
           return;
         }
 
-        updateLoading('預載頁面內容中...');
+        probe.htmlBackAt = now();
 
-        var wrapper = makePreloadWrapper(html);
+        var wrapper = makeWrapper(html);
+        content.innerHTML = '';
         content.appendChild(wrapper);
+        probe.wrapperInsertedAt = now();
 
         wrapTables(wrapper);
-        runInsertedScripts(wrapper);
-
-        updateLoading('等待樣式套用完成...');
-
-        waitDomQuiet(wrapper,function(){
-          waitVisualReady(pageObj, wrapper, function(){
-            waitFrames(2,function(){
-              revealWrapper(wrapper, requestId);
-            });
-          });
-        });
+        runInsertedScripts(wrapper, probe);
+        startProbeObserver(probe, wrapper);
       })
       .withFailureHandler(function(error){
         if(requestId !== activeRequestId){
           return;
         }
 
+        probe.notes.push('getUiTestPageContent failure：' + (error && error.message ? error.message : error));
         showError(error);
       })
       .getUiTestPageContent(pageObj.path);
