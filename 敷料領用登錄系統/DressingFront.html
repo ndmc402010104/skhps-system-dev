@@ -6862,11 +6862,14 @@ async function runInventoryNewGtinGuidedMasterFlow(options){
     }).filter(Boolean)
   )).sort();
 
-  const name = await pickValueByPrompt(
-    '步驟 2：請選擇或輸入敷料名稱',
-    names,
-    defaultName
-  );
+  let name = defaultName;
+  if(!name){
+    name = await pickValueByPrompt(
+      gtin ? '步驟 2：請選擇或輸入敷料名稱' : '步驟 2：敷料名稱',
+      names,
+      ''
+    );
+  }
 
   if(name === null){
     return null;
@@ -6884,7 +6887,7 @@ async function runInventoryNewGtinGuidedMasterFlow(options){
   )).sort();
 
   const size = await pickValueByPrompt(
-    '步驟 3：請選擇或輸入規格描述',
+    gtin ? '步驟 3：請選擇或輸入規格描述' : '步驟 3：規格描述',
     sizesForName,
     ''
   );
@@ -6894,11 +6897,16 @@ async function runInventoryNewGtinGuidedMasterFlow(options){
   }
 
   const existingItem = findExistingItemByNameAndSize(name, size) || {};
-  const hospitalCode = await showInputDialog(
-    '步驟 4：院內碼',
-    '請確認院內碼\n\n已有相同名稱與規格時會自動帶入；沒有也可以手動輸入。',
-    existingItem.hospitalCode || defaultHospitalCode
-  );
+  let hospitalCode = existingItem.hospitalCode || defaultHospitalCode;
+  if(!hospitalCode || defaultName){
+    hospitalCode = await showInputDialog(
+      '步驟 4：院內碼',
+      defaultName
+        ? '請輸入院內碼。\n\n如果目前還不知道院內碼，可以留空，最後總整理畫面仍可再改。'
+        : '請確認院內碼\n\n已有相同名稱與規格時會自動帶入；沒有也可以手動輸入。',
+      hospitalCode || ''
+    );
+  }
 
   if(hospitalCode === null){
     return null;
@@ -7899,7 +7907,7 @@ if (window.location.hostname.includes('github.io')) {
   ghFooter.innerHTML = `
     <div style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">
       <span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>
-      <span>v.2.27.6-202606021528</span>
+      <span>v.2.27.6-202606021534</span>
     </div>
   `;
   document.body.appendChild(ghFooter);
@@ -7916,6 +7924,7 @@ function normalizeTextForCompare(value){
 
 </body>
 </html>
+
 
 
 
