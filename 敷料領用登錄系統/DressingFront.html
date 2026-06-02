@@ -1,8 +1,8 @@
 ﻿<!DOCTYPE html>
 <!--
 檔案位置：科室系統用戶端/DressingFront.html
-時間戳記：2026-06-02 17:25 UTC+8
-用途：敷料領用/建檔/庫存前端；修正庫存盤點批號下拉、掃碼批號預設、該批號目前數量/總庫存數量、實際盤點盒數與單位數，以及未設定一盒數量時的快速設定流程。
+時間戳記：2026-06-02 17:37 UTC+8
+用途：敷料領用/建檔/庫存前端；修正庫存盤點批號下拉、掃碼批號預設、該批號目前數量/總庫存數量、實際盤點盒數與單位數；盤點時主檔已有一盒數量不再顯示一盒數量輸入框，主檔缺值才顯示設定按鈕；掃到目前無庫存的批號時提示切換入庫並沿用掃描碼。
 -->
 <html>
 <head>
@@ -3851,6 +3851,10 @@ function renderSearchSuggestions(context, matches, query){
     return;
   }
 
+  const isInventoryContext = context === 'inventory';
+  const isStocktakeContext = isInventoryContext && getInventoryOperationType() === 'stocktake';
+  const allowInventoryNewItem = isInventoryContext && !isStocktakeContext;
+
   function getInventoryNewSuggestLabel(){
     const existingName = findExistingDressingNameForInventoryInput(query);
     return existingName
@@ -3859,8 +3863,14 @@ function renderSearchSuggestions(context, matches, query){
   }
 
   if(!matches || matches.length === 0){
-    if(context === 'inventory'){
+    if(isInventoryContext){
       box.style.display = 'block';
+      if(isStocktakeContext){
+        box.innerHTML =
+          '<div class="searchSuggestMeta">盤點模式找不到目前可盤點的敷料；新增敷料請改走入庫流程</div>';
+        return;
+      }
+
       box.innerHTML =
         '<div class="searchSuggestMeta">找不到符合的敷料主檔</div>' +
         '<button type="button" class="searchSuggestNewItem" onclick="openInventoryNewDressingDialogFromSearch()">' +
@@ -3875,16 +3885,20 @@ function renderSearchSuggestions(context, matches, query){
     return;
   }
 
-  const inventoryNewItemHtml = context === 'inventory'
+  const inventoryNewItemHtml = allowInventoryNewItem
     ? '<button type="button" class="searchSuggestNewItem" onclick="openInventoryNewDressingDialogFromSearch()">' +
         '<span>' + escapeHtml(getInventoryNewSuggestLabel()) + '</span>' +
         '<span class="searchSuggestNewHint">' + escapeHtml(query) + '</span>' +
       '</button>'
     : '';
 
+  const metaText = isStocktakeContext
+    ? '找到 ' + matches.length + ' 筆候選；盤點模式只可選擇目前已建立庫存的敷料，不能在這裡新增'
+    : '找到 ' + matches.length + ' 筆候選；沒有需要的品項、規格或院內碼可滑到最下方新增';
+
   box.style.display = 'block';
   box.innerHTML =
-    '<div class="searchSuggestMeta">找到 ' + matches.length + ' 筆候選；沒有需要的品項、規格或院內碼可滑到最下方新增</div>' +
+    '<div class="searchSuggestMeta">' + escapeHtml(metaText) + '</div>' +
     matches.map(function(item, idx){
       const dressingText = [item.dressingName || '', item.size || ''].filter(Boolean).join(' ');
       const statusClass = getDressingStatusClassForSuggest(item);
@@ -5428,12 +5442,20 @@ function startDressingScanner(){
     .catch(function(err){
       done();
       console.log(err);
+      if(scannerMode === 'inventory'){
+        setInventoryScannerBusy(false);
+        document.getElementById('scannerOverlay').style.display = 'none';
+      }
       showNotice('無法開啟相機，請確認手機瀏覽器已允許相機權限', 'error');
     });
 }
 
 function closeDressingScanner(){
   document.getElementById('scannerOverlay').style.display = 'none';
+
+  if(scannerMode === 'inventory'){
+    setInventoryScannerBusy(false);
+  }
 
   if(dressingScanner){
     dressingScanner
@@ -5655,8 +5677,10 @@ let inventoryCache = [];
 let pendingInventoryMasterGtinTarget = '';
 let inventoryOperationDirty = false;
 let inventoryBusy = false;
+let inventoryScannerBusy = false;
 let inventoryOperationChoiceMade = false;
 let inventoryUnitChoiceMade = false;
+let inventoryInboundRedirectAutoCreateRaw = '';
 
 function openInventoryArea(){
   document.getElementById('formArea').style.display = 'none';
@@ -6226,7 +6250,13 @@ function setInventoryBusy(isBusy, message){
     setInventoryStatus(message);
   }
 
-  document.querySelectorAll('#inventoryArea button, #inventoryArea input').forEach(function(el){
+  syncInventoryControlDisabledState();
+}
+
+function syncInventoryControlDisabledState(){
+  const shouldDisable = inventoryBusy || inventoryScannerBusy;
+
+  document.querySelectorAll('#inventoryArea button, #inventoryArea input, #inventoryArea select').forEach(function(el){
     if(el.id === 'inventoryOperationType' || el.id === 'inventoryUnit'){
       return;
     }
@@ -6235,8 +6265,13 @@ function setInventoryBusy(isBusy, message){
       return;
     }
 
-    el.disabled = !!isBusy;
+    el.disabled = !!shouldDisable;
   });
+}
+
+function setInventoryScannerBusy(isBusy){
+  inventoryScannerBusy = !!isBusy;
+  syncInventoryControlDisabledState();
 }
 
 function markInventoryOperationDirty(){
@@ -6507,13 +6542,9 @@ function renderInventoryStocktakeLotSelect(){
   field.style.display = '';
 
   if(rows.length === 0){
-    if(preferredValue){
-      select.innerHTML = '<option value="' + escapeHtml(preferredValue) + '" selected>' +
-        escapeHtml('掃描批號 ' + (currentLot || '未填') + '｜效期 ' + (currentExp || '未填') + '｜目前 0 單位') +
-        '</option>';
-    } else {
-      select.innerHTML = '<option value="">此敷料在本庫存位置暫無庫存；若要盤點為 0，請先確認批號</option>';
-    }
+    select.innerHTML = '<option value="">此敷料在本庫存位置目前沒有可盤點批號；請改走入庫</option>';
+    if(lotInput) lotInput.value = '';
+    if(expInput) expInput.value = '';
     applyInventoryStocktakeLotSelection({ silent:true });
     return;
   }
@@ -6523,12 +6554,6 @@ function renderInventoryStocktakeLotSelect(){
   });
 
   const options = [];
-  if(preferredValue && !hasPreferredRow){
-    options.push({
-      value:preferredValue,
-      label:'掃描批號 ' + (currentLot || '未填') + '｜效期 ' + (currentExp || '未填') + '｜目前 0 單位'
-    });
-  }
 
   rows.forEach(function(row){
     options.push({
@@ -6539,16 +6564,24 @@ function renderInventoryStocktakeLotSelect(){
     });
   });
 
-  select.innerHTML = options.map(function(opt){
+  const placeholderOption = {
+    value:'',
+    label:'請選擇要盤點的批號'
+  };
+
+  const shouldShowPlaceholder = !hasPreferredRow;
+  const renderOptions = shouldShowPlaceholder ? [placeholderOption].concat(options) : options;
+
+  select.innerHTML = renderOptions.map(function(opt){
     return '<option value="' + escapeHtml(opt.value) + '">' + escapeHtml(opt.label) + '</option>';
   }).join('');
 
-  if(preferredValue){
+  if(hasPreferredRow){
     select.value = preferredValue;
-  }
-
-  if(!select.value && options.length > 0){
-    select.value = options[0].value;
+  } else {
+    select.value = '';
+    if(lotInput) lotInput.value = '';
+    if(expInput) expInput.value = '';
   }
 
   applyInventoryStocktakeLotSelection({ silent:true });
@@ -6578,6 +6611,153 @@ function applyInventoryStocktakeLotSelection(options){
     markInventoryOperationDirty();
   }
   renderInventoryQuantityHint();
+}
+
+
+function findInventoryStocktakeRowByLotExp(lot, exp){
+  const targetLot = String(lot || '').trim();
+  const targetExp = String(exp || '').trim();
+  const rows = getInventoryStocktakeLotRows();
+
+  return rows.find(function(row){
+    return String(row.lot || '').trim() === targetLot &&
+      String(row.exp || '').trim() === targetExp;
+  }) || null;
+}
+
+function isInventoryStocktakeSelectedLotKnown(){
+  if(getInventoryOperationType() !== 'stocktake'){
+    return true;
+  }
+
+  const rows = getInventoryStocktakeLotRows();
+  if(rows.length === 0){
+    return false;
+  }
+
+  const lot = String(document.getElementById('inventoryLot') ? document.getElementById('inventoryLot').value : '').trim();
+  const exp = String(document.getElementById('inventoryExp') ? document.getElementById('inventoryExp').value : '').trim();
+  if(!lot && !exp){
+    return false;
+  }
+
+  return !!findInventoryStocktakeRowByLotExp(lot, exp);
+}
+
+function shouldOfferInboundForMissingStocktakeInventory(parsed){
+  parsed = parsed || {};
+
+  if(getInventoryOperationType() !== 'stocktake'){
+    return false;
+  }
+
+  if(!getInventoryMasterItem()){
+    return false;
+  }
+
+  if(getInventoryUnitValue() === '__ALL__'){
+    return false;
+  }
+
+  const rows = getInventoryStocktakeLotRows();
+  if(rows.length === 0){
+    return true;
+  }
+
+  const hasScannedLotOrExp = !!String(parsed.lot || parsed.exp || '').trim();
+  if(!hasScannedLotOrExp){
+    return false;
+  }
+
+  return !findInventoryStocktakeRowByLotExp(parsed.lot || '', parsed.exp || '');
+}
+
+async function offerSwitchMissingStocktakeInventoryToInbound(item, parsed, packageType){
+  item = item || getInventoryMasterItem() || {};
+  parsed = parsed || {};
+
+  const lotText = String(parsed.lot || '').trim() || '未填';
+  const expText = String(parsed.exp || '').trim() || '未填';
+  const ok = await showConfirmDialog(
+    describeDressingItem(item) +
+      '\n庫存位置：' + getInventoryUnitLabel() +
+      '\n掃描批號：' + lotText +
+      '\n效期：' + expText +
+      '\n\n這個批號目前沒有庫存紀錄。盤點只適合盤「現在已存在的庫存批號」。\n\n要改成入庫，並沿用剛剛掃到的碼、批號與效期嗎？',
+    '目前沒有庫存，建議改入庫'
+  );
+
+  if(!ok){
+    showNotice('已留在盤點模式；此批號目前沒有可盤點庫存，建議改走入庫。', 'warning', '未切換入庫');
+    return false;
+  }
+
+  const typeInput = document.getElementById('inventoryOperationType');
+  if(typeInput){
+    typeInput.value = 'inbound';
+  }
+  inventoryOperationChoiceMade = true;
+  inventoryOperationDirty = false;
+
+  const boxInput = document.getElementById('inventoryBoxQty');
+  const actualBoxInput = document.getElementById('inventoryActualBoxQty');
+  const unitInput = document.getElementById('inventoryUnitQty');
+  if(boxInput) boxInput.value = '';
+  if(actualBoxInput) actualBoxInput.value = '';
+  if(unitInput) unitInput.value = '';
+
+  updateInventorySegmentedButtons();
+  setInventoryPanelOpen('inventorySearchPanel', canShowInventorySearchPanel());
+  setInventoryPanelOpen('inventoryDetailPanel', true);
+  applyInventoryLotExpInputMode(parsed);
+  renderInventoryOperationMode();
+  renderInventoryQuantityHint();
+  showNotice('已切換為入庫，並保留剛剛掃到的批號與效期。', 'success', '已切換入庫');
+
+  await promptInventoryInboundQuantitiesAfterLookup(item, parsed, packageType);
+  return true;
+}
+
+async function offerSwitchStocktakeSearchKeyToInbound(raw, options){
+  options = options || {};
+  raw = String(raw || '').trim();
+  if(!raw){
+    return false;
+  }
+
+  const ok = await showConfirmDialog(
+    '盤點模式只處理目前已存在的庫存批號。\n\n目前搜尋 / 掃描的內容：' + raw + '\n\n在盤點流程中找不到可以直接盤點的庫存。要切換到入庫，並把這個內容帶到入庫流程繼續查詢 / 新增嗎？',
+    '盤點不新增，改走入庫'
+  );
+
+  if(!ok){
+    renderSearchSuggestions('inventory', [], raw);
+    showNotice('已留在盤點模式；新增敷料或新批號請改走入庫。', 'warning', '未切換入庫');
+    return false;
+  }
+
+  const typeInput = document.getElementById('inventoryOperationType');
+  if(typeInput){
+    typeInput.value = 'inbound';
+  }
+  inventoryOperationChoiceMade = true;
+  inventoryOperationDirty = false;
+  inventoryInboundRedirectAutoCreateRaw = raw;
+
+  updateInventorySegmentedButtons();
+  setInventoryPanelOpen('inventorySearchPanel', canShowInventorySearchPanel());
+  setInventoryPanelOpen('inventoryDetailPanel', false);
+  clearInventoryDetailForm();
+  renderInventoryOperationMode();
+
+  const input = document.getElementById('inventoryBarcodeInput');
+  if(input){
+    input.value = raw;
+  }
+
+  showNotice('已切換為入庫，並保留剛剛的搜尋 / 掃描內容。', 'success', '已切換入庫');
+  await lookupInventoryFromInput();
+  return true;
 }
 
 function isInventoryStocktakeSpecificLotSelected(){
@@ -6670,7 +6850,8 @@ function renderInventoryOperationMode(){
 
   const operationType = getInventoryOperationType();
   const boxQty = getInventoryBoxQuantity();
-  const missingBoxQty = isInventoryCurrentScanBoxWithoutBoxQuantity();
+  const missingBoxQty = isInventoryCurrentScanBoxWithoutBoxQuantity() ||
+    (operationType === 'stocktake' && boxQty <= 0 && !!getInventoryMasterItem());
   const boxField = document.getElementById('inventoryBoxQtyField');
   const boxLabel = document.getElementById('inventoryBoxQtyLabel');
   const boxInput = document.getElementById('inventoryBoxQty');
@@ -6700,6 +6881,7 @@ function renderInventoryOperationMode(){
     if(cancelBtn) cancelBtn.style.display = 'none';
     renderInventoryCurrentQty();
     applyInventoryLotExpInputMode({});
+    syncInventoryControlDisabledState();
     return;
   }
 
@@ -6715,30 +6897,32 @@ function renderInventoryOperationMode(){
     renderInventoryStocktakeLotSelect();
     if(stocktakeLotSelectField) stocktakeLotSelectField.style.display = '';
     
-    // 盤點時顯示系統目前盒數欄位（如果有一盒數量）
+    // 盤點時「一盒數量」沿用主檔，不再顯示輸入框；只有主檔缺值時才顯示設定按鈕。
     const actualBoxField = document.getElementById('inventoryActualBoxQtyField');
     if(boxField){
-      boxField.style.display = (boxQty > 0 || missingBoxQty) ? '' : 'none';
+      boxField.style.display = missingBoxQty ? '' : 'none';
     }
     if(boxInput){
-      boxInput.disabled = true;  // 系統目前盒數為唯讀
-      boxInput.style.display = boxQty > 0 ? '' : 'none';
-      if(missingBoxQty){
-        boxInput.value = '';
-      }
+      boxInput.disabled = true;
+      boxInput.style.display = 'none';
+      boxInput.value = '';
     }
     if(boxBtn){
       boxBtn.style.display = missingBoxQty ? 'inline-flex' : 'none';
     }
+    if(boxHint){
+      boxHint.style.display = missingBoxQty ? 'block' : 'none';
+      boxHint.innerText = missingBoxQty ? '尚未設定一盒數量；要使用「實際盤點盒數」前，請先設定一盒多少單位。也可以先只填實際盤點單位數。' : '';
+    }
     if(boxLabel){
-      boxLabel.innerText = boxQty > 0 ? '一盒數量（主檔）' : '一盒數量';
+      boxLabel.innerText = '一盒數量';
     }
-    
-    // 顯示「實際盤點盒數」欄位
+
+    // 顯示「實際盤點盒數」欄位：主檔有一盒數量才可以填盒數。
     if(actualBoxField){
-      actualBoxField.style.display = (boxQty > 0 || missingBoxQty) ? '' : 'none';
+      actualBoxField.style.display = boxQty > 0 ? '' : 'none';
     }
-    
+
     if(unitLabel) unitLabel.innerText = '實際盤點單位數';
     if(finalLabel) finalLabel.innerText = '盤點差額';
     if(submitBtn) submitBtn.innerText = '確認盤點';
@@ -6804,22 +6988,22 @@ function renderInventoryQuantityHint(){
 
   if(operationType === 'stocktake'){
     if(boxField){
-      boxField.style.display = boxQty > 0 || missingBoxQty ? '' : 'none';
+      boxField.style.display = missingBoxQty ? '' : 'none';
     }
     if(boxInput){
-      boxInput.style.display = boxQty > 0 ? '' : 'none';
+      boxInput.style.display = 'none';
       boxInput.readOnly = true;
       boxInput.disabled = false;
-      boxInput.value = boxQty > 0 ? String(boxQty) : '';
+      boxInput.value = '';
     }
     if(boxBtn){
       boxBtn.style.display = missingBoxQty ? 'inline-flex' : 'none';
     }
     if(boxHint){
-      boxHint.style.display = missingBoxQty ? 'block' : (boxQty > 0 ? 'block' : 'none');
+      boxHint.style.display = missingBoxQty ? 'block' : 'none';
       boxHint.innerText = missingBoxQty
         ? '尚未設定一盒數量；要使用「實際盤點盒數」前，請先設定一盒多少單位。也可以先只填實際盤點單位數。'
-        : '主檔設定：1 盒 = ' + formatInventoryQty(boxQty) + ' 單位。';
+        : '';
     }
     if(actualBoxField){
       actualBoxField.style.display = boxQty > 0 ? '' : 'none';
@@ -7462,12 +7646,26 @@ async function fillInventoryFormFromLookup(result, parsed){
     renderInventoryLookupBox();
     updateInventoryInlineMasterButton();
     setInventoryPanelOpen('inventoryDetailPanel', false);
+
+    const rawForUnknown = String(parsed.raw || parsed.gtin || getInventorySearchRawValue() || '').trim();
+    if(getInventoryOperationType() === 'stocktake'){
+      if(inventoryBusy){
+        setInventoryBusy(false, '準備切換入庫');
+      }
+      await offerSwitchStocktakeSearchKeyToInbound(rawForUnknown, {
+        parsed:parsed,
+        packageType:packageType,
+        reason:'stocktake_unknown_master'
+      });
+      return;
+    }
+
     if(inventoryBusy){
       setInventoryBusy(false, '進入新敷料建立流程');
     }
     await openInventoryNewDressingDialogFromUnknown({
       gtin:parsed.gtin || '',
-      raw:parsed.raw || '',
+      raw:rawForUnknown || parsed.raw || '',
       lot:parsed.lot || '',
       exp:parsed.exp || '',
       packageType:packageType,
@@ -7521,6 +7719,17 @@ async function fillInventoryFormFromLookup(result, parsed){
   renderInventoryOperationMode();
   renderInventoryQuantityHint();
 
+  if(shouldOfferInboundForMissingStocktakeInventory(parsed)){
+    const switchedToInbound = await offerSwitchMissingStocktakeInventoryToInbound(item, parsed, packageType);
+    if(switchedToInbound){
+      if(Array.isArray(inventoryCache) && inventoryCache.length > 0){
+        renderInventoryGroupedList(getInventoryCurrentListFilter({ hospitalCode:String(item.hospitalCode || '').trim() }));
+      }
+      clearInventorySearchInput();
+      return;
+    }
+  }
+
   if(Array.isArray(inventoryCache) && inventoryCache.length > 0){
     renderInventoryGroupedList(getInventoryCurrentListFilter({ hospitalCode:String(item.hospitalCode || '').trim() }));
   }
@@ -7539,16 +7748,60 @@ async function lookupInventoryFromInput(){
   }
 
   const parsed = parseUDI(raw);
+
+  if(!parsed.gtin && getInventoryOperationType() === 'stocktake'){
+    setInventoryBusy(true, '正在搜尋可盤點敷料...');
+    try{
+      await ensureDressingMasterLoadedForSearch();
+      const matches = searchDressingMaster(raw, 12);
+
+      if(matches.length === 0){
+        setInventoryBusy(false, '搜尋完成');
+        await offerSwitchStocktakeSearchKeyToInbound(raw, { reason:'stocktake_no_master_match' });
+        return;
+      }
+
+      if(matches.length === 1){
+        setInventoryBusy(false, '搜尋完成');
+        await selectDressingSearchCandidate('inventory', matches[0]);
+        return;
+      }
+
+      renderSearchSuggestions('inventory', matches, raw);
+      showNotice('找到多筆候選，請從下拉清單選擇；盤點模式不能新增敷料。', 'warning', '請選擇敷料');
+    } finally {
+      if(inventoryBusy){
+        setInventoryBusy(false, '搜尋完成');
+      }
+    }
+    return;
+  }
+
   if(!parsed.gtin){
     setInventoryBusy(true, '正在搜尋敷料主檔...');
     try{
       const handled = await searchOrSelectDressingFromInput('inventory');
-      if(!handled){
-        renderSearchSuggestions('inventory', [], raw);
-        showNotice('找不到符合的敷料主檔資料，可直接鍵入新敷料。', 'warning', '查無資料');
+      if(handled){
+        inventoryInboundRedirectAutoCreateRaw = '';
+        return;
       }
+
+      renderSearchSuggestions('inventory', [], raw);
+
+      if(inventoryInboundRedirectAutoCreateRaw && inventoryInboundRedirectAutoCreateRaw === raw && getInventoryOperationType() === 'inbound'){
+        inventoryInboundRedirectAutoCreateRaw = '';
+        if(inventoryBusy){
+          setInventoryBusy(false, '進入新敷料建立流程');
+        }
+        await openInventoryNewDressingDialogFromSearch();
+        return;
+      }
+
+      showNotice('找不到符合的敷料主檔資料，可在入庫流程新增。', 'warning', '查無資料');
     } finally {
-      setInventoryBusy(false, '搜尋完成');
+      if(inventoryBusy){
+        setInventoryBusy(false, '搜尋完成');
+      }
     }
     return;
   }
@@ -7577,7 +7830,13 @@ async function handleInventoryBarcodeResult(barcode, parsed){
 }
 
 function startInventoryScanner(){
+  if(inventoryBusy || inventoryScannerBusy){
+    return;
+  }
+
   scannerMode = 'inventory';
+  setInventoryScannerBusy(true);
+  setInventoryStatus('正在重新掃描批號，盤點批號下拉已暫時鎖定');
   document.getElementById('scannerOverlay').style.display = 'block';
   startDressingScanner();
 }
@@ -7654,6 +7913,22 @@ async function submitInventoryOperationFromForm(){
   let successTitle = '';
 
   if(operationType === 'stocktake'){
+    if(!isInventoryStocktakeSelectedLotKnown()){
+      showNotice('這個批號目前沒有庫存紀錄，盤點不應新增批號；請改走入庫。', 'warning', '請改入庫');
+      const ok = await showConfirmDialog('目前選到的批號在這個庫存位置沒有庫存紀錄。\n\n要切換到入庫並保留目前敷料、批號與效期嗎？', '目前沒有庫存，建議入庫');
+      if(ok){
+        const typeInput = document.getElementById('inventoryOperationType');
+        if(typeInput) typeInput.value = 'inbound';
+        inventoryOperationChoiceMade = true;
+        updateInventorySegmentedButtons();
+        applyInventoryLotExpInputMode((inventoryLookupState && inventoryLookupState.parsed) || {});
+        renderInventoryOperationMode();
+        renderInventoryQuantityHint();
+        showNotice('已切換為入庫，請輸入本次入庫數量。', 'success', '已切換入庫');
+      }
+      return;
+    }
+
     const actualBoxQtyInput = document.getElementById('inventoryActualBoxQty');
     const unitQtyInput = document.getElementById('inventoryUnitQty');
     
@@ -8245,7 +8520,7 @@ if (window.location.hostname.includes('github.io')) {
   ghFooter.innerHTML = `
     <div style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">
       <span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>
-      <span>v.2.27.6-202606021731</span>
+      <span>v.2.27.7-202606021746</span>
     </div>
   `;
   document.body.appendChild(ghFooter);
@@ -8262,38 +8537,3 @@ function normalizeTextForCompare(value){
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
