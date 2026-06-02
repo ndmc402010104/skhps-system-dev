@@ -1,8 +1,8 @@
 ﻿<!DOCTYPE html>
 <!--
 檔案位置：科室系統用戶端/DressingFront.html
-時間戳記：2026-06-02 08:46 UTC+8
-用途：敷料領用/建檔/庫存前端；修正搜尋候選 GTIN/盒裝換算顯示，盒數已設定時即顯示「1盒=N單位」，未設定且無盒裝GTIN時不再顯示「1盒=不適用」。
+時間戳記：2026-06-02 11:45 UTC+8
+用途：敷料領用/建檔/庫存前端；新增庫存作業類型（入庫/盤點）前端切換、盤點差額計算與搜尋列輸入即時候選，保留搜尋候選 GTIN/盒裝換算顯示。
 -->
 <html>
 <head>
@@ -1072,7 +1072,7 @@ function goHome(){
 <div id="inventoryArea" class="inventoryArea">
   <div class="dictHeader">
     <div>
-      <h2>敷料批號庫存 MVP</h2>
+      <h2>敷料庫存作業</h2>
       <div id="inventoryLoadStatus" class="dictLoadStatus">尚未讀取批號庫存</div>
     </div>
     <div class="dictToolbar">
@@ -1084,6 +1084,14 @@ function goHome(){
   </div>
 
   <div class="inventoryGrid">
+    <div class="inventoryField">
+      <label>作業類型</label>
+      <select id="inventoryOperationType" onchange="renderInventoryOperationMode()">
+        <option value="inbound">入庫</option>
+        <option value="stocktake">盤點</option>
+      </select>
+    </div>
+
     <div class="inventoryField full">
       <label>搜尋 / 掃描內容</label>
       <div class="dressingInputGroup">
@@ -1098,8 +1106,8 @@ function goHome(){
       <input id="inventoryHospitalCode" readonly>
     </div>
     <div class="inventoryField">
-      <label>扣庫單位</label>
-      <select id="inventoryUnit">
+      <label>庫存位置</label>
+      <select id="inventoryUnit" onchange="renderInventoryOperationMode()">
         <option value="">請選擇</option>
         <option value="5A">5A</option>
         <option value="傷口照護中心">傷口照護中心</option>
@@ -1107,27 +1115,31 @@ function goHome(){
     </div>
     <div class="inventoryField">
       <label>批號</label>
-      <input id="inventoryLot" placeholder="LOT">
+      <input id="inventoryLot" placeholder="入庫填實際批號；期初盤點可用 INITIAL" oninput="renderInventoryOperationMode()">
     </div>
     <div class="inventoryField">
       <label>效期</label>
-      <input id="inventoryExp" type="date">
+      <input id="inventoryExp" type="date" onchange="renderInventoryOperationMode()">
+    </div>
+    <div class="inventoryField">
+      <label>系統目前數量</label>
+      <input id="inventoryCurrentQty" readonly>
     </div>
     <div class="inventoryField" id="inventoryBoxQtyField" style="display:none;">
-      <label>本次入庫盒數</label>
+      <label id="inventoryBoxQtyLabel">本次入庫盒數</label>
       <input id="inventoryBoxQty" type="number" inputmode="decimal" min="0" step="0.01" placeholder="例如 1" oninput="renderInventoryQuantityHint()">
     </div>
     <div class="inventoryField">
-      <label>本次入庫單位數</label>
+      <label id="inventoryUnitQtyLabel">本次入庫單位數</label>
       <input id="inventoryUnitQty" type="number" inputmode="decimal" min="0" step="0.01" placeholder="例如 1" oninput="renderInventoryQuantityHint()">
     </div>
     <div class="inventoryField">
-      <label>實際增加庫存</label>
+      <label id="inventoryFinalQtyLabel">實際增加庫存</label>
       <input id="inventoryFinalQty" readonly>
     </div>
     <div class="inventoryField">
       <label>&nbsp;</label>
-      <button type="button" class="primary" onclick="addInventoryStockFromForm()">確認入庫</button>
+      <button id="inventorySubmitBtn" type="button" class="primary" onclick="submitInventoryOperationFromForm()">確認入庫</button>
     </div>
   </div>
 
@@ -4930,33 +4942,130 @@ function calculateInventoryFinalQty(){
   return Number.isFinite(finalQty) ? finalQty : 0;
 }
 
+function getInventoryOperationType(){
+  const input = document.getElementById('inventoryOperationType');
+  return input && input.value === 'stocktake' ? 'stocktake' : 'inbound';
+}
+
+function getInventoryCurrentQtyForForm(){
+  const hospitalCode = String(document.getElementById('inventoryHospitalCode') ? document.getElementById('inventoryHospitalCode').value : '').trim();
+  const stockUnit = String(document.getElementById('inventoryUnit') ? document.getElementById('inventoryUnit').value : '').trim();
+  const lot = String(document.getElementById('inventoryLot') ? document.getElementById('inventoryLot').value : '').trim();
+  const exp = String(document.getElementById('inventoryExp') ? document.getElementById('inventoryExp').value : '').trim();
+
+  if(!hospitalCode || !stockUnit){
+    return 0;
+  }
+
+  const rows = Array.isArray(inventoryCache) ? inventoryCache : [];
+
+  return rows.reduce(function(sum, raw){
+    const row = getInventoryRowItem(raw);
+    const sameHospitalCode = String(row.hospitalCode || '').trim() === hospitalCode;
+    const sameStockUnit = String(row.stockUnit || '').trim() === stockUnit;
+    const sameLot = lot ? String(row.lot || '').trim() === lot : true;
+    const sameExp = exp ? String(row.exp || '').trim() === exp : true;
+
+    if(sameHospitalCode && sameStockUnit && sameLot && sameExp){
+      return sum + (Number(row.quantity || 0) || 0);
+    }
+
+    return sum;
+  }, 0);
+}
+
+function renderInventoryCurrentQty(){
+  const currentInput = document.getElementById('inventoryCurrentQty');
+  if(!currentInput){
+    return 0;
+  }
+
+  const currentQty = getInventoryCurrentQtyForForm();
+  currentInput.value = String(Math.round(currentQty * 100) / 100) + ' 單位';
+  return currentQty;
+}
+
+function renderInventoryOperationMode(){
+  const operationType = getInventoryOperationType();
+  const boxQty = getInventoryBoxQuantity();
+  const boxField = document.getElementById('inventoryBoxQtyField');
+  const boxLabel = document.getElementById('inventoryBoxQtyLabel');
+  const unitLabel = document.getElementById('inventoryUnitQtyLabel');
+  const finalLabel = document.getElementById('inventoryFinalQtyLabel');
+  const submitBtn = document.getElementById('inventorySubmitBtn');
+  const lotInput = document.getElementById('inventoryLot');
+  const expInput = document.getElementById('inventoryExp');
+
+  if(operationType === 'stocktake'){
+    if(boxField) boxField.style.display = 'none';
+    if(boxLabel) boxLabel.innerText = '盤點盒數';
+    if(unitLabel) unitLabel.innerText = '實際盤點單位數';
+    if(finalLabel) finalLabel.innerText = '盤點差額';
+    if(submitBtn) submitBtn.innerText = '確認盤點';
+
+    if(lotInput && !String(lotInput.value || '').trim()){
+      lotInput.value = 'INITIAL';
+    }
+  } else {
+    if(boxField) boxField.style.display = boxQty > 0 ? '' : 'none';
+    if(boxLabel) boxLabel.innerText = '本次入庫盒數';
+    if(unitLabel) unitLabel.innerText = '本次入庫單位數';
+    if(finalLabel) finalLabel.innerText = '實際增加庫存';
+    if(submitBtn) submitBtn.innerText = '確認入庫';
+
+    if(lotInput && String(lotInput.value || '').trim() === 'INITIAL'){
+      lotInput.value = '';
+    }
+  }
+
+  renderInventoryQuantityHint();
+}
+
 function renderInventoryQuantityHint(){
+  const operationType = getInventoryOperationType();
   const boxQty = getInventoryBoxQuantity();
   const boxField = document.getElementById('inventoryBoxQtyField');
   const boxInput = document.getElementById('inventoryBoxQty');
+  const unitInput = document.getElementById('inventoryUnitQty');
   const finalInput = document.getElementById('inventoryFinalQty');
+  const currentQty = renderInventoryCurrentQty();
 
   if(boxField){
-    boxField.style.display = boxQty > 0 ? '' : 'none';
+    boxField.style.display = (operationType === 'inbound' && boxQty > 0) ? '' : 'none';
   }
 
-  if(boxQty <= 0 && boxInput){
+  if((boxQty <= 0 || operationType === 'stocktake') && boxInput){
     boxInput.value = '';
+  }
+
+  if(!finalInput){
+    return;
+  }
+
+  if(operationType === 'stocktake'){
+    const actualQty = Number(unitInput ? unitInput.value : 0);
+    if(!Number.isFinite(actualQty) || String(unitInput ? unitInput.value : '').trim() === ''){
+      finalInput.value = '';
+      return;
+    }
+
+    const diffQty = actualQty - currentQty;
+    const sign = diffQty > 0 ? '+' : '';
+    finalInput.value = sign + String(Math.round(diffQty * 100) / 100) + ' 單位（系統 ' + String(Math.round(currentQty * 100) / 100) + ' → 盤點 ' + String(Math.round(actualQty * 100) / 100) + '）';
+    return;
   }
 
   const finalQty = calculateInventoryFinalQty();
 
-  if(finalInput){
-    if(finalQty > 0 && boxQty > 0){
-      const boxCount = Number(boxInput ? boxInput.value : 0) || 0;
-      const unitCount = Number(document.getElementById('inventoryUnitQty') ? document.getElementById('inventoryUnitQty').value : 0) || 0;
-      const parts = [];
-      if(boxCount > 0) parts.push(boxCount + '盒 × ' + boxQty);
-      if(unitCount > 0) parts.push(unitCount + '單位');
-      finalInput.value = String(finalQty) + ' 單位' + (parts.length ? '（' + parts.join(' + ') + '）' : '');
-    } else {
-      finalInput.value = finalQty > 0 ? String(finalQty) + ' 單位' : '';
-    }
+  if(finalQty > 0 && boxQty > 0){
+    const boxCount = Number(boxInput ? boxInput.value : 0) || 0;
+    const unitCount = Number(unitInput ? unitInput.value : 0) || 0;
+    const parts = [];
+    if(boxCount > 0) parts.push(boxCount + '盒 × ' + boxQty);
+    if(unitCount > 0) parts.push(unitCount + '單位');
+    finalInput.value = String(finalQty) + ' 單位' + (parts.length ? '（' + parts.join(' + ') + '）' : '');
+  } else {
+    finalInput.value = finalQty > 0 ? String(finalQty) + ' 單位' : '';
   }
 }
 
@@ -5136,18 +5245,52 @@ function triggerInventoryTest(type){
   lookupInventoryFromInput();
 }
 
-async function addInventoryStockFromForm(){
+async function submitInventoryOperationFromForm(){
+  const operationType = getInventoryOperationType();
   const hospitalCode = String(document.getElementById('inventoryHospitalCode').value || '').trim();
   const stockUnit = String(document.getElementById('inventoryUnit').value || '').trim();
-  const lot = String(document.getElementById('inventoryLot').value || '').trim();
+  const lotInput = document.getElementById('inventoryLot');
   const exp = String(document.getElementById('inventoryExp').value || '').trim();
-  const finalQty = calculateInventoryFinalQty();
+  let lot = String(lotInput ? lotInput.value : '').trim();
 
   if(!hospitalCode){ showNotice('請先查詢敷料主檔', 'warning'); return; }
-  if(!stockUnit){ showNotice('請選擇扣庫單位', 'warning'); return; }
-  if(!lot){ showNotice('請輸入批號', 'warning'); return; }
-  if(!exp){ showNotice('請輸入效期', 'warning'); return; }
-  if(!Number.isFinite(finalQty) || finalQty <= 0){ showNotice('請輸入有效入庫數量', 'warning'); return; }
+  if(!stockUnit){ showNotice('請選擇庫存位置', 'warning'); return; }
+
+  if(operationType === 'stocktake' && !lot){
+    lot = 'INITIAL';
+    if(lotInput) lotInput.value = lot;
+  }
+
+  if(!lot){ showNotice('請輸入批號；期初盤點可用 INITIAL', 'warning'); return; }
+  if(operationType === 'inbound' && !exp){ showNotice('請輸入效期', 'warning'); return; }
+
+  const currentQty = getInventoryCurrentQtyForForm();
+  let changeQty = 0;
+  let successTitle = '';
+
+  if(operationType === 'stocktake'){
+    const actualQty = Number(document.getElementById('inventoryUnitQty').value || 0);
+    if(!Number.isFinite(actualQty) || actualQty < 0){
+      showNotice('請輸入有效盤點數量', 'warning');
+      return;
+    }
+
+    changeQty = actualQty - currentQty;
+    successTitle = '盤點完成';
+
+    if(changeQty === 0){
+      showNotice('盤點數量與系統相同，沒有需要修正的庫存差額', 'success', '無差異');
+      return;
+    }
+  } else {
+    changeQty = calculateInventoryFinalQty();
+    successTitle = '已入庫';
+
+    if(!Number.isFinite(changeQty) || changeQty <= 0){
+      showNotice('請輸入有效入庫數量', 'warning');
+      return;
+    }
+  }
 
   try{
     const res = await addInventoryStock({
@@ -5155,14 +5298,24 @@ async function addInventoryStockFromForm(){
       stockUnit:stockUnit,
       lot:lot,
       exp:exp,
-      quantity:finalQty
+      quantity:changeQty,
+      operationType:operationType,
+      currentQuantity:currentQty,
+      actualQuantity:operationType === 'stocktake' ? currentQty + changeQty : '',
+      note:operationType === 'stocktake' ? '前端盤點修正' : '前端入庫'
     });
 
     if(!res || !res.ok){
-      throw new Error((res && res.message) || '入庫失敗');
+      throw new Error((res && res.message) || (operationType === 'stocktake' ? '盤點失敗' : '入庫失敗'));
     }
 
-    showNotice('已入庫，庫存數量 +' + finalQty + ' 單位', 'success', res.merged ? '已累加既有批號' : '已新增批號庫存');
+    const sign = changeQty > 0 ? '+' : '';
+    showNotice(
+      (operationType === 'stocktake' ? '已修正庫存差額 ' : '已入庫 ') + sign + changeQty + ' 單位',
+      'success',
+      successTitle
+    );
+
     const boxInput = document.getElementById('inventoryBoxQty');
     const unitInput = document.getElementById('inventoryUnitQty');
     if(boxInput) boxInput.value = '';
@@ -5170,8 +5323,16 @@ async function addInventoryStockFromForm(){
     renderInventoryQuantityHint();
     await loadInventoryList({ hospitalCode:hospitalCode });
   } catch(error){
-    showNotice('入庫失敗：' + (error.message || error), 'error', '入庫錯誤');
+    showNotice(
+      (operationType === 'stocktake' ? '盤點失敗：' : '入庫失敗：') + (error.message || error),
+      'error',
+      operationType === 'stocktake' ? '盤點錯誤' : '入庫錯誤'
+    );
   }
+}
+
+async function addInventoryStockFromForm(){
+  return submitInventoryOperationFromForm();
 }
 
 function getInventoryRowItem(row){
@@ -5313,6 +5474,7 @@ async function loadInventoryList(options){
 
     inventoryCache = res.data || [];
     renderInventoryGroupedList(options);
+    renderInventoryOperationMode();
     setInventoryStatus('已讀取批號庫存' + (Array.isArray(dressingMasterCache) && dressingMasterCache.length ? '，並已連結敷料主檔' : '；敷料主檔尚未連結'));
   } catch(error){
     tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#dc2626; padding:20px;">讀取失敗：' + escapeHtml(error.message || error) + '</td></tr>';
@@ -5351,7 +5513,11 @@ function addInventoryStock(data){
     stockUnit:data.stockUnit || '',
     lot:data.lot || '',
     exp:data.exp || '',
-    quantity:data.quantity || ''
+    quantity:data.quantity || '',
+    operationType:data.operationType || '',
+    currentQuantity:data.currentQuantity || '',
+    actualQuantity:data.actualQuantity || '',
+    note:data.note || ''
   });
 }
 
@@ -5526,6 +5692,59 @@ function debugDressingBarcode(label, data){
 
 
 
+
+function debounceDressingSearch(fn, wait){
+  let timer = null;
+  return function(){
+    const args = arguments;
+    clearTimeout(timer);
+    timer = setTimeout(function(){
+      fn.apply(null, args);
+    }, wait || 120);
+  };
+}
+
+function bindDressingLiveSearchInput(inputId, context){
+  const input = document.getElementById(inputId);
+  if(!input || input.dataset.liveSearchBound === '1'){
+    return;
+  }
+
+  input.dataset.liveSearchBound = '1';
+
+  const runSearch = debounceDressingSearch(function(){
+    updateDressingSearchSuggestions(context);
+  }, 120);
+
+  input.addEventListener('input', runSearch);
+  input.addEventListener('focus', function(){
+    updateDressingSearchSuggestions(context);
+  });
+  input.addEventListener('keydown', function(event){
+    if(event.key === 'Escape'){
+      hideSearchSuggestions(context);
+    }
+  });
+}
+
+function initDressingFrontLiveSearch(){
+  bindDressingLiveSearchInput('inventoryBarcodeInput', 'inventory');
+  bindDressingLiveSearchInput('dictBarcodeInput', 'dict');
+
+  ['inventoryOperationType', 'inventoryUnit', 'inventoryLot', 'inventoryExp'].forEach(function(id){
+    const el = document.getElementById(id);
+    if(el && el.dataset.inventoryModeBound !== '1'){
+      el.dataset.inventoryModeBound = '1';
+      el.addEventListener('change', renderInventoryOperationMode);
+      el.addEventListener('input', renderInventoryOperationMode);
+    }
+  });
+
+  renderInventoryOperationMode();
+}
+
+initDressingFrontLiveSearch();
+
 document.addEventListener('click', function(e){
   if(e.target.classList.contains('deleteRow')){
     const tbody = e.target.closest('tbody');
@@ -5595,7 +5814,7 @@ if (window.location.hostname.includes('github.io')) {
   ghFooter.innerHTML = `
     <div style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">
       <span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>
-      <span>v.2.27.4-202606021118</span>
+      <span>v.2.27.5-202606021152</span>
     </div>
   `;
   document.body.appendChild(ghFooter);
@@ -5612,6 +5831,7 @@ function normalizeTextForCompare(value){
 
 </body>
 </html>
+
 
 
 
