@@ -6631,7 +6631,7 @@ async function promptInventoryInboundQuantitiesAfterLookup(item, parsed, package
   async function askUnit(){
     const value = await promptInventoryInboundQuantityStep({
       title:'本次入庫單位數',
-      message:name + '\n\n請輸入本次額外入庫的最小單位數。\n例如掃到單包通常可填 1；沒有額外單包可留空。',
+      message:name + '\n\n請輸入本次額外入庫的最小單位數；沒有額外單包可留空。',
       defaultValue:unitInput ? unitInput.value : ''
     });
 
@@ -7092,14 +7092,12 @@ async function fillInventoryFormFromLookup(result, parsed){
     if(boxInput) boxInput.value = '';
     if(unitInput) unitInput.value = '';
   } else {
-    const isBoxScan = isInventoryLookupBoxPackage(item, parsed, packageType);
-
     if(boxInput){
-      boxInput.value = (isBoxScan && boxQty > 0) ? '1' : '';
+      boxInput.value = '';
     }
 
     if(unitInput){
-      unitInput.value = isBoxScan ? '' : '1';
+      unitInput.value = '';
     }
   }
 
@@ -7800,7 +7798,7 @@ if (window.location.hostname.includes('github.io')) {
   ghFooter.innerHTML = `
     <div style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">
       <span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>
-      <span>v.2.27.5-202606021457</span>
+      <span>v.2.27.6-202606021500</span>
     </div>
   `;
   document.body.appendChild(ghFooter);
@@ -7817,6 +7815,7 @@ function normalizeTextForCompare(value){
 
 </body>
 </html>
+
 
 
 
