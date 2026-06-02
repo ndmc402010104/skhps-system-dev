@@ -610,6 +610,12 @@ tr.editing .dictGtinScanBtn{
   font-weight:700;
 }
 
+.inventoryPrimaryText{
+  font-size:20px;
+  font-weight:900;
+  color:#0f172a;
+}
+
 .searchSuggestNewItem{
   width:100%;
   display:flex;
@@ -1212,7 +1218,7 @@ function goHome(){
         <div class="segmentedGroup" role="group" aria-label="作業類型">
           <button type="button" class="segmentedBtn" data-inventory-operation="inbound" onclick="setInventoryOperationType('inbound')">入庫</button>
           <button type="button" class="segmentedBtn" data-inventory-operation="stocktake" onclick="setInventoryOperationType('stocktake')">盤點</button>
-          <button type="button" class="segmentedBtn active" data-inventory-operation="query" onclick="setInventoryOperationType('query')">查詢敷料數量</button>
+          <button type="button" class="segmentedBtn active" data-inventory-operation="query" onclick="setInventoryOperationType('query')">敷料查詢 / 建檔</button>
         </div>
       </div>
 
@@ -1232,7 +1238,7 @@ function goHome(){
       </div>
     </div>
     <div id="inventorySetupHint" class="inventorySetupHint">
-      目前模式：查詢敷料數量／不限制單位。搜尋與掃描工具會依目前條件即時切換。
+      目前模式：敷料查詢 / 建檔／不限制單位。已有主檔進入查詢，查無資料可直接鍵入新敷料。
     </div>
   </div>
 
@@ -1257,6 +1263,11 @@ function goHome(){
 
   <div id="inventoryDetailPanel" class="inventoryStepPanel">
     <div class="inventoryGrid">
+      <div class="inventoryField full">
+        <label>敷料名稱</label>
+        <div id="inventoryDressingNameText" class="readonlyValue inventoryPrimaryText muted">尚未選擇敷料</div>
+        <input id="inventoryDressingName" type="hidden">
+      </div>
       <div class="inventoryField">
         <label>院內碼</label>
         <div id="inventoryHospitalCodeText" class="readonlyValue muted">尚未選擇敷料</div>
@@ -5142,6 +5153,10 @@ function getInventoryReadOnlyValue(inputId, textId){
   return textEl ? String(textEl.innerText || '').trim() : '';
 }
 
+function setInventoryDressingNameValue(value){
+  setInventoryReadOnlyValue('inventoryDressingName', 'inventoryDressingNameText', value, '尚未選擇敷料');
+}
+
 function setInventoryHospitalCodeValue(value){
   setInventoryReadOnlyValue('inventoryHospitalCode', 'inventoryHospitalCodeText', value, '尚未選擇敷料');
 }
@@ -5173,6 +5188,7 @@ function clearInventorySelectedDressingForSearchInput(){
     }
   });
 
+  setInventoryDressingNameValue('');
   setInventoryHospitalCodeValue('');
   setInventoryCurrentQtyValue('');
   setInventoryFinalQtyValue('');
@@ -5184,14 +5200,14 @@ function renderInventoryLookupBox(){
   if(!box) return;
 
   if(!inventoryLookupState || !inventoryLookupState.item){
-    box.innerHTML = '<div class="inventoryLookupTitle">尚未查詢敷料</div><div>請先掃描或輸入 GTIN。系統會用敷料主檔帶出院內碼、名稱、規格與一盒數量。</div>';
+    box.innerHTML = '<div class="inventoryLookupTitle">尚未查詢敷料</div><div>請先輸入或掃描。已有主檔會進入查詢/作業；查無主檔會提供「鍵入新敷料」。</div>';
     return;
   }
 
   const item = inventoryLookupState.item || {};
   const parsed = inventoryLookupState.parsed || {};
-  const unitQty = Number(inventoryLookupState.unitQuantity || item.boxQuantity || 1) || 1;
-  const packageText = inventoryLookupState.packageType === 'box' ? '包裝/盒裝' : '單包/單位';
+  const boxQty = Number(item.boxQuantity || 0) || 0;
+  const packageText = inventoryLookupState.packageType === 'box' ? '盒裝GTIN / 盒' : '單包GTIN / 單位';
   const hasSingleGtin = !!String(item.singleGtin || item.gtin || '').trim();
   const hasBoxGtin = !!String(item.boxGtin || '').trim();
   const gtinText = [
@@ -5199,20 +5215,16 @@ function renderInventoryLookupBox(){
     hasBoxGtin ? '盒裝GTIN ✓' : '盒裝GTIN 未建檔'
   ].join('；');
 
-  const masterButtons = `
+  box.innerHTML = `
+    <div class="inventoryLookupTitle">敷料主檔狀態</div>
+    <div>本次判斷：${escapeHtml(packageText)}${boxQty > 0 ? '；一盒 ' + escapeHtml(boxQty) + ' 單位' : '；一盒尚未設定'}</div>
+    <div>${escapeHtml(gtinText)}</div>
+    ${parsed.lot ? '<div>掃描批號：' + escapeHtml(parsed.lot) + (getInventoryOperationType() === 'inbound' && parsed.exp ? '；效期：' + escapeHtml(parsed.exp) : '') + '</div>' : ''}
     <div class="inventoryMasterActions">
       <button type="button" onclick="openInventoryBoxQuantityDialog()">修改一盒數量</button>
       ${(!hasSingleGtin || !hasBoxGtin) ? '<button type="button" onclick="openInventoryAddGtinWorkflow()">新增GTIN</button>' : ''}
+      <button type="button" onclick="openInventoryFullMasterEditDialog()">完整編輯主檔</button>
     </div>
-  `;
-
-  box.innerHTML = `
-    <div class="inventoryLookupTitle">${escapeHtml(item.dressingName || '已找到敷料')} ${escapeHtml(item.size || '')}</div>
-    <div>院內碼：${escapeHtml(item.hospitalCode || '')}</div>
-    <div>本次掃描判斷：${escapeHtml(packageText)}${Number(item.boxQuantity || 0) > 0 ? '；一盒 ' + escapeHtml(item.boxQuantity) + ' 單位' : '；一盒尚未設定'}</div>
-    <div>${escapeHtml(gtinText)}</div>
-    <div>批號：${escapeHtml(parsed.lot || '') || '尚未帶入'}${getInventoryOperationType() === 'inbound' ? '；效期：' + (escapeHtml(parsed.exp || '') || '尚未帶入') : ''}</div>
-    ${masterButtons}
   `;
 }
 
@@ -5282,6 +5294,12 @@ function applyInventoryMasterUpdate(updatedItem){
     inventoryLookupState.unitQuantity = boxQty > 0 ? boxQty : 1;
   }
 
+  const currentItem = getInventoryMasterItem();
+  if(currentItem){
+    setInventoryDressingNameValue(formatDressingDisplayName(currentItem));
+    setInventoryHospitalCodeValue(currentItem.hospitalCode || '');
+  }
+
   renderInventoryLookupBox();
   renderInventoryOperationMode();
 }
@@ -5340,6 +5358,87 @@ function openInventoryBoxQuantityDialog(){
       }
 
       await saveInventoryMasterPatch({ boxQuantity:String(value) }, '已更新一盒 ' + value + ' 單位');
+    }
+  });
+}
+
+
+function openInventoryFullMasterEditDialog(){
+  const item = getInventoryMasterItem();
+  if(!item){
+    showNotice('請先查詢敷料主檔', 'warning', '尚未選擇敷料');
+    return;
+  }
+
+  openInventoryMasterDialog({
+    title:'完整編輯主檔',
+    message:describeDressingItem(item) + '\n可在庫存作業中快速修正主檔，不會切走目前流程。',
+    bodyHtml:`
+      <div class="inventoryMasterMiniGrid">
+        <label>院內碼
+          <input id="inventoryMasterEditHospitalCode" type="text" value="${escapeHtml(item.hospitalCode || '')}" placeholder="例如 9590533 或 1EWF16">
+        </label>
+        <label>敷料名稱
+          <input id="inventoryMasterEditDressingName" type="text" value="${escapeHtml(item.dressingName || '')}" placeholder="例如 Allevyn">
+        </label>
+        <label>規格描述
+          <input id="inventoryMasterEditSize" type="text" value="${escapeHtml(item.size || '')}" placeholder="例如 22.5×22.5">
+        </label>
+        <label>單包GTIN
+          <div class="dictGtinInputGroup">
+            <input id="inventoryMasterEditSingleGtin" type="number" inputmode="numeric" value="${escapeHtml(item.singleGtin || item.gtin || '')}" placeholder="可手動輸入或掃描">
+            <button type="button" title="掃描單包GTIN" onclick="openInventoryNewGtinFieldScanner('inventoryMasterEditSingleGtin')">📷</button>
+          </div>
+        </label>
+        <label>盒裝GTIN
+          <div class="dictGtinInputGroup">
+            <input id="inventoryMasterEditBoxGtin" type="number" inputmode="numeric" value="${escapeHtml(item.boxGtin || '')}" placeholder="可手動輸入或掃描">
+            <button type="button" title="掃描盒裝GTIN" onclick="openInventoryNewGtinFieldScanner('inventoryMasterEditBoxGtin')">📷</button>
+          </div>
+        </label>
+        <label>一盒數量
+          <input id="inventoryMasterEditBoxQuantity" type="number" inputmode="decimal" min="0" step="0.01" value="${escapeHtml(item.boxQuantity || '')}" placeholder="沒有可留空">
+        </label>
+        <label>自費價格
+          <input id="inventoryMasterEditCategory" type="number" inputmode="numeric" min="0" step="1" value="${escapeHtml(item.category || '')}" placeholder="沒有可留空">
+        </label>
+        <label>狀態
+          <select id="inventoryMasterEditStatus">
+            ${['使用中','試用','停用'].map(function(opt){ return '<option value="' + escapeHtml(opt) + '"' + (opt === (item.status || '使用中') ? ' selected' : '') + '>' + escapeHtml(opt) + '</option>'; }).join('')}
+          </select>
+        </label>
+      </div>
+    `,
+    okText:'儲存主檔',
+    onSubmit:async function(){
+      const patch = {
+        hospitalCode:String(document.getElementById('inventoryMasterEditHospitalCode') ? document.getElementById('inventoryMasterEditHospitalCode').value : '').trim(),
+        dressingName:String(document.getElementById('inventoryMasterEditDressingName') ? document.getElementById('inventoryMasterEditDressingName').value : '').trim(),
+        size:String(document.getElementById('inventoryMasterEditSize') ? document.getElementById('inventoryMasterEditSize').value : '').trim(),
+        singleGtin:String(document.getElementById('inventoryMasterEditSingleGtin') ? document.getElementById('inventoryMasterEditSingleGtin').value : '').replace(/[^0-9]/g, '').trim(),
+        gtin:String(document.getElementById('inventoryMasterEditSingleGtin') ? document.getElementById('inventoryMasterEditSingleGtin').value : '').replace(/[^0-9]/g, '').trim(),
+        boxGtin:String(document.getElementById('inventoryMasterEditBoxGtin') ? document.getElementById('inventoryMasterEditBoxGtin').value : '').replace(/[^0-9]/g, '').trim(),
+        boxQuantity:String(document.getElementById('inventoryMasterEditBoxQuantity') ? document.getElementById('inventoryMasterEditBoxQuantity').value : '').trim(),
+        category:String(document.getElementById('inventoryMasterEditCategory') ? document.getElementById('inventoryMasterEditCategory').value : '').trim(),
+        status:String(document.getElementById('inventoryMasterEditStatus') ? document.getElementById('inventoryMasterEditStatus').value : '使用中').trim() || '使用中'
+      };
+
+      if(!patch.hospitalCode){
+        showNotice('請輸入院內碼', 'warning', '欄位不足');
+        return;
+      }
+
+      if(!patch.dressingName){
+        showNotice('請輸入敷料名稱', 'warning', '欄位不足');
+        return;
+      }
+
+      await saveInventoryMasterPatch(patch, '主檔已更新');
+      const updated = getInventoryMasterItem();
+      if(updated){
+        setInventoryDressingNameValue(formatDressingDisplayName(updated));
+        setInventoryHospitalCodeValue(updated.hospitalCode || '');
+      }
     }
   });
 }
@@ -5472,7 +5571,7 @@ function getInventoryOperationLabel(){
   const type = getInventoryOperationType();
   if(type === 'inbound') return '入庫';
   if(type === 'stocktake') return '盤點';
-  return '查詢敷料數量';
+  return '敷料查詢 / 建檔';
 }
 
 function getInventoryUnitValue(){
@@ -5547,7 +5646,7 @@ async function setInventoryUnit(unit, options){
   unit = String(unit || '').trim() || '__ALL__';
 
   if(unit === '__ALL__' && getInventoryOperationType() !== 'query'){
-    showNotice('只有「查詢敷料數量」可以使用不限制單位。', 'warning', '請選擇庫存位置');
+    showNotice('只有「敷料查詢 / 建檔」可以使用不限制單位。', 'warning', '請選擇庫存位置');
     unit = getInventoryUnitValue() === '__ALL__' ? '5A' : getInventoryUnitValue();
   }
 
@@ -6021,22 +6120,45 @@ async function ensureInventoryBoxQuantityForBoxScan(result, parsed){
     return item;
   }
 
+  const method = await openAppDialog({
+    title:'盒裝數量未設定',
+    message:describeDressingItem(item) + '\n\n這次掃描看起來是盒裝GTIN，但主檔還沒有「一盒幾單位」。請選擇處理方式：',
+    input:false,
+    choices:[
+      { label:'設定一盒總數，並回寫敷料主檔', value:'master' },
+      { label:'只輸入這一盒實際敷料數量，不回寫主檔', value:'once' }
+    ],
+    cancelText:'取消'
+  });
+
+  if(method === null || method === false){
+    showNotice('已取消盒裝入庫；可先設定一盒數量後再入庫。', 'warning', '已取消');
+    return null;
+  }
+
   const answer = await showInputDialog(
-    '盒裝數量未設定',
-    describeDressingItem(item) +
-      '\n\n偵測到這次掃描的是盒裝GTIN，但敷料主檔尚未設定「一盒幾單位」。\n\n請輸入一盒包含幾個最小單位：',
+    method === 'master' ? '設定一盒總數' : '輸入本盒敷料數量',
+    method === 'master'
+      ? '請輸入一盒包含幾個最小單位。系統會同步回寫敷料主檔。'
+      : '請輸入這次掃到的這一盒內實際敷料數量。這次會直接用該數量入庫，不會回寫一盒數量。',
     ''
   );
 
   if(answer === null){
-    showNotice('已取消盒裝入庫；請先設定一盒數量後再入庫。', 'warning', '已取消');
+    showNotice('已取消盒裝入庫。', 'warning', '已取消');
     return null;
   }
 
   const boxQty = Number(String(answer || '').trim());
   if(!Number.isFinite(boxQty) || boxQty <= 0){
-    showNotice('一盒數量必須大於 0。', 'warning', '數量錯誤');
+    showNotice('數量必須大於 0。', 'warning', '數量錯誤');
     return null;
+  }
+
+  if(method === 'once'){
+    return Object.assign({}, item, {
+      __manualBoxUnitQuantity:String(boxQty)
+    });
   }
 
   const updatedItem = Object.assign({}, item, {
@@ -6101,14 +6223,17 @@ async function fillInventoryFormFromLookup(result, parsed){
   }
 
   const boxQty = Number(item.boxQuantity || 0) || 0;
+  const manualBoxUnitQuantity = Number(item.__manualBoxUnitQuantity || 0) || 0;
+  const effectivePackageType = manualBoxUnitQuantity > 0 ? 'single' : (result.packageType || '');
 
   inventoryLookupState = {
     item:item,
     parsed:parsed,
-    packageType:result.packageType || '',
+    packageType:effectivePackageType,
     unitQuantity:boxQty > 0 ? boxQty : 1
   };
 
+  setInventoryDressingNameValue(formatDressingDisplayName(item));
   setInventoryHospitalCodeValue(item.hospitalCode || '');
   if(parsed.lot) document.getElementById('inventoryLot').value = parsed.lot;
   if(parsed.exp) document.getElementById('inventoryExp').value = parsed.exp;
@@ -6121,7 +6246,9 @@ async function fillInventoryFormFromLookup(result, parsed){
   }
 
   if(unitInput && !unitInput.value){
-    unitInput.value = (result.packageType === 'box' && boxQty > 0) ? '' : '1';
+    unitInput.value = manualBoxUnitQuantity > 0
+      ? String(manualBoxUnitQuantity)
+      : ((result.packageType === 'box' && boxQty > 0) ? '' : '1');
   }
 
   renderInventoryLookupBox();
@@ -6131,7 +6258,8 @@ async function fillInventoryFormFromLookup(result, parsed){
   if(Array.isArray(inventoryCache) && inventoryCache.length > 0){
     renderInventoryGroupedList(getInventoryCurrentListFilter({ hospitalCode:String(item.hospitalCode || '').trim() }));
   }
-  showNotice('已帶入敷料主檔資料，庫存清單已依目前作業條件篩選', 'success', '查詢成功');
+  clearInventorySearchInput();
+  showNotice('已帶入敷料主檔資料，搜尋欄已清空，可直接進行下一步', 'success', '查詢成功');
 }
 
 async function lookupInventoryFromInput(){
@@ -6777,7 +6905,7 @@ if (window.location.hostname.includes('github.io')) {
   ghFooter.innerHTML = `
     <div style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">
       <span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>
-      <span>v.2.27.5-202606021254</span>
+      <span>v.2.27.5-202606021305</span>
     </div>
   `;
   document.body.appendChild(ghFooter);
@@ -6794,7 +6922,6 @@ function normalizeTextForCompare(value){
 
 </body>
 </html>
-
 
 
 
