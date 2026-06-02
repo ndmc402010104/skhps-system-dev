@@ -1,7 +1,7 @@
 ﻿<!DOCTYPE html>
 <!--
 檔案位置：科室系統用戶端/DressingFront.html
-時間戳記：2026-06-02 19:05 UTC+8
+時間戳記：2026-06-02 19:15 UTC+8
 用途：敷料領用/建檔/庫存前端；聚焦修正入庫頁，修正新條碼切換完整敷料建檔流程，並讓未設定一盒數量的敷料保留本次入庫盒數欄位以按鈕設定。
 -->
 <html>
@@ -6500,6 +6500,10 @@ function renderInventoryStocktakeLotSelect(){
 }
 
 function applyInventoryStocktakeLotSelection(){
+  if(getInventoryOperationType() !== 'stocktake'){
+    return;
+  }
+
   const select = document.getElementById('inventoryStocktakeLotSelect');
   const lotInput = document.getElementById('inventoryLot');
   const expInput = document.getElementById('inventoryExp');
@@ -7359,8 +7363,10 @@ async function fillInventoryFormFromLookup(result, parsed){
   if(Array.isArray(inventoryCache) && inventoryCache.length > 0){
     renderInventoryGroupedList(getInventoryCurrentListFilter({ hospitalCode:String(item.hospitalCode || '').trim() }));
   }
-  renderInventoryStocktakeLotSelect();
-  applyInventoryStocktakeLotSelection();
+  if(getInventoryOperationType() === 'stocktake'){
+    renderInventoryStocktakeLotSelect();
+    applyInventoryStocktakeLotSelection();
+  }
   clearInventorySearchInput();
   showNotice('已帶入敷料主檔資料，搜尋欄已清空，可直接進行下一步', 'success', '查詢成功');
 
@@ -8074,7 +8080,7 @@ if (window.location.hostname.includes('github.io')) {
   ghFooter.innerHTML = `
     <div style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">
       <span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>
-      <span>v.2.27.6-202606021624</span>
+      <span>v.2.27.6-202606021628</span>
     </div>
   `;
   document.body.appendChild(ghFooter);
@@ -8091,6 +8097,7 @@ function normalizeTextForCompare(value){
 
 </body>
 </html>
+
 
 
 
