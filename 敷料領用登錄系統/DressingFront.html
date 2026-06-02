@@ -1,8 +1,8 @@
 ﻿<!DOCTYPE html>
 <!--
 檔案位置：科室系統用戶端/DressingFront.html
-時間戳記：2026-06-02 23:00 UTC+8
-用途：敷料領用/建檔/庫存前端；統一批號與效期顯示字級，強化盒裝數量與單位數量的視覺辨識，並保留盤點/入庫分區與流程規則。
+時間戳記：2026-06-03 01:51 UTC+8
+用途：敷料領用/建檔/庫存前端；補回 merge 後遺失的 pushAppWait busy/loading helper，避免庫存、主檔讀取、掃描與 JSONP API 呼叫時因 ReferenceError 中斷。
 -->
 <html>
 <head>
@@ -2419,6 +2419,100 @@ function escapeHtml(value){
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+
+/*
+  merge hotfix：
+  庫存 / 建檔 / 掃描流程會呼叫 pushAppWait() 取得一個 done()，
+  但合併後 helper 本體遺失，會造成「pushAppWait is not defined」。
+  這裡提供前端內建 fallback，不依賴 AppShell；未來 AppShell 若也有同名函式，
+  這段仍可獨立正常運作。
+*/
+let appWaitStackCount = 0;
+let appWaitNode = null;
+let appWaitMessageNode = null;
+
+function pushAppWait(message){
+  appWaitStackCount += 1;
+  ensureAppWaitNode();
+  if(appWaitMessageNode){
+    appWaitMessageNode.innerText = message || '處理中...';
+  }
+  if(appWaitNode){
+    appWaitNode.style.display = 'flex';
+  }
+
+  let closed = false;
+  return function doneAppWait(){
+    if(closed){
+      return;
+    }
+    closed = true;
+    appWaitStackCount = Math.max(0, appWaitStackCount - 1);
+    if(appWaitStackCount === 0 && appWaitNode){
+      appWaitNode.style.display = 'none';
+    }
+  };
+}
+
+function ensureAppWaitNode(){
+  if(appWaitNode && appWaitMessageNode){
+    return;
+  }
+
+  appWaitNode = document.getElementById('appWaitOverlay');
+  if(!appWaitNode){
+    appWaitNode = document.createElement('div');
+    appWaitNode.id = 'appWaitOverlay';
+    appWaitNode.setAttribute('aria-live', 'polite');
+    appWaitNode.style.cssText = [
+      'display:none',
+      'position:fixed',
+      'inset:auto 16px 16px auto',
+      'z-index:1600',
+      'align-items:center',
+      'gap:10px',
+      'max-width:min(360px,calc(100vw - 32px))',
+      'padding:12px 14px',
+      'border-radius:14px',
+      'border:1px solid #bfdbfe',
+      'background:rgba(239,246,255,.98)',
+      'color:#1e3a8a',
+      'box-shadow:0 10px 30px rgba(15,23,42,.18)',
+      'font-size:14px',
+      'font-weight:900',
+      'line-height:1.45',
+      'pointer-events:none'
+    ].join(';');
+
+    const spinner = document.createElement('span');
+    spinner.setAttribute('aria-hidden', 'true');
+    spinner.style.cssText = [
+      'width:16px',
+      'height:16px',
+      'border-radius:999px',
+      'border:3px solid rgba(37,99,235,.25)',
+      'border-top-color:#2563eb',
+      'display:inline-block',
+      'flex:0 0 auto',
+      'animation:appWaitSpin .8s linear infinite'
+    ].join(';');
+
+    appWaitMessageNode = document.createElement('span');
+    appWaitMessageNode.style.cssText = 'min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;';
+
+    appWaitNode.appendChild(spinner);
+    appWaitNode.appendChild(appWaitMessageNode);
+
+    const style = document.createElement('style');
+    style.textContent = '@keyframes appWaitSpin{to{transform:rotate(360deg)}}';
+    document.head.appendChild(style);
+
+    document.body.appendChild(appWaitNode);
+  } else {
+    appWaitMessageNode = appWaitNode.querySelector('[data-app-wait-message]') || appWaitNode.querySelector('span:last-child') || appWaitNode;
+  }
 }
 
 
@@ -9060,7 +9154,7 @@ if (window.location.hostname.includes('github.io')) {
   ghFooter.innerHTML = `
     <div style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">
       <span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>
-      <span>v.2.27.8-202606030148</span>
+      <span>v.2.27.8-202606030152</span>
     </div>
   `;
   document.body.appendChild(ghFooter);
@@ -9077,6 +9171,7 @@ function normalizeTextForCompare(value){
 
 </body>
 </html>
+
 
 
 
