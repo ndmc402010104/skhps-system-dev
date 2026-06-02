@@ -1679,7 +1679,7 @@ function goHome(){
       </div>
     </div>
     <div id="inventorySetupHint" class="inventorySetupHint">
-      目前模式：敷料查詢 / 建檔／不限制單位。已有主檔進入查詢，查無資料可直接鍵入新敷料。
+      目前模式：敷料查詢 / 建檔／不限制單位。請先選擇作業類型與庫存位置，完成後才會出現搜尋 / 掃描列。
     </div>
   </div>
 
@@ -5625,16 +5625,20 @@ let inventoryCache = [];
 let pendingInventoryMasterGtinTarget = '';
 let inventoryOperationDirty = false;
 let inventoryBusy = false;
+let inventoryOperationChoiceMade = false;
+let inventoryUnitChoiceMade = false;
 
 function openInventoryArea(){
   document.getElementById('formArea').style.display = 'none';
   document.getElementById('dictArea').style.display = 'none';
   document.getElementById('inventoryArea').style.display = 'block';
+  inventoryOperationChoiceMade = false;
+  inventoryUnitChoiceMade = false;
   updateInventorySegmentedButtons();
   inventoryOperationDirty = false;
   clearInventorySearchInput();
   clearInventoryDetailForm();
-  setInventoryPanelOpen('inventorySearchPanel', true);
+  setInventoryPanelOpen('inventorySearchPanel', canShowInventorySearchPanel());
   setInventoryPanelOpen('inventoryDetailPanel', false);
   loadInventoryList(getInventoryCurrentListFilter());
 }
@@ -5648,6 +5652,10 @@ function setInventoryStatus(message){
 }
 
 function focusInventorySearchInput(){
+  if(!canShowInventorySearchPanel()){
+    return;
+  }
+
   const input = document.getElementById('inventoryBarcodeInput');
   if(input){
     setTimeout(function(){
@@ -5766,7 +5774,7 @@ function applyInventoryLotExpInputMode(parsed){
   const lockExp = operationType === 'inbound' && !!String(parsed.exp || '').trim();
 
   if(lotInput){
-    lotInput.placeholder = operationType === 'inbound' ? '請輸入本次入庫批號' : 'INITIAL';
+    lotInput.placeholder = operationType === 'inbound' ? '沒有批號會自動建立批號' : 'INITIAL';
     lotInput.readOnly = lockLot;
     lotInput.classList.toggle('inventoryScanLocked', lockLot);
     lotInput.title = lockLot ? '由掃描帶入，避免手動修改造成批號錯誤' : '';
@@ -6158,6 +6166,16 @@ function getInventoryUnitLabel(){
   return unit === '__ALL__' ? '不限制單位' : unit;
 }
 
+function canShowInventorySearchPanel(){
+  const operationType = getInventoryOperationType();
+  const unit = getInventoryUnitValue();
+  if(!inventoryOperationChoiceMade || !inventoryUnitChoiceMade){
+    return false;
+  }
+
+  return operationType === 'query' || unit !== '__ALL__';
+}
+
 function setInventoryBusy(isBusy, message){
   inventoryBusy = !!isBusy;
   if(isBusy){
@@ -6228,9 +6246,11 @@ function hasPendingInventoryOperationInput(){
 
 async function setInventoryOperationType(type){
   type = ['inbound','stocktake','query'].indexOf(type) >= 0 ? type : 'query';
+  inventoryOperationChoiceMade = true;
   const currentType = getInventoryOperationType();
   if(type === currentType){
     updateInventorySegmentedButtons();
+    setInventoryPanelOpen('inventorySearchPanel', canShowInventorySearchPanel());
     focusInventorySearchInput();
     return;
   }
@@ -6243,10 +6263,6 @@ async function setInventoryOperationType(type){
 
   const input = document.getElementById('inventoryOperationType');
   if(input) input.value = type;
-
-  if((type === 'inbound' || type === 'stocktake') && getInventoryUnitValue() === '__ALL__'){
-    setInventoryUnitSilently('5A');
-  }
 
   updateInventorySegmentedButtons();
   resetInventoryAfterSetupChange({ keepSearchOpen:true });
@@ -6262,15 +6278,12 @@ function setInventoryUnitSilently(unit){
 async function setInventoryUnit(unit, options){
   options = options || {};
   unit = String(unit || '').trim() || '__ALL__';
-
-  if(unit === '__ALL__' && getInventoryOperationType() !== 'query'){
-    showNotice('只有「敷料查詢 / 建檔」可以使用不限制單位。', 'warning', '請選擇庫存位置');
-    unit = getInventoryUnitValue() === '__ALL__' ? '5A' : getInventoryUnitValue();
-  }
+  inventoryUnitChoiceMade = true;
 
   const currentUnit = getInventoryUnitValue();
   if(unit === currentUnit){
     updateInventorySegmentedButtons();
+    setInventoryPanelOpen('inventorySearchPanel', canShowInventorySearchPanel());
     focusInventorySearchInput();
     return;
   }
@@ -6295,28 +6308,34 @@ async function setInventoryUnit(unit, options){
 
 function updateInventorySegmentedButtons(){
   const operationType = getInventoryOperationType();
-  let unit = getInventoryUnitValue();
-
-  if(operationType !== 'query' && unit === '__ALL__'){
-    unit = '5A';
-    setInventoryUnitSilently(unit);
-  }
+  const unit = getInventoryUnitValue();
+  const searchReady = canShowInventorySearchPanel();
 
   document.querySelectorAll('[data-inventory-operation]').forEach(function(btn){
-    btn.classList.toggle('active', btn.dataset.inventoryOperation === operationType);
+    btn.classList.toggle('active', inventoryOperationChoiceMade && btn.dataset.inventoryOperation === operationType);
   });
 
   document.querySelectorAll('[data-inventory-unit]').forEach(function(btn){
-    const isAllButton = btn.dataset.inventoryUnit === '__ALL__';
-    btn.style.display = (isAllButton && operationType !== 'query') ? 'none' : '';
-    btn.classList.toggle('active', btn.dataset.inventoryUnit === unit);
+    btn.classList.toggle('active', inventoryUnitChoiceMade && btn.dataset.inventoryUnit === unit);
   });
 
   const hint = document.getElementById('inventorySetupHint');
   if(hint){
+    let nextHint = '請先選擇作業類型與庫存位置，完成後才會出現搜尋 / 掃描列。';
+
+    if(inventoryOperationChoiceMade && !inventoryUnitChoiceMade){
+      nextHint = '已選擇作業類型，請再選擇庫存位置。';
+    } else if(!inventoryOperationChoiceMade && inventoryUnitChoiceMade){
+      nextHint = '已選擇庫存位置，請再選擇作業類型。';
+    } else if(inventoryOperationChoiceMade && inventoryUnitChoiceMade && !searchReady){
+      nextHint = '入庫與盤點需要指定 5A 或傷口照護中心，不能使用不限制單位。';
+    } else if(searchReady){
+      nextHint = '可以開始搜尋或掃描敷料。';
+    }
+
     hint.innerText =
       '目前模式：' + getInventoryOperationLabel() + '／' + getInventoryUnitLabel() +
-      '。搜尋與掃描工具會依目前條件即時切換。';
+      '。' + nextHint;
   }
 }
 
@@ -6352,7 +6371,8 @@ function clearInventoryDetailForm(){
 
 function resetInventoryAfterSetupChange(options){
   options = options || {};
-  setInventoryPanelOpen('inventorySearchPanel', options.keepSearchOpen !== false);
+  const showSearch = options.keepSearchOpen !== false && canShowInventorySearchPanel();
+  setInventoryPanelOpen('inventorySearchPanel', showSearch);
   setInventoryPanelOpen('inventoryDetailPanel', false);
   clearInventoryDetailForm();
   clearInventorySearchInput();
@@ -6361,22 +6381,21 @@ function resetInventoryAfterSetupChange(options){
     renderInventoryGroupedList(getInventoryCurrentListFilter());
   }
 
-  const input = document.getElementById('inventoryBarcodeInput');
-  if(input && options.keepSearchOpen !== false){
-    setTimeout(function(){ input.focus(); }, 30);
+  if(showSearch){
+    focusInventorySearchInput();
   }
 }
 
 function confirmInventorySetup(){
-  setInventoryPanelOpen('inventorySearchPanel', true);
+  const showSearch = canShowInventorySearchPanel();
+  setInventoryPanelOpen('inventorySearchPanel', showSearch);
   setInventoryPanelOpen('inventoryDetailPanel', false);
   clearInventoryDetailForm();
   renderInventoryOperationMode();
   renderInventoryGroupedList(getInventoryCurrentListFilter());
 
-  const input = document.getElementById('inventoryBarcodeInput');
-  if(input){
-    setTimeout(function(){ input.focus(); }, 30);
+  if(showSearch){
+    focusInventorySearchInput();
   }
 }
 function getInventoryCurrentListFilter(extra){
@@ -7213,28 +7232,31 @@ function triggerInventoryTest(type){
 
 function resetInventoryAfterOperationComplete(options){
   options = options || {};
+  const showSearch = canShowInventorySearchPanel();
   clearInventorySearchInput();
   clearInventoryDetailForm();
-  setInventoryPanelOpen('inventorySearchPanel', true);
+  setInventoryPanelOpen('inventorySearchPanel', showSearch);
   setInventoryPanelOpen('inventoryDetailPanel', false);
   inventoryOperationDirty = false;
   renderInventoryOperationMode();
 
-  const input = document.getElementById('inventoryBarcodeInput');
-  if(input){
-    setTimeout(function(){ input.focus(); }, 30);
+  if(showSearch){
+    focusInventorySearchInput();
   }
 }
 
 function cancelInventoryOperation(){
   const operationLabel = getInventoryOperationType() === 'stocktake' ? '盤點' : '入庫';
+  const showSearch = canShowInventorySearchPanel();
   clearInventorySearchInput();
   clearInventoryDetailForm();
-  setInventoryPanelOpen('inventorySearchPanel', true);
+  setInventoryPanelOpen('inventorySearchPanel', showSearch);
   setInventoryPanelOpen('inventoryDetailPanel', false);
   inventoryOperationDirty = false;
   renderInventoryOperationMode();
-  focusInventorySearchInput();
+  if(showSearch){
+    focusInventorySearchInput();
+  }
   showNotice('已取消本次' + operationLabel + '，可重新掃描或輸入下一筆。', 'warning', '已取消');
 }
 
@@ -7851,7 +7873,7 @@ if (window.location.hostname.includes('github.io')) {
   ghFooter.innerHTML = `
     <div style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">
       <span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>
-      <span>v.2.27.6-202606021509</span>
+      <span>v.2.27.6-202606021517</span>
     </div>
   `;
   document.body.appendChild(ghFooter);
@@ -7868,6 +7890,7 @@ function normalizeTextForCompare(value){
 
 </body>
 </html>
+
 
 
 
