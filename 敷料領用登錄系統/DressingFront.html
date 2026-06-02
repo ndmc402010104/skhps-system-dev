@@ -1,7 +1,7 @@
 ﻿<!DOCTYPE html>
 <!--
 檔案位置：科室系統用戶端/DressingFront.html
-時間戳記：2026-06-02 14:17 UTC+8
+時間戳記：2026-06-02 18:40 UTC+8
 用途：敷料領用/建檔/庫存前端；聚焦修正入庫頁，修正新條碼切換完整敷料建檔流程，並讓未設定一盒數量的敷料保留本次入庫盒數欄位以按鈕設定。
 -->
 <html>
@@ -3837,13 +3837,20 @@ function renderSearchSuggestions(context, matches, query){
     return;
   }
 
+  function getInventoryNewSuggestLabel(){
+    const existingName = findExistingDressingNameForInventoryInput(query);
+    return existingName
+      ? '＋ 新增 ' + existingName + ' 的規格'
+      : '＋ 新增 ' + query;
+  }
+
   if(!matches || matches.length === 0){
     if(context === 'inventory'){
       box.style.display = 'block';
       box.innerHTML =
         '<div class="searchSuggestMeta">找不到符合的敷料主檔</div>' +
         '<button type="button" class="searchSuggestNewItem" onclick="openInventoryNewDressingDialogFromSearch()">' +
-          '<span>＋ 鍵入新敷料</span>' +
+          '<span>' + escapeHtml(getInventoryNewSuggestLabel()) + '</span>' +
           '<span class="searchSuggestNewHint">' + escapeHtml(query) + '</span>' +
         '</button>';
       return;
@@ -3854,9 +3861,16 @@ function renderSearchSuggestions(context, matches, query){
     return;
   }
 
+  const inventoryNewItemHtml = context === 'inventory'
+    ? '<button type="button" class="searchSuggestNewItem" onclick="openInventoryNewDressingDialogFromSearch()">' +
+        '<span>' + escapeHtml(getInventoryNewSuggestLabel()) + '</span>' +
+        '<span class="searchSuggestNewHint">' + escapeHtml(query) + '</span>' +
+      '</button>'
+    : '';
+
   box.style.display = 'block';
   box.innerHTML =
-    '<div class="searchSuggestMeta">找到 ' + matches.length + ' 筆候選，請點選帶入</div>' +
+    '<div class="searchSuggestMeta">找到 ' + matches.length + ' 筆候選；沒有需要的品項、規格或院內碼可滑到最下方新增</div>' +
     matches.map(function(item, idx){
       const dressingText = [item.dressingName || '', item.size || ''].filter(Boolean).join(' ');
       const statusClass = getDressingStatusClassForSuggest(item);
@@ -3871,7 +3885,8 @@ function renderSearchSuggestions(context, matches, query){
           <span class="searchSuggestStatus ${escapeHtml(statusClass)}">${escapeHtml(formatDressingStatusForSuggest(item))}</span>
         </button>
       `;
-    }).join('');
+    }).join('') +
+    inventoryNewItemHtml;
 
   box.querySelectorAll('.searchSuggestItem').forEach(function(btn){
     btn.onclick = function(){
@@ -4088,8 +4103,9 @@ function ensureOptionContainsCurrentValue(values, currentValue){
 
   return list;
 }
-async function pickValueByPrompt(title, values, defaultValue, message){
+async function pickValueByPrompt(title, values, defaultValue, message, manualLabel){
   values = ensureOptionContainsCurrentValue(values || [], defaultValue);
+  manualLabel = manualLabel || '自行輸入';
 
   if(!values || values.length === 0){
     const val = await openAppDialog({
@@ -4105,7 +4121,7 @@ async function pickValueByPrompt(title, values, defaultValue, message){
 
   while(true){
     const choices = values.map(function(v){ return { label: v, value: v }; });
-    choices.push({ label: '➕ 自行輸入...', value: '__MANUAL_INPUT__' });
+    choices.push({ label: '➕ ' + manualLabel + '...', value: '__MANUAL_INPUT__' });
 
     const choice = await openAppDialog({
       title: title,
@@ -4121,7 +4137,7 @@ async function pickValueByPrompt(title, values, defaultValue, message){
 
     if(choice === '__MANUAL_INPUT__'){
       const manualVal = await openAppDialog({
-        title: title + ' (自行輸入)',
+        title: title + ' (' + manualLabel + ')',
         message: message || '請輸入內容：',
         input: true,
         defaultValue: defaultValue || '',
@@ -6316,6 +6332,8 @@ function updateInventorySegmentedButtons(){
   });
 
   document.querySelectorAll('[data-inventory-unit]').forEach(function(btn){
+    const isAllUnit = btn.dataset.inventoryUnit === '__ALL__';
+    btn.style.display = isAllUnit && operationType !== 'query' ? 'none' : '';
     btn.classList.toggle('active', inventoryUnitChoiceMade && btn.dataset.inventoryUnit === unit);
   });
 
@@ -6760,12 +6778,54 @@ async function openInventoryNewDressingDialogFromSearch(){
   });
 }
 
+function findExistingDressingNameForInventoryInput(raw){
+  const query = normalizeTextForCompare(raw);
+  if(!query){
+    return '';
+  }
+
+  const names = Array.from(new Set(
+    getExistingDressingItems().map(function(item){
+      return String(item.dressingName || '').trim();
+    }).filter(Boolean)
+  ));
+
+  const exact = names.find(function(name){
+    return normalizeTextForCompare(name) === query;
+  });
+  if(exact){
+    return exact;
+  }
+
+  return '';
+}
+
+async function askInventoryTextInputKind(raw){
+  const choice = await openAppDialog({
+    title:'新增資料類型',
+    message:'你輸入的是：' + raw + '\n請先選擇它要當作敷料名稱還是院內碼，接著會一步一步完成新敷料資料。',
+    input:false,
+    choices:[
+      { label:'新增敷料名稱', value:'dressingName' },
+      { label:'新增院內碼', value:'hospitalCode' }
+    ],
+    cancelText:'取消'
+  });
+
+  if(choice === null || choice === false){
+    return '';
+  }
+
+  return choice === 'hospitalCode' ? 'hospitalCode' : 'dressingName';
+}
+
 async function askInventoryUnknownDressingPrefill(options){
   options = options || {};
   const raw = String(options.raw || '').trim();
   const gtin = String(options.gtin || '').replace(/[^0-9]/g, '').trim();
   let packageType = inferInventoryPendingPackageType(raw, parseUDI(raw));
   let prefillKind = '';
+  let prefillName = '';
 
   if(gtin){
     const choices = packageType === 'box'
@@ -6809,31 +6869,28 @@ async function askInventoryUnknownDressingPrefill(options){
   }
 
   if(/^\d+$/.test(raw)){
-    const choice = await openAppDialog({
-      title:'新增資料類型',
-      message:'你輸入的是純數字：' + raw + '\n請選擇它要先放在哪個欄位，接著會一步一步完成新敷料資料，最後再開完整主檔畫面總整理。',
-      input:false,
-      choices:[
-        { label:'院內碼', value:'hospitalCode' },
-        { label:'敷料名稱', value:'dressingName' }
-      ],
-      cancelText:'取消'
-    });
-
-    if(choice === null || choice === false){
+    prefillKind = await askInventoryTextInputKind(raw);
+    if(!prefillKind){
       return null;
     }
-
-    prefillKind = choice === 'dressingName' ? 'dressingName' : 'hospitalCode';
   } else {
-    prefillKind = raw ? 'dressingName' : '';
+    prefillName = findExistingDressingNameForInventoryInput(raw);
+    if(prefillName){
+      prefillKind = 'dressingName';
+    } else if(raw){
+      prefillKind = await askInventoryTextInputKind(raw);
+      if(!prefillKind){
+        return null;
+      }
+    }
   }
 
   const guided = await runInventoryNewGtinGuidedMasterFlow({
     raw:raw,
     gtin:'',
     packageType:packageType || 'single',
-    prefillKind:prefillKind
+    prefillKind:prefillKind,
+    dressingName:prefillName || ''
   });
 
   if(!guided){
@@ -6852,7 +6909,9 @@ async function runInventoryNewGtinGuidedMasterFlow(options){
   const gtin = String(options.gtin || '').replace(/[^0-9]/g, '').trim();
   const packageType = options.packageType === 'box' ? 'box' : 'single';
   const prefillKind = options.prefillKind || '';
-  const defaultName = prefillKind === 'dressingName' ? raw : '';
+  const defaultName = prefillKind === 'dressingName'
+    ? String(options.dressingName || raw || '').trim()
+    : '';
   const defaultHospitalCode = prefillKind === 'hospitalCode' ? raw : '';
   const allItems = getExistingDressingItems();
 
@@ -6867,7 +6926,9 @@ async function runInventoryNewGtinGuidedMasterFlow(options){
     name = await pickValueByPrompt(
       gtin ? '步驟 2：請選擇或輸入敷料名稱' : '步驟 2：敷料名稱',
       names,
-      ''
+      '',
+      '',
+      '新增敷料名稱'
     );
   }
 
@@ -6890,7 +6951,8 @@ async function runInventoryNewGtinGuidedMasterFlow(options){
     gtin ? '步驟 3：請選擇或輸入規格描述' : '步驟 3：規格描述',
     sizesForName,
     '',
-    '敷料名稱：' + name + '\n請選擇既有規格，或點擊最下方「自行輸入...」新增規格。'
+    '敷料名稱：' + name + '\n請選擇既有規格，或點擊最下方「新增規格...」建立同名稱的新規格。',
+    '新增規格'
   );
 
   if(size === null){
@@ -7329,6 +7391,7 @@ async function submitInventoryOperationFromForm(){
 
   const currentQty = getInventoryCurrentQtyForForm();
   let changeQty = 0;
+  let stocktakeActualQty = '';
   let successTitle = '';
 
   if(operationType === 'stocktake'){
@@ -7345,13 +7408,8 @@ async function submitInventoryOperationFromForm(){
     }
 
     changeQty = actualQty - currentQty;
+    stocktakeActualQty = actualQty;
     successTitle = '盤點完成';
-
-    if(changeQty === 0){
-      showNotice('盤點數量與系統相同，沒有需要修正的庫存差額', 'success', '無差異');
-      resetInventoryAfterOperationComplete({ hospitalCode:hospitalCode });
-      return;
-    }
   } else {
     changeQty = calculateInventoryFinalQty();
     successTitle = '已入庫';
@@ -7365,6 +7423,8 @@ async function submitInventoryOperationFromForm(){
   setInventoryBusy(true, operationType === 'stocktake' ? '盤點送出中...' : '入庫送出中...');
 
   try{
+    const masterItem = getInventoryMasterItem() || {};
+    const operatorInput = document.getElementById('userName');
     const res = await addInventoryStock({
       hospitalCode:hospitalCode,
       stockUnit:stockUnit,
@@ -7373,7 +7433,9 @@ async function submitInventoryOperationFromForm(){
       quantity:changeQty,
       operationType:operationType,
       currentQuantity:currentQty,
-      actualQuantity:operationType === 'stocktake' ? currentQty + changeQty : '',
+      actualQuantity:operationType === 'stocktake' ? stocktakeActualQty : '',
+      singleGtin:masterItem.singleGtin || masterItem.gtin || '',
+      operator:String(operatorInput ? operatorInput.value : '').trim() || '前端使用者',
       note:operationType === 'stocktake' ? '前端盤點修正' : '前端入庫'
     });
 
@@ -7625,10 +7687,12 @@ function addInventoryStock(data){
     stockUnit:data.stockUnit || '',
     lot:data.lot || '',
     exp:data.exp || '',
-    quantity:data.quantity || '',
+    quantity:data.quantity !== undefined && data.quantity !== null ? data.quantity : '',
     operationType:data.operationType || '',
-    currentQuantity:data.currentQuantity || '',
-    actualQuantity:data.actualQuantity || '',
+    currentQuantity:data.currentQuantity !== undefined && data.currentQuantity !== null ? data.currentQuantity : '',
+    actualQuantity:data.actualQuantity !== undefined && data.actualQuantity !== null ? data.actualQuantity : '',
+    singleGtin:data.singleGtin || data.gtin || '',
+    operator:data.operator || '',
     note:data.note || ''
   });
 }
@@ -7908,7 +7972,7 @@ if (window.location.hostname.includes('github.io')) {
   ghFooter.innerHTML = `
     <div style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">
       <span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>
-      <span>v.2.27.6-202606021538</span>
+      <span>v.2.27.6-202606021615</span>
     </div>
   `;
   document.body.appendChild(ghFooter);
@@ -7925,6 +7989,10 @@ function normalizeTextForCompare(value){
 
 </body>
 </html>
+
+
+
+
 
 
 
