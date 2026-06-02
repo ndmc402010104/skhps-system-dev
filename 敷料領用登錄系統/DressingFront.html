@@ -6780,7 +6780,7 @@ async function askInventoryUnknownDressingPrefill(options){
 
     const choice = await openAppDialog({
       title:'新 GTIN 類型',
-      message:'這個 GTIN 目前不在敷料主檔中。\n請先確認它是單包條碼還是盒裝條碼，接著會開完整主檔畫面讓你總整理。',
+      message:'這個 GTIN 目前不在敷料主檔中。\n請先確認它是單包條碼還是盒裝條碼，接著會一步一步完成新敷料資料，最後再開完整主檔畫面總整理。',
       input:false,
       choices:choices,
       cancelText:'取消'
@@ -6811,7 +6811,7 @@ async function askInventoryUnknownDressingPrefill(options){
   if(/^\d+$/.test(raw)){
     const choice = await openAppDialog({
       title:'新增資料類型',
-      message:'你輸入的是純數字：' + raw + '\n請選擇它要先放在哪個欄位，接著會開完整主檔畫面確認。',
+      message:'你輸入的是純數字：' + raw + '\n請選擇它要先放在哪個欄位，接著會一步一步完成新敷料資料，最後再開完整主檔畫面總整理。',
       input:false,
       choices:[
         { label:'院內碼', value:'hospitalCode' },
@@ -6829,16 +6829,31 @@ async function askInventoryUnknownDressingPrefill(options){
     prefillKind = raw ? 'dressingName' : '';
   }
 
-  return {
-    packageType:packageType || '',
+  const guided = await runInventoryNewGtinGuidedMasterFlow({
+    raw:raw,
+    gtin:'',
+    packageType:packageType || 'single',
     prefillKind:prefillKind
-  };
+  });
+
+  if(!guided){
+    return null;
+  }
+
+  return Object.assign({}, guided, {
+    packageType:packageType || 'single',
+    prefillKind:prefillKind
+  });
 }
 
 async function runInventoryNewGtinGuidedMasterFlow(options){
   options = options || {};
+  const raw = String(options.raw || '').trim();
   const gtin = String(options.gtin || '').replace(/[^0-9]/g, '').trim();
   const packageType = options.packageType === 'box' ? 'box' : 'single';
+  const prefillKind = options.prefillKind || '';
+  const defaultName = prefillKind === 'dressingName' ? raw : '';
+  const defaultHospitalCode = prefillKind === 'hospitalCode' ? raw : '';
   const allItems = getExistingDressingItems();
 
   const names = Array.from(new Set(
@@ -6850,7 +6865,7 @@ async function runInventoryNewGtinGuidedMasterFlow(options){
   const name = await pickValueByPrompt(
     '步驟 2：請選擇或輸入敷料名稱',
     names,
-    ''
+    defaultName
   );
 
   if(name === null){
@@ -6882,7 +6897,7 @@ async function runInventoryNewGtinGuidedMasterFlow(options){
   const hospitalCode = await showInputDialog(
     '步驟 4：院內碼',
     '請確認院內碼\n\n已有相同名稱與規格時會自動帶入；沒有也可以手動輸入。',
-    existingItem.hospitalCode || ''
+    existingItem.hospitalCode || defaultHospitalCode
   );
 
   if(hospitalCode === null){
@@ -7884,7 +7899,7 @@ if (window.location.hostname.includes('github.io')) {
   ghFooter.innerHTML = `
     <div style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">
       <span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>
-      <span>v.2.27.6-202606021523</span>
+      <span>v.2.27.6-202606021528</span>
     </div>
   `;
   document.body.appendChild(ghFooter);
@@ -7901,6 +7916,7 @@ function normalizeTextForCompare(value){
 
 </body>
 </html>
+
 
 
 
