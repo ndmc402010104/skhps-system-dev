@@ -1054,14 +1054,30 @@ function deleteDressingBarcode(data){
 //AJAX
 const DRESSING_API_URL = APP_ENTRY_URL;
 
-async function dressingApi(action, payload = {}) {
-  const params = new URLSearchParams({
-    action,
-    ...payload
-  });
+function dressingApi(action, payload) {
+  payload = payload || {};
 
-  const res = await fetch(`${DRESSING_API_URL}?${params.toString()}`);
-  return await res.json();
+  if (action === 'listDressingBarcode') {
+    return listDressingBarcode();
+  }
+
+  if (action === 'lookupDressingBarcode') {
+    return lookupDressingBarcode(payload.gtin || payload.code || '');
+  }
+
+  if (action === 'saveDressingBarcode') {
+    return saveDressingBarcode(payload);
+  }
+
+  if (action === 'deleteDressingBarcode') {
+    return deleteDressingBarcode(payload);
+  }
+
+  if (action === 'reorderDressingBarcode') {
+    return reorderDressingBarcode(payload.order || payload);
+  }
+
+  return { ok: false, message: '未知的敷料建檔 action：' + action };
 }
 
 function listBarcode() {
