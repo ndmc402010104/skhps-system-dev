@@ -907,7 +907,7 @@
 
 <body>
 
-<?!= include('共用設定檔/AppHeader', { subtitle: '簽到管理後台', onClick: 'goHome()', maxWidth: '1600px' }) ?>
+<?!= include('共用設定檔/AppShell', { subtitle: '簽到管理後台', onClick: 'goHome()', maxWidth: '1600px', showCalendarSource: true }) ?>
 
 <nav class="pageMap" aria-label="頁面地圖">
   <button class="pageMapLink" onclick="goHome()">後台首頁</button>
@@ -987,8 +987,6 @@
 
 
 <datalist id="staffNameList"></datalist>
-
-<?!= getVersionBadgeHtml({showCalendarSource:true}) ?>
 
 </body>
 </html>

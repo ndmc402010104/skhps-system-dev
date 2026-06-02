@@ -973,7 +973,7 @@ function submitName(){
 
 <body>
 
-  <?!= include('共用設定檔/AppHeader', { subtitle: '會議簽到', maxWidth: '760px' }) ?>
+  <?!= include('共用設定檔/AppShell', { subtitle: '會議簽到', maxWidth: '760px', showCalendarSource: true }) ?>
 
   <section class="pageHero">
     <p class="eyebrow">簽到表單</p>
@@ -1061,8 +1061,6 @@ function submitName(){
   </button>
 
   <div id="nameGrid"></div>
-
-<?!= getVersionBadgeHtml({showCalendarSource:true}) ?>
 
 </body>
 </html>

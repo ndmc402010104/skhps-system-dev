@@ -1,8 +1,8 @@
 ﻿<!DOCTYPE html>
 <!--
 檔案位置：科室系統用戶端/DressingFront.html
-時間戳記：2026-06-02 18:37 UTC+8
-用途：敷料領用/建檔/庫存前端；調整本次入庫/盤點作業區左右等高、送出按鈕左右排列、放大差額顯示，並修正盤點剩餘盒數與單位數 placeholder。
+時間戳記：2026-06-02 23:00 UTC+8
+用途：敷料領用/建檔/庫存前端；統一批號與效期顯示字級，強化盒裝數量與單位數量的視覺辨識，並保留盤點/入庫分區與流程規則。
 -->
 <html>
 <head>
@@ -380,68 +380,6 @@ tr.editing .dictGtinScanBtn{
   line-height:1;
   padding:0;
   cursor:pointer;
-}
-
-.appWaitIndicator{
-  position:fixed;
-  top:12px;
-  left:50%;
-  z-index:1450;
-  display:none;
-  align-items:center;
-  gap:9px;
-  max-width:min(420px,calc(100vw - 32px));
-  padding:9px 14px;
-  border:1px solid #bfdbfe;
-  border-radius:999px;
-  background:rgba(255,255,255,.96);
-  box-shadow:0 8px 24px rgba(15,23,42,.12);
-  color:#1e3a8a;
-  font-size:13px;
-  font-weight:900;
-  transform:translateX(-50%);
-  overflow:hidden;
-}
-
-.appWaitIndicator.is-active{
-  display:flex;
-}
-
-.appWaitIndicator::after{
-  content:'';
-  position:absolute;
-  left:0;
-  right:0;
-  bottom:0;
-  height:3px;
-  background:linear-gradient(90deg,transparent,#2563eb,transparent);
-  animation:waitSweep 1.05s linear infinite;
-}
-
-.appWaitSpinner{
-  width:15px;
-  height:15px;
-  flex:0 0 auto;
-  border:2px solid #bfdbfe;
-  border-top-color:#2563eb;
-  border-radius:50%;
-  animation:waitSpin .72s linear infinite;
-}
-
-.appWaitText{
-  min-width:0;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-}
-
-@keyframes waitSpin{
-  to{ transform:rotate(360deg); }
-}
-
-@keyframes waitSweep{
-  from{ transform:translateX(-100%); }
-  to{ transform:translateX(100%); }
 }
 
 @keyframes noticeIn{
@@ -1027,6 +965,76 @@ tr.editing .dictGtinScanBtn{
   font-weight:800;
   pointer-events:none;
   padding-left:2px;
+}
+
+#inventoryLot.inventoryScanLocked,
+#inventoryExp.inventoryScanLocked{
+  min-height:44px;
+  font-family:inherit;
+  font-size:18px;
+  font-weight:950;
+  line-height:1.35;
+  letter-spacing:.01em;
+}
+
+#inventoryExp.inventoryScanLocked::-webkit-datetime-edit,
+#inventoryExp.inventoryScanLocked::-webkit-datetime-edit-fields-wrapper,
+#inventoryExp.inventoryScanLocked::-webkit-datetime-edit-text,
+#inventoryExp.inventoryScanLocked::-webkit-datetime-edit-year-field,
+#inventoryExp.inventoryScanLocked::-webkit-datetime-edit-month-field,
+#inventoryExp.inventoryScanLocked::-webkit-datetime-edit-day-field{
+  font-family:inherit;
+  font-size:18px;
+  font-weight:950;
+  color:#0f172a;
+}
+
+#inventoryBoxQtyField,
+#inventoryActualBoxQtyField{
+  border-left:6px solid #2563eb !important;
+  background:linear-gradient(90deg,rgba(37,99,235,.08),#ffffff 52%) !important;
+}
+
+#inventoryUnitQtyField{
+  border-left:6px solid #16a34a !important;
+  background:linear-gradient(90deg,rgba(22,163,74,.08),#ffffff 52%) !important;
+}
+
+#inventoryBoxQtyLabel::before,
+#inventoryActualBoxQtyLabel::before,
+#inventoryUnitQtyLabel::before{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:34px;
+  height:20px;
+  margin-right:6px;
+  padding:0 7px;
+  border-radius:999px;
+  color:#ffffff;
+  font-size:12px;
+  font-weight:950;
+  letter-spacing:.04em;
+  vertical-align:1px;
+}
+
+#inventoryBoxQtyLabel::before,
+#inventoryActualBoxQtyLabel::before{
+  content:'盒裝';
+  background:#2563eb;
+}
+
+#inventoryUnitQtyLabel::before{
+  content:'單位';
+  background:#16a34a;
+}
+
+#inventoryBoxQty,
+#inventoryActualBoxQty,
+#inventoryUnitQty{
+  min-height:44px;
+  font-size:17px;
+  font-weight:800;
 }
 
 .inventoryBoxQtyAction{
@@ -1621,13 +1629,6 @@ tr.editing select:not(.readonly):focus{
     max-width:none;
   }
 
-  .appWaitIndicator{
-    top:58px;
-    width:calc(100vw - 20px);
-    max-width:none;
-    justify-content:center;
-  }
-
   .appDialogOverlay{
     align-items:flex-end;
     padding:10px;
@@ -1889,15 +1890,10 @@ function goHome(){
 <body>
 <main class="shell">
 
-<?!= include('共用設定檔/AppHeader', { subtitle: '敷料領用登錄', onClick: 'goHome()', maxWidth: '1400px' }) ?>
+<?!= include('共用設定檔/AppShell', { subtitle: '敷料領用登錄', onClick: 'goHome()', maxWidth: '1400px' }) ?>
 
 <div class="headerNoticeWrap">
   <div id="noticeStack" class="noticeStack" aria-live="polite"></div>
-</div>
-
-<div id="appWaitIndicator" class="appWaitIndicator" role="status" aria-live="polite">
-  <span class="appWaitSpinner" aria-hidden="true"></span>
-  <span id="appWaitText" class="appWaitText">處理中...</span>
 </div>
 
 <nav class="pageMap" aria-label="頁面地圖">
@@ -2074,7 +2070,7 @@ function goHome(){
           <div class="inventoryActionColumn inventoryActionInputColumn" aria-label="本次作業輸入">
             <div class="inventoryField inventorySectionField" id="inventoryBoxQtyField" style="display:none;">
               <label id="inventoryBoxQtyLabel">本次入庫盒數</label>
-              <input id="inventoryBoxQty" type="number" inputmode="decimal" min="0" step="0.01" placeholder="入庫幾盒" oninput="renderInventoryQuantityHint()">
+              <input id="inventoryBoxQty" type="number" inputmode="decimal" min="0" step="0.01" placeholder="輸入入庫盒數" oninput="renderInventoryQuantityHint()">
               <button id="inventoryBoxQtyMasterBtn" type="button" class="inventoryBoxQtyAction" onclick="openInventoryBoxQuantityDialog()">設定一盒數量</button>
               <div id="inventoryBoxQtyHint" class="inventoryBoxQtyHint"></div>
             </div>
@@ -2084,7 +2080,7 @@ function goHome(){
             </div>
             <div class="inventoryField inventorySectionField" id="inventoryUnitQtyField">
               <label id="inventoryUnitQtyLabel">本次入庫單位數</label>
-              <input id="inventoryUnitQty" type="number" inputmode="decimal" min="0" step="0.01" placeholder="入庫幾單位" oninput="renderInventoryQuantityHint()">
+              <input id="inventoryUnitQty" type="number" inputmode="decimal" min="0" step="0.01" placeholder="輸入入庫單位數" oninput="renderInventoryQuantityHint()">
             </div>
           </div>
 
@@ -2220,8 +2216,6 @@ let draggedRow = null;
 let dictScanMemory = {};
 let cancelledDictScanKeys = {};
 let pendingInventoryPackageType = '';
-let appWaitStack = [];
-let appWaitSeq = 0;
 let dictBusyWaitDone = null;
 let inventoryBusyWaitDone = null;
 
@@ -2233,42 +2227,6 @@ const DICT_TABLE_STATE = {
 
 function isDictTableBusy(){
   return ['loading','saving','deleting','refreshing'].indexOf(DICT_TABLE_STATE.mode) >= 0;
-}
-
-function renderAppWaitIndicator(){
-  const indicator = document.getElementById('appWaitIndicator');
-  const textEl = document.getElementById('appWaitText');
-  if(!indicator || !textEl){
-    return;
-  }
-
-  const active = appWaitStack.length > 0;
-  const current = active ? appWaitStack[appWaitStack.length - 1] : null;
-  indicator.classList.toggle('is-active', active);
-  indicator.setAttribute('aria-busy', active ? 'true' : 'false');
-  textEl.innerText = current && current.message ? current.message : '處理中...';
-}
-
-function pushAppWait(message){
-  const id = ++appWaitSeq;
-  appWaitStack.push({
-    id:id,
-    message:message || '處理中...'
-  });
-  renderAppWaitIndicator();
-
-  let closed = false;
-  return function(){
-    if(closed){
-      return;
-    }
-
-    closed = true;
-    appWaitStack = appWaitStack.filter(function(item){
-      return item.id !== id;
-    });
-    renderAppWaitIndicator();
-  };
 }
 
 function getDictBusyMessage(mode, message){
@@ -7335,8 +7293,8 @@ function renderInventoryOperationMode(){
     if(unitLabel){
       unitLabel.innerText = missingBoxQty ? '本次入庫單位數（可先填本盒實際數量）' : '本次入庫單位數';
     }
-    if(boxInput) boxInput.placeholder = '入庫幾盒';
-    if(unitInput) unitInput.placeholder = '入庫幾單位';
+    if(boxInput) boxInput.placeholder = '輸入入庫盒數';
+    if(unitInput) unitInput.placeholder = '輸入入庫單位數';
     if(finalLabel) finalLabel.innerText = '實際增加庫存';
     if(submitBtn) submitBtn.innerText = '確認入庫';
     if(cancelBtn) cancelBtn.innerText = '取消入庫';
@@ -7400,7 +7358,7 @@ function renderInventoryQuantityHint(){
     }
     if(boxInput){
       boxInput.style.display = operationType === 'inbound' && boxQty > 0 ? '' : 'none';
-      boxInput.placeholder = '入庫幾盒';
+      boxInput.placeholder = '輸入入庫盒數';
       boxInput.readOnly = false;
       boxInput.disabled = false;
       if(boxQty <= 0 || operationType !== 'inbound'){
@@ -7408,7 +7366,7 @@ function renderInventoryQuantityHint(){
       }
     }
     if(unitInput){
-      unitInput.placeholder = operationType === 'inbound' ? '入庫幾單位' : '';
+      unitInput.placeholder = operationType === 'inbound' ? '輸入入庫單位數' : '';
     }
     if(boxBtn){
       boxBtn.style.display = operationType === 'inbound' && missingBoxQty ? 'inline-flex' : 'none';
@@ -8962,8 +8920,6 @@ function submitUse(){
 </script>
 </main>
 
-<?!= getVersionBadgeHtml() ?>
-
 <script>
 if (window.location.hostname.includes('github.io')) {
   document.body.style.padding = '0';
@@ -8996,7 +8952,7 @@ if (window.location.hostname.includes('github.io')) {
   ghFooter.innerHTML = `
     <div style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">
       <span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>
-      <span>v.2.27.7-202606021838</span>
+      <span>v.2.27.7-202606022305</span>
     </div>
   `;
   document.body.appendChild(ghFooter);
@@ -9013,3 +8969,4 @@ function normalizeTextForCompare(value){
 
 </body>
 </html>
+

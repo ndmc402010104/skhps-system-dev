@@ -395,7 +395,7 @@ function goUiTest(){
 
 <main class="shell">
 
-<?!= include('共用設定檔/AppHeader', { subtitle: '常用作業入口', onClick: 'goHome()', maxWidth: '980px' }) ?>
+<?!= include('共用設定檔/AppShell', { subtitle: '常用作業入口', onClick: 'goHome()', maxWidth: '980px' }) ?>
 
 <nav class="pageMap" aria-label="頁面地圖">
   <span class="pageMapCurrent">首頁</span>
@@ -481,8 +481,6 @@ style="display: none;">
 </section>
 
 </main>
-
-<?!= getVersionBadgeHtml() ?>
 
 <script>
 // 如果是 GitHub Pages，因為 GAS 的標籤無法執行，我們手動加上專屬的 Footer 與 Header 標籤

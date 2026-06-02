@@ -315,7 +315,7 @@ h2{
 
 <div class="wrap">
 
-  <?!= include('共用設定檔/AppHeader', { subtitle: '簽到 QR 產生器', onClick: 'goHome()', maxWidth: '980px' }) ?>
+  <?!= include('共用設定檔/AppShell', { subtitle: '簽到 QR 產生器', onClick: 'goHome()', maxWidth: '980px', showCalendarSource: true }) ?>
 
   <nav class="pageMap" aria-label="頁面地圖">
     <button class="pageMapLink" onclick="goHome()">首頁</button>
@@ -355,8 +355,6 @@ h2{
   <div id="result"></div>
 
 </div>
-
-<?!= getVersionBadgeHtml({showCalendarSource:true}) ?>
 
 </body>
 

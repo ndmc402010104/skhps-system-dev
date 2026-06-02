@@ -1,0 +1,195 @@
+<style>
+.appHeader{
+  position:fixed;
+  top:0;
+  left:0;
+  right:0;
+  z-index:20;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:18px;
+  height:76px;
+  margin:0;
+  padding:0 max(24px,calc((100vw - <?= typeof maxWidth !== 'undefined' ? maxWidth : '980px' ?>) / 2 + 24px));
+  box-sizing:border-box;
+  border-bottom:1px solid #dbe4ef;
+  background:rgba(248,251,255,.92);
+  backdrop-filter:blur(10px);
+  box-shadow:0 8px 24px rgba(15,23,42,.06);
+}
+.appHeader .brand{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  cursor:pointer;
+}
+.appHeader .brandMark{
+  width:46px;
+  height:46px;
+  display:grid;
+  place-items:center;
+  border-radius:14px;
+  color:#ffffff;
+  font-size:22px;
+  font-weight:800;
+  background:linear-gradient(135deg,#2563eb,#0f766e);
+  box-shadow:0 12px 24px rgba(37,99,235,.2);
+}
+.appHeader .brandText{
+  display:grid;
+  gap:2px;
+}
+.appHeader .brandName{
+  font-size:18px;
+  font-weight:800;
+}
+.appHeader .brandSub{
+  color:#64748b;
+  font-size:13px;
+}
+.appWaitIndicator{
+  position:fixed;
+  top:12px;
+  left:50%;
+  z-index:1450;
+  display:none;
+  align-items:center;
+  gap:9px;
+  max-width:min(420px,calc(100vw - 32px));
+  padding:9px 14px;
+  border:1px solid #bfdbfe;
+  border-radius:999px;
+  background:rgba(255,255,255,.96);
+  box-shadow:0 8px 24px rgba(15,23,42,.12);
+  color:#1e3a8a;
+  font-size:13px;
+  font-weight:900;
+  transform:translateX(-50%);
+  overflow:hidden;
+}
+.appWaitIndicator.is-active{
+  display:flex;
+}
+.appWaitIndicator::after{
+  content:'';
+  position:absolute;
+  left:0;
+  right:0;
+  bottom:0;
+  height:3px;
+  background:linear-gradient(90deg,transparent,#2563eb,transparent);
+  animation:appWaitSweep 1.05s linear infinite;
+}
+.appWaitSpinner{
+  width:15px;
+  height:15px;
+  flex:0 0 auto;
+  border:2px solid #bfdbfe;
+  border-top-color:#2563eb;
+  border-radius:50%;
+  animation:appWaitSpin .72s linear infinite;
+}
+.appWaitText{
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+@keyframes appWaitSpin{
+  to{ transform:rotate(360deg); }
+}
+@keyframes appWaitSweep{
+  from{ transform:translateX(-100%); }
+  to{ transform:translateX(100%); }
+}
+@media(max-width:820px){
+  .appHeader{
+    padding:0 16px;
+  }
+}
+@media(max-width:720px){
+  .appWaitIndicator{
+    top:58px;
+    width:calc(100vw - 20px);
+    max-width:none;
+    justify-content:center;
+  }
+}
+</style>
+
+<header class="appHeader">
+  <div class="brand" <?!= typeof onClick !== 'undefined' && onClick ? 'onclick="' + onClick + '"' : '' ?>>
+    <div class="brandMark">S</div>
+    <div class="brandText">
+      <span class="brandName">新光整形外科科室系統</span>
+      <span class="brandSub"><?= typeof subtitle !== 'undefined' ? subtitle : '' ?></span>
+    </div>
+  </div>
+</header>
+
+<div id="appWaitIndicator" class="appWaitIndicator" role="status" aria-live="polite" aria-busy="false">
+  <span class="appWaitSpinner" aria-hidden="true"></span>
+  <span id="appWaitText" class="appWaitText">處理中...</span>
+</div>
+
+<?!= typeof showVersionFooter !== 'undefined' && showVersionFooter === false
+  ? ''
+  : getVersionBadgeHtml({
+      showCalendarSource: typeof showCalendarSource !== 'undefined' && showCalendarSource === true
+    })
+?>
+
+<script>
+(function(){
+  if(window.AppWait && typeof window.AppWait.push === 'function'){
+    return;
+  }
+
+  var waitStack = [];
+  var waitSeq = 0;
+
+  function render(){
+    var indicator = document.getElementById('appWaitIndicator');
+    var textEl = document.getElementById('appWaitText');
+    if(!indicator || !textEl){
+      return;
+    }
+
+    var active = waitStack.length > 0;
+    var current = active ? waitStack[waitStack.length - 1] : null;
+    indicator.classList.toggle('is-active', active);
+    indicator.setAttribute('aria-busy', active ? 'true' : 'false');
+    textEl.innerText = current && current.message ? current.message : '處理中...';
+  }
+
+  function push(message){
+    var id = ++waitSeq;
+    waitStack.push({
+      id:id,
+      message:message || '處理中...'
+    });
+    render();
+
+    var closed = false;
+    return function(){
+      if(closed){
+        return;
+      }
+
+      closed = true;
+      waitStack = waitStack.filter(function(item){
+        return item.id !== id;
+      });
+      render();
+    };
+  }
+
+  window.AppWait = {
+    push:push,
+    render:render
+  };
+  window.pushAppWait = push;
+  window.renderAppWaitIndicator = render;
+})();
+</script>

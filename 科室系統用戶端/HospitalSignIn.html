@@ -328,7 +328,7 @@ window.addEventListener(
 
 <main class="shell">
 
-<?!= include('共用設定檔/AppHeader', { subtitle: '院內系統快速登入', onClick: 'goHome()', maxWidth: '980px' }) ?>
+<?!= include('共用設定檔/AppShell', { subtitle: '院內系統快速登入', onClick: 'goHome()', maxWidth: '980px' }) ?>
 
 <nav class="pageMap" aria-label="頁面地圖">
   <button class="pageMapLink" onclick="goHome()">首頁</button>
@@ -425,8 +425,6 @@ window.addEventListener(
 </form>
 
 </main>
-
-<?!= getVersionBadgeHtml() ?>
 
 </body>
 </html>
