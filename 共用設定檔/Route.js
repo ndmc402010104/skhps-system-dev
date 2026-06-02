@@ -13,6 +13,33 @@ function doGet(e){
   if(
     e &&
     e.parameter &&
+    isDressingInventoryAction_(
+      e.parameter.action
+    )
+  ){
+    try{
+      const result =
+        handleDressingInventoryAction_(e.parameter);
+
+      return apiOutput_(
+        result || { ok:false, message:'unknown inventory action' },
+        e.parameter.callback
+      );
+    }
+    catch(error){
+      return apiOutput_(
+        {
+          ok:false,
+          message:error && error.message ? error.message : String(error)
+        },
+        e.parameter.callback
+      );
+    }
+  }
+
+  if(
+    e &&
+    e.parameter &&
     isDressingBarcodeAction_(
       e.parameter.action
     )
@@ -200,6 +227,32 @@ function doPost(e){
     return handleDressingBarcodePost(e);
   }
 
+  if(
+    isDressingInventoryAction_(action)
+  ){
+    try{
+      const data =
+        JSON.parse(
+          e &&
+          e.postData &&
+          e.postData.contents
+          ? e.postData.contents
+          : '{}'
+        );
+
+      return jsonOutput_(
+        handleDressingInventoryAction_(data) ||
+        { ok:false, message:'unknown inventory action' }
+      );
+    }
+    catch(error){
+      return jsonOutput_({
+        ok:false,
+        message:error && error.message ? error.message : String(error)
+      });
+    }
+  }
+
   return jsonOutput_({
     ok:false,
     message:'unknown post action'
@@ -218,6 +271,16 @@ function isDressingBarcodeAction_(action){
     'deleteDressingBarcode',
     'ping',
     'whoami'
+  ].indexOf(action || '') >= 0;
+
+}
+
+function isDressingInventoryAction_(action){
+
+  return [
+    'listDressingInventory',
+    'addDressingInventoryStock',
+    'lookupDressingInventoryBarcode'
   ].indexOf(action || '') >= 0;
 
 }
