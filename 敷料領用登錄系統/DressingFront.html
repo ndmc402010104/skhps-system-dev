@@ -1,8 +1,8 @@
 ﻿<!DOCTYPE html>
 <!--
 檔案位置：科室系統用戶端/DressingFront.html
-時間戳記：2026-06-02 18:32 UTC+8
-用途：敷料領用/建檔/庫存前端；優化本次入庫/盤點作業區為左側輸入、右側計算差額與送出，並保留盤點0單位批號隱藏、搜尋欄清空與主題分區規則。
+時間戳記：2026-06-02 18:37 UTC+8
+用途：敷料領用/建檔/庫存前端；調整本次入庫/盤點作業區左右等高、送出按鈕左右排列、放大差額顯示，並修正盤點剩餘盒數與單位數 placeholder。
 -->
 <html>
 <head>
@@ -629,11 +629,24 @@ tr.editing .dictGtinScanBtn{
 #inventoryDetailPanel .inventorySectionAction{ border-left-color:#ea580c; }
 
 .inventorySubmitCard{
-  justify-content:flex-end;
+  display:grid !important;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  grid-template-rows:auto 1fr;
+  align-items:stretch;
+  gap:8px;
+}
+
+.inventorySubmitCard label{
+  grid-column:1 / -1;
+}
+
+.inventorySubmitCard button{
+  width:100%;
+  min-height:44px;
 }
 
 .inventorySubmitCard button + button{
-  margin-top:6px;
+  margin-top:0;
 }
 
 #inventoryDetailPanel .inventoryField{
@@ -737,6 +750,7 @@ tr.editing .dictGtinScanBtn{
 
 .inventoryActionColumn{
   display:grid;
+  grid-template-rows:repeat(2,minmax(0,1fr));
   gap:10px;
   min-width:0;
 }
@@ -754,8 +768,11 @@ tr.editing .dictGtinScanBtn{
 }
 
 .inventoryActionResultColumn #inventoryFinalQtyText{
-  font-size:20px;
+  min-height:46px;
+  align-items:center;
+  font-size:30px;
   font-weight:950;
+  letter-spacing:.01em;
 }
 
 .inventoryActionResultColumn #inventorySubmitField{
@@ -824,15 +841,24 @@ tr.editing .dictGtinScanBtn{
 }
 
 .inventorySubmitCard{
-  justify-content:flex-end;
+  display:grid !important;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  grid-template-rows:auto 1fr;
+  align-items:stretch;
+  gap:8px;
+}
+
+.inventorySubmitCard label{
+  grid-column:1 / -1;
 }
 
 .inventorySubmitCard button{
   width:100%;
+  min-height:44px;
 }
 
 .inventorySubmitCard button + button{
-  margin-top:6px;
+  margin-top:0;
 }
 
 .inventoryField{
@@ -2054,7 +2080,7 @@ function goHome(){
             </div>
             <div class="inventoryField inventorySectionField" id="inventoryActualBoxQtyField" style="display:none;">
               <label id="inventoryActualBoxQtyLabel">實際盤點盒數</label>
-              <input id="inventoryActualBoxQty" type="number" inputmode="decimal" min="0" step="0.01" placeholder="一盒幾單位會由主檔帶入" oninput="renderInventoryQuantityHint()">
+              <input id="inventoryActualBoxQty" type="number" inputmode="decimal" min="0" step="0.01" placeholder="一盒10單位，輸入剩餘盒數" oninput="renderInventoryQuantityHint()">
             </div>
             <div class="inventoryField inventorySectionField" id="inventoryUnitQtyField">
               <label id="inventoryUnitQtyLabel">本次入庫單位數</label>
@@ -7270,11 +7296,11 @@ function renderInventoryOperationMode(){
       actualBoxField.style.display = boxQty > 0 ? '' : 'none';
     }
     if(actualBoxInput){
-      actualBoxInput.placeholder = boxQty > 0 ? ('一盒 ' + formatInventoryQty(boxQty) + ' 單位') : '需先設定一盒數量';
+      actualBoxInput.placeholder = boxQty > 0 ? ('一盒' + formatInventoryQty(boxQty) + '單位，輸入剩餘盒數') : '需先設定一盒數量';
     }
 
     if(unitLabel) unitLabel.innerText = '實際盤點單位數';
-    if(unitInput) unitInput.placeholder = '盤點單位數';
+    if(unitInput) unitInput.placeholder = '輸入剩餘單位數';
     if(finalLabel) finalLabel.innerText = '盤點差額';
     if(submitBtn) submitBtn.innerText = '確認盤點';
     if(cancelBtn) cancelBtn.innerText = '取消盤點';
@@ -7318,7 +7344,7 @@ function renderInventoryOperationMode(){
     // 入庫模式隱藏「實際盤點盒數」
     const actualBoxField = document.getElementById('inventoryActualBoxQtyField');
     if(actualBoxField) actualBoxField.style.display = 'none';
-    if(actualBoxInput) actualBoxInput.placeholder = '盤點幾盒';
+    if(actualBoxInput) actualBoxInput.placeholder = '一盒10單位，輸入剩餘盒數';
     
     applyInventoryLotExpInputMode();
   }
@@ -7363,10 +7389,10 @@ function renderInventoryQuantityHint(){
       actualBoxField.style.display = boxQty > 0 ? '' : 'none';
     }
     if(actualBoxInput){
-      actualBoxInput.placeholder = boxQty > 0 ? ('一盒 ' + formatInventoryQty(boxQty) + ' 單位') : '需先設定一盒數量';
+      actualBoxInput.placeholder = boxQty > 0 ? ('一盒' + formatInventoryQty(boxQty) + '單位，輸入剩餘盒數') : '需先設定一盒數量';
     }
     if(unitInput){
-      unitInput.placeholder = '盤點單位數';
+      unitInput.placeholder = '輸入剩餘單位數';
     }
   } else {
     if(boxField){
@@ -7394,7 +7420,7 @@ function renderInventoryQuantityHint(){
       actualBoxField.style.display = 'none';
     }
     if(actualBoxInput){
-      actualBoxInput.placeholder = '盤點幾盒';
+      actualBoxInput.placeholder = '一盒10單位，輸入剩餘盒數';
     }
   }
 
@@ -8970,7 +8996,7 @@ if (window.location.hostname.includes('github.io')) {
   ghFooter.innerHTML = `
     <div style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">
       <span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>
-      <span>v.2.27.7-202606021833</span>
+      <span>v.2.27.7-202606021838</span>
     </div>
   `;
   document.body.appendChild(ghFooter);
