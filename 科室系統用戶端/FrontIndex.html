@@ -229,6 +229,73 @@ background:#f3f4f6;
 const APP_ENTRY_URL =
 '<?= appEntryUrl ?>';
 
+const APP_DEV_URL =
+'<?= appDevUrl ?>';
+
+const DRESSING_GITHUB_URL =
+'https://ndmc402010104.github.io/plastic-surgery-department-system/';
+
+
+function getCurrentAppEnv(){
+
+  if(window.location.hostname.includes('github.io')){
+    return 'prod';
+  }
+
+  const sources = [
+    window.location.href,
+    document.referrer || ''
+  ];
+
+  try{
+    sources.push(
+      window.top.location.href
+    );
+  }
+  catch(error){}
+
+  for(let i = 0; i < sources.length; i++){
+
+    const source =
+      sources[i] || '';
+
+    if(
+      /[?&]appEnv=dev(?:&|#|$)/.test(source) ||
+      /\/dev(?:[?#]|$)/.test(source)
+    ){
+      return 'dev';
+    }
+
+    if(
+      /[?&]appEnv=prod(?:&|#|$)/.test(source) ||
+      /\/exec(?:[?#]|$)/.test(source)
+    ){
+      return 'prod';
+    }
+
+  }
+
+  return 'dev';
+
+}
+
+
+function buildAppPageUrl(baseUrl, page, env){
+
+  const separator =
+    baseUrl.indexOf('?') >= 0
+      ? '&'
+      : '?';
+
+  return baseUrl +
+    separator +
+    'page=' +
+    encodeURIComponent(page) +
+    '&appEnv=' +
+    encodeURIComponent(env);
+
+}
+
 
 function goPage(page){
 
@@ -262,7 +329,13 @@ function goHospitalSignIn(){
 
 function goDressingFront(){
 
-  window.top.location.href = 'https://ndmc402010104.github.io/plastic-surgery-department-system/';
+  const env =
+    getCurrentAppEnv();
+
+  window.top.location.href =
+    env === 'dev'
+      ? buildAppPageUrl(APP_DEV_URL, 'dressingfront', 'dev')
+      : DRESSING_GITHUB_URL;
 
 }
 

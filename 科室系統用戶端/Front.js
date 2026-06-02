@@ -22,6 +22,9 @@ function showFrontIndex(){
   template.appEntryUrl =
     getAppEntryUrl();
 
+  template.appDevUrl =
+    APP_DEV_URL;
+
   return template
     .evaluate()
     .setTitle(
