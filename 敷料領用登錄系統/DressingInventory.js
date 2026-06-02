@@ -61,14 +61,13 @@ function addDressingInventoryStock(payload) {
 
     const hospitalCode = String(payload.hospitalCode || '').trim();
     const stockUnit = String(payload.stockUnit || '').trim();
-    const lot = String(payload.lot || '').trim();
+    let lot = String(payload.lot || '').trim();
     const exp = normalizeInventoryDateForClient_(payload.exp || '');
     const quantity = Number(payload.quantity || 0);
 
     if (!hospitalCode) throw new Error('缺少院內碼');
     if (!stockUnit) throw new Error('缺少扣庫單位');
-    if (!lot) throw new Error('缺少批號');
-    if (!exp) throw new Error('缺少效期');
+    if (!lot) lot = buildDressingInventoryAutoLot_(hospitalCode);
     if (!Number.isFinite(quantity) || quantity <= 0) throw new Error('庫存數量必須大於 0');
 
     const lock = LockService.getScriptLock();
@@ -185,6 +184,12 @@ function handleDressingInventoryAction_(params) {
   }
 
   return null;
+}
+
+function buildDressingInventoryAutoLot_(hospitalCode) {
+  const code = String(hospitalCode || '').replace(/[^A-Za-z0-9]/g, '').trim() || 'UNKNOWN';
+  const now = new Date();
+  return code + Utilities.formatDate(now, 'Asia/Taipei', 'yyyyMMddHHmm');
 }
 
 function getDressingInventorySheet_() {

@@ -1724,11 +1724,11 @@ function goHome(){
       </div>
       <div class="inventoryField" id="inventoryLotField">
         <label>批號</label>
-        <input id="inventoryLot" placeholder="請輸入本次入庫批號" oninput="renderInventoryOperationMode()">
+        <input id="inventoryLot" placeholder="沒有批號會自動建立批號" oninput="renderInventoryOperationMode()">
       </div>
       <div class="inventoryField" id="inventoryExpField">
-        <label>效期</label>
-        <input id="inventoryExp" type="date" onchange="renderInventoryOperationMode()">
+        <label>效期（如果不知道效期可以空白）</label>
+        <input id="inventoryExp" type="date" placeholder="如果不知道效期可以空白" title="如果不知道效期可以空白" onchange="renderInventoryOperationMode()">
       </div>
       <div class="inventoryField">
         <label>系統目前數量</label>
@@ -1753,6 +1753,7 @@ function goHome(){
       <div class="inventoryField" id="inventorySubmitField">
         <label>&nbsp;</label>
         <button id="inventorySubmitBtn" type="button" class="primary" onclick="submitInventoryOperationFromForm()">確認入庫</button>
+        <button id="inventoryCancelBtn" type="button" class="danger" onclick="cancelInventoryOperation()">取消入庫</button>
       </div>
     </div>
   </div>
@@ -5636,11 +5637,6 @@ function openInventoryArea(){
   setInventoryPanelOpen('inventorySearchPanel', true);
   setInventoryPanelOpen('inventoryDetailPanel', false);
   loadInventoryList(getInventoryCurrentListFilter());
-
-  const input = document.getElementById('inventoryBarcodeInput');
-  if(input){
-    setTimeout(function(){ input.focus(); }, 30);
-  }
 }
 
 // Apps Script HtmlService 與 inline onclick 保險：明確掛到 window，避免按鈕找不到函式。
@@ -5649,6 +5645,15 @@ window.openInventoryArea = openInventoryArea;
 function setInventoryStatus(message){
   const el = document.getElementById('inventoryLoadStatus');
   if(el) el.innerText = message || '';
+}
+
+function focusInventorySearchInput(){
+  const input = document.getElementById('inventoryBarcodeInput');
+  if(input){
+    setTimeout(function(){
+      input.focus();
+    }, 30);
+  }
 }
 
 function setInventoryReadOnlyValue(inputId, textId, value, emptyText){
@@ -6226,6 +6231,7 @@ async function setInventoryOperationType(type){
   const currentType = getInventoryOperationType();
   if(type === currentType){
     updateInventorySegmentedButtons();
+    focusInventorySearchInput();
     return;
   }
 
@@ -6245,6 +6251,7 @@ async function setInventoryOperationType(type){
   updateInventorySegmentedButtons();
   resetInventoryAfterSetupChange({ keepSearchOpen:true });
   renderInventoryOperationMode();
+  focusInventorySearchInput();
 }
 
 function setInventoryUnitSilently(unit){
@@ -6264,6 +6271,7 @@ async function setInventoryUnit(unit, options){
   const currentUnit = getInventoryUnitValue();
   if(unit === currentUnit){
     updateInventorySegmentedButtons();
+    focusInventorySearchInput();
     return;
   }
 
@@ -6281,6 +6289,7 @@ async function setInventoryUnit(unit, options){
   if(!options.silent){
     resetInventoryAfterSetupChange({ keepSearchOpen:true });
     renderInventoryOperationMode();
+    focusInventorySearchInput();
   }
 }
 
@@ -6452,6 +6461,7 @@ function renderInventoryOperationMode(){
   const unitLabel = document.getElementById('inventoryUnitQtyLabel');
   const finalLabel = document.getElementById('inventoryFinalQtyLabel');
   const submitBtn = document.getElementById('inventorySubmitBtn');
+  const cancelBtn = document.getElementById('inventoryCancelBtn');
   const lotField = document.getElementById('inventoryLotField');
   const expField = document.getElementById('inventoryExpField');
   const lotInput = document.getElementById('inventoryLot');
@@ -6464,6 +6474,7 @@ function renderInventoryOperationMode(){
     if(unitQtyField) unitQtyField.style.display = 'none';
     if(finalQtyField) finalQtyField.style.display = 'none';
     if(submitField) submitField.style.display = 'none';
+    if(cancelBtn) cancelBtn.style.display = 'none';
     renderInventoryCurrentQty();
     applyInventoryLotExpInputMode({});
     return;
@@ -6472,6 +6483,7 @@ function renderInventoryOperationMode(){
   if(unitQtyField) unitQtyField.style.display = '';
   if(finalQtyField) finalQtyField.style.display = '';
   if(submitField) submitField.style.display = '';
+  if(cancelBtn) cancelBtn.style.display = '';
 
   if(operationType === 'stocktake'){
     if(lotField) lotField.style.display = 'none';
@@ -6482,6 +6494,7 @@ function renderInventoryOperationMode(){
     if(unitLabel) unitLabel.innerText = '實際盤點單位數';
     if(finalLabel) finalLabel.innerText = '盤點差額';
     if(submitBtn) submitBtn.innerText = '確認盤點';
+    if(cancelBtn) cancelBtn.innerText = '取消盤點';
     applyInventoryLotExpInputMode({});
   } else {
     if(lotField) lotField.style.display = '';
@@ -6513,6 +6526,7 @@ function renderInventoryOperationMode(){
     }
     if(finalLabel) finalLabel.innerText = '實際增加庫存';
     if(submitBtn) submitBtn.innerText = '確認入庫';
+    if(cancelBtn) cancelBtn.innerText = '取消入庫';
     applyInventoryLotExpInputMode();
   }
 
@@ -6578,6 +6592,21 @@ function renderInventoryQuantityHint(){
   const finalQty = calculateInventoryFinalQty();
   finalInput.value = finalQty ? String(finalQty) : '';
   setInventoryFinalQtyValue(finalQty ? String(finalQty) : '尚未輸入');
+}
+
+function buildAutoInventoryLot(hospitalCode, date){
+  const code = String(hospitalCode || '').replace(/[^A-Za-z0-9]/g, '').trim() || 'UNKNOWN';
+  const d = date || new Date();
+  const pad = function(value){
+    return String(value).padStart(2, '0');
+  };
+
+  return code +
+    d.getFullYear() +
+    pad(d.getMonth() + 1) +
+    pad(d.getDate()) +
+    pad(d.getHours()) +
+    pad(d.getMinutes());
 }
 
 function isInventoryLookupBoxPackage(item, parsed, packageType){
@@ -6667,6 +6696,13 @@ async function promptInventoryInboundQuantitiesAfterLookup(item, parsed, package
 
   inventoryOperationDirty = true;
   renderInventoryQuantityHint();
+
+  const boxBtn = document.getElementById('inventoryBoxQtyMasterBtn');
+  if(boxInput && boxInput.style.display !== 'none'){
+    setTimeout(function(){ boxInput.focus(); }, 30);
+  } else if(boxBtn && boxBtn.style.display !== 'none'){
+    setTimeout(function(){ boxBtn.focus(); }, 30);
+  }
 }
 
 
@@ -7190,6 +7226,18 @@ function resetInventoryAfterOperationComplete(options){
   }
 }
 
+function cancelInventoryOperation(){
+  const operationLabel = getInventoryOperationType() === 'stocktake' ? '盤點' : '入庫';
+  clearInventorySearchInput();
+  clearInventoryDetailForm();
+  setInventoryPanelOpen('inventorySearchPanel', true);
+  setInventoryPanelOpen('inventoryDetailPanel', false);
+  inventoryOperationDirty = false;
+  renderInventoryOperationMode();
+  focusInventorySearchInput();
+  showNotice('已取消本次' + operationLabel + '，可重新掃描或輸入下一筆。', 'warning', '已取消');
+}
+
 async function submitInventoryOperationFromForm(){
   const operationType = getInventoryOperationType();
   const hospitalCode = String(getInventoryReadOnlyValue('inventoryHospitalCode', 'inventoryHospitalCodeText') || '').trim();
@@ -7214,8 +7262,13 @@ async function submitInventoryOperationFromForm(){
     if(expInput) expInput.value = '';
   }
 
+  if(operationType === 'inbound' && !lot){
+    lot = buildAutoInventoryLot(hospitalCode);
+    if(lotInput) lotInput.value = lot;
+    showNotice('未輸入批號，已自動產生：' + lot, 'success', '批號已補上');
+  }
+
   if(!lot){ showNotice('請輸入批號；期初盤點可用 INITIAL', 'warning'); return; }
-  if(operationType === 'inbound' && !exp){ showNotice('請輸入效期', 'warning'); return; }
 
   const currentQty = getInventoryCurrentQtyForForm();
   let changeQty = 0;
@@ -7798,7 +7851,7 @@ if (window.location.hostname.includes('github.io')) {
   ghFooter.innerHTML = `
     <div style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">
       <span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>
-      <span>v.2.27.6-202606021500</span>
+      <span>v.2.27.6-202606021509</span>
     </div>
   `;
   document.body.appendChild(ghFooter);
@@ -7815,6 +7868,8 @@ function normalizeTextForCompare(value){
 
 </body>
 </html>
+
+
 
 
 
