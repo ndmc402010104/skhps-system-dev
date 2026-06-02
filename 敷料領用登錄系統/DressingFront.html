@@ -104,6 +104,14 @@ h1{
   border-radius:8px;
   box-shadow:0 8px 24px rgba(15,23,42,.06);
   overflow:visible;
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  align-items:center;
+}
+
+.card > button{
+  margin-left:0 !important;
 }
 
 button{
@@ -372,6 +380,68 @@ tr.editing .dictGtinScanBtn{
   line-height:1;
   padding:0;
   cursor:pointer;
+}
+
+.appWaitIndicator{
+  position:fixed;
+  top:12px;
+  left:50%;
+  z-index:1450;
+  display:none;
+  align-items:center;
+  gap:9px;
+  max-width:min(420px,calc(100vw - 32px));
+  padding:9px 14px;
+  border:1px solid #bfdbfe;
+  border-radius:999px;
+  background:rgba(255,255,255,.96);
+  box-shadow:0 8px 24px rgba(15,23,42,.12);
+  color:#1e3a8a;
+  font-size:13px;
+  font-weight:900;
+  transform:translateX(-50%);
+  overflow:hidden;
+}
+
+.appWaitIndicator.is-active{
+  display:flex;
+}
+
+.appWaitIndicator::after{
+  content:'';
+  position:absolute;
+  left:0;
+  right:0;
+  bottom:0;
+  height:3px;
+  background:linear-gradient(90deg,transparent,#2563eb,transparent);
+  animation:waitSweep 1.05s linear infinite;
+}
+
+.appWaitSpinner{
+  width:15px;
+  height:15px;
+  flex:0 0 auto;
+  border:2px solid #bfdbfe;
+  border-top-color:#2563eb;
+  border-radius:50%;
+  animation:waitSpin .72s linear infinite;
+}
+
+.appWaitText{
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+@keyframes waitSpin{
+  to{ transform:rotate(360deg); }
+}
+
+@keyframes waitSweep{
+  from{ transform:translateX(-100%); }
+  to{ transform:translateX(100%); }
 }
 
 @keyframes noticeIn{
@@ -1110,17 +1180,54 @@ tr.editing select:not(.readonly):focus{
 
 @media(max-width:960px){
   body{
-    padding:104px 8px 72px;
+    padding:96px 10px 72px;
   }
 
   .shell{
     max-width:none;
     width:100%;
+    padding:0 !important;
   }
 
   .card{
     padding:12px;
     border-radius:8px;
+    gap:8px;
+  }
+
+  .card > button{
+    flex:1 1 calc(50% - 8px);
+    min-width:140px;
+    min-height:42px;
+  }
+
+  .pageHero{
+    margin-bottom:16px;
+  }
+
+  .pageMap{
+    flex-wrap:wrap;
+    margin-bottom:14px;
+    font-size:12px;
+  }
+
+  .pageLead{
+    font-size:14px;
+    line-height:1.55;
+  }
+
+  .infoRow label{
+    display:block;
+    width:auto;
+    margin-bottom:6px;
+  }
+
+  .patientBlock{
+    padding:12px;
+  }
+
+  .patientTitle{
+    font-size:18px;
   }
 
   .dictHeader{
@@ -1131,16 +1238,17 @@ tr.editing select:not(.readonly):focus{
 
   .dictToolbar{
     width:100%;
-    display:flex;
-    flex-wrap:nowrap;
-    overflow-x:auto;
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    overflow-x:visible;
     -webkit-overflow-scrolling:touch;
     gap:8px;
     padding-bottom:2px;
   }
 
   .dictToolbar button{
-    flex:0 0 auto;
+    width:100%;
+    min-width:0;
     font-size:13px;
     padding:7px 10px;
   }
@@ -1162,15 +1270,298 @@ tr.editing select:not(.readonly):focus{
   }
 
   .dictTable{
-    min-width:1220px;
+    min-width:1040px;
   }
 
   .useTable{
-    min-width:1020px;
+    min-width:900px;
   }
 
   .scannerBox{
     margin:24px auto;
+  }
+}
+
+@media(max-width:720px){
+  body{
+    padding:86px 8px 64px;
+  }
+
+  h1{
+    font-size:26px;
+  }
+
+  button{
+    font-size:14px;
+    padding:8px 10px;
+  }
+
+  input,
+  select{
+    min-height:40px;
+    font-size:16px;
+  }
+
+  .headerNoticeWrap{
+    top:10px;
+    right:8px;
+    left:8px;
+    max-width:none;
+  }
+
+  .noticeStack{
+    align-items:stretch;
+  }
+
+  .noticeCard{
+    height:auto;
+    min-height:42px;
+  }
+
+  .noticeMessage{
+    max-width:none;
+  }
+
+  .appWaitIndicator{
+    top:58px;
+    width:calc(100vw - 20px);
+    max-width:none;
+    justify-content:center;
+  }
+
+  .appDialogOverlay{
+    align-items:flex-end;
+    padding:10px;
+  }
+
+  .appDialog{
+    width:100%;
+    max-height:calc(100vh - 24px);
+    overflow-y:auto;
+    border-radius:14px 14px 10px 10px;
+    padding:14px;
+  }
+
+  .appDialogTitle{
+    font-size:17px;
+  }
+
+  .appDialogMessage{
+    font-size:14px;
+    line-height:1.55;
+  }
+
+  .appDialogActions{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+  }
+
+  .appDialogActions button{
+    width:100%;
+    min-height:42px;
+  }
+
+  .appDialogChoices{
+    max-height:42vh;
+  }
+
+  .inventorySetupPanel{
+    padding:12px;
+  }
+
+  .inventoryGrid{
+    gap:10px;
+  }
+
+  .segmentedGroup{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:8px;
+  }
+
+  .segmentedBtn{
+    width:100%;
+    min-width:0;
+    white-space:normal;
+    line-height:1.25;
+  }
+
+  .dressingInputGroup,
+  .dictGtinInputGroup{
+    align-items:stretch;
+  }
+
+  .dressingInputGroup{
+    flex-wrap:wrap;
+  }
+
+  .dressingInputGroup input{
+    flex:1 1 100%;
+  }
+
+  .dressingInputGroup button{
+    flex:1 1 auto;
+  }
+
+  .inventoryNameHeader{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+
+  .inventoryInlineAction{
+    width:100%;
+    justify-content:center;
+  }
+
+  .readonlyValue{
+    min-height:32px;
+    font-size:14px;
+  }
+
+  .inventoryPrimaryText{
+    font-size:17px;
+  }
+
+  .searchSuggestItem{
+    grid-template-columns:1fr;
+    gap:4px;
+  }
+
+  .searchSuggestMain{
+    white-space:normal;
+  }
+
+  .searchSuggestStatus{
+    justify-self:start;
+  }
+
+  .searchSuggestNewItem{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+
+  .dictToolbar{
+    grid-template-columns:1fr;
+  }
+
+  .useTableWrap,
+  .dictTableWrap,
+  .inventoryTableWrap{
+    margin-left:-4px;
+    margin-right:-4px;
+    width:calc(100% + 8px);
+    border-radius:6px;
+  }
+
+  .useTableWrap::after,
+  .dictTableWrap::after,
+  .inventoryTableWrap::after{
+    content:'左右滑動查看更多';
+    display:block;
+    position:sticky;
+    left:0;
+    padding:7px 10px;
+    color:#64748b;
+    background:#f8fafc;
+    border-top:1px solid var(--line);
+    font-size:12px;
+    font-weight:800;
+  }
+
+  .useTable{
+    min-width:820px;
+  }
+
+  .dictTable{
+    min-width:980px;
+  }
+
+  .inventoryTable{
+    min-width:760px;
+  }
+
+  .useTable th,
+  .useTable td,
+  .dictTable th,
+  .dictTable td,
+  .inventoryTable th,
+  .inventoryTable td{
+    padding:7px;
+  }
+
+  .scannerOverlay{
+    padding:10px;
+  }
+
+  .scannerBox{
+    margin:10px auto;
+    max-height:calc(100vh - 20px);
+    overflow-y:auto;
+    padding:14px;
+  }
+
+  .scannerTitle{
+    font-size:18px;
+  }
+
+  .appHeader{
+    height:auto !important;
+    min-height:64px !important;
+    padding:8px 10px !important;
+    gap:10px !important;
+  }
+
+  .appHeader .brand{
+    min-width:0 !important;
+    gap:10px !important;
+  }
+
+  .appHeader .brandMark{
+    width:40px !important;
+    height:40px !important;
+    border-radius:12px !important;
+    font-size:20px !important;
+    flex:0 0 auto !important;
+  }
+
+  .appHeader .brandText{
+    min-width:0 !important;
+  }
+
+  .appHeader .brandName,
+  .appHeader .brandSub{
+    display:block !important;
+    overflow:hidden !important;
+    text-overflow:ellipsis !important;
+    white-space:nowrap !important;
+  }
+
+  .appHeader .brandName{
+    font-size:15px !important;
+  }
+
+  .appHeader .brandSub{
+    font-size:12px !important;
+  }
+}
+
+@media(max-width:420px){
+  body{
+    padding-left:6px;
+    padding-right:6px;
+  }
+
+  .card > button{
+    flex-basis:100%;
+  }
+
+  .segmentedGroup{
+    grid-template-columns:1fr;
+  }
+
+  .appDialogActions{
+    grid-template-columns:1fr;
   }
 }
 </style>
@@ -1203,6 +1594,11 @@ function goHome(){
 
 <div class="headerNoticeWrap">
   <div id="noticeStack" class="noticeStack" aria-live="polite"></div>
+</div>
+
+<div id="appWaitIndicator" class="appWaitIndicator" role="status" aria-live="polite">
+  <span class="appWaitSpinner" aria-hidden="true"></span>
+  <span id="appWaitText" class="appWaitText">處理中...</span>
 </div>
 
 <nav class="pageMap" aria-label="頁面地圖">
@@ -1343,7 +1739,7 @@ function goHome(){
         <label id="inventoryBoxQtyLabel">本次入庫盒數</label>
         <input id="inventoryBoxQty" type="number" inputmode="decimal" min="0" step="0.01" placeholder="例如 1" oninput="renderInventoryQuantityHint()">
         <button id="inventoryBoxQtyMasterBtn" type="button" class="inventoryBoxQtyAction" onclick="openInventoryBoxQuantityDialog()">設定一盒數量</button>
-        <div id="inventoryBoxQtyHint" class="inventoryBoxQtyHint">這筆盒裝 GTIN 尚未設定一盒幾單位；本欄先以按鈕取代盒數輸入框，設定完成後會回到可輸入本次入庫盒數。也可直接在「本次入庫單位數」輸入本盒實際數量。</div>
+        <div id="inventoryBoxQtyHint" class="inventoryBoxQtyHint"></div>
       </div>
       <div class="inventoryField" id="inventoryUnitQtyField">
         <label id="inventoryUnitQtyLabel">本次入庫單位數</label>
@@ -1476,6 +1872,10 @@ let draggedRow = null;
 let dictScanMemory = {};
 let cancelledDictScanKeys = {};
 let pendingInventoryPackageType = '';
+let appWaitStack = [];
+let appWaitSeq = 0;
+let dictBusyWaitDone = null;
+let inventoryBusyWaitDone = null;
 
 const DICT_TABLE_STATE = {
   mode:'closed', // closed | loading | clean | editing | adding | saving | deleting | refreshing | reordering | error
@@ -1487,7 +1887,65 @@ function isDictTableBusy(){
   return ['loading','saving','deleting','refreshing'].indexOf(DICT_TABLE_STATE.mode) >= 0;
 }
 
+function renderAppWaitIndicator(){
+  const indicator = document.getElementById('appWaitIndicator');
+  const textEl = document.getElementById('appWaitText');
+  if(!indicator || !textEl){
+    return;
+  }
+
+  const active = appWaitStack.length > 0;
+  const current = active ? appWaitStack[appWaitStack.length - 1] : null;
+  indicator.classList.toggle('is-active', active);
+  indicator.setAttribute('aria-busy', active ? 'true' : 'false');
+  textEl.innerText = current && current.message ? current.message : '處理中...';
+}
+
+function pushAppWait(message){
+  const id = ++appWaitSeq;
+  appWaitStack.push({
+    id:id,
+    message:message || '處理中...'
+  });
+  renderAppWaitIndicator();
+
+  let closed = false;
+  return function(){
+    if(closed){
+      return;
+    }
+
+    closed = true;
+    appWaitStack = appWaitStack.filter(function(item){
+      return item.id !== id;
+    });
+    renderAppWaitIndicator();
+  };
+}
+
+function getDictBusyMessage(mode, message){
+  if(message){
+    return message;
+  }
+
+  if(mode === 'loading') return '正在讀取敷料主檔...';
+  if(mode === 'saving') return '正在儲存敷料主檔...';
+  if(mode === 'deleting') return '正在刪除敷料主檔...';
+  if(mode === 'refreshing') return '正在重新讀取敷料主檔...';
+  return '';
+}
+
 function setDictTableMode(mode, message){
+  const busyModes = ['loading','saving','deleting','refreshing'];
+  if(busyModes.indexOf(mode) >= 0){
+    if(!dictBusyWaitDone){
+      dictBusyWaitDone = pushAppWait(getDictBusyMessage(mode, message));
+    }
+  } else if(dictBusyWaitDone){
+    dictBusyWaitDone();
+    dictBusyWaitDone = null;
+  }
+
   DICT_TABLE_STATE.mode = mode || 'clean';
   DICT_TABLE_STATE.lastMessage = message || '';
   renderDictTableControls();
@@ -4906,6 +5364,7 @@ function startDressingScanner(){
     return;
   }
 
+  const done = pushAppWait('正在開啟相機...');
   dressingScanner = new Html5Qrcode('scannerReader');
 
   const config = {
@@ -4932,7 +5391,11 @@ function startDressingScanner(){
       },
       function(errorMessage){}
     )
+    .then(function(){
+      done();
+    })
     .catch(function(err){
+      done();
       console.log(err);
       showNotice('無法開啟相機，請確認手機瀏覽器已允許相機權限', 'error');
     });
@@ -5444,14 +5907,12 @@ function openInventoryBoxQuantityDialog(){
 
   openInventoryMasterDialog({
     title:'修改一盒數量',
-    message:describeDressingItem(item) + '\n院內碼：' + (item.hospitalCode || ''),
+    message:describeDressingItem(item) + '\n院內碼：' + (item.hospitalCode || '') +
+      '\n\n這筆主檔尚未設定一盒幾單位。請輸入一盒包含幾個最小單位，儲存後會回到可輸入本次入庫盒數。',
     bodyHtml:`
       <div class="inventoryMasterMiniGrid">
-        <label>目前一盒數量
-          <input value="${escapeHtml(item.boxQuantity || '')}" disabled>
-        </label>
-        <label>新一盒數量
-          <input id="inventoryMasterBoxQuantityInput" type="number" inputmode="decimal" min="0" step="0.01" value="${escapeHtml(item.boxQuantity || '')}" placeholder="例如 10">
+        <label>一盒數量
+          <input id="inventoryMasterBoxQuantityInput" type="number" inputmode="decimal" min="0" step="0.01" value="" placeholder="例如 10">
         </label>
       </div>
     `,
@@ -5694,6 +6155,15 @@ function getInventoryUnitLabel(){
 
 function setInventoryBusy(isBusy, message){
   inventoryBusy = !!isBusy;
+  if(isBusy){
+    if(!inventoryBusyWaitDone){
+      inventoryBusyWaitDone = pushAppWait(message || '庫存作業處理中...');
+    }
+  } else if(inventoryBusyWaitDone){
+    inventoryBusyWaitDone();
+    inventoryBusyWaitDone = null;
+  }
+
   if(message){
     setInventoryStatus(message);
   }
@@ -6033,7 +6503,7 @@ function renderInventoryOperationMode(){
       boxBtn.style.display = missingBoxQty ? 'inline-flex' : 'none';
     }
     if(boxHint){
-      boxHint.style.display = missingBoxQty ? 'block' : 'none';
+      boxHint.style.display = 'none';
     }
     if(boxLabel){
       boxLabel.innerText = '本次入庫盒數';
@@ -6077,7 +6547,7 @@ function renderInventoryQuantityHint(){
   }
 
   if(boxHint){
-    boxHint.style.display = (operationType === 'inbound' && missingBoxQty) ? 'block' : 'none';
+    boxHint.style.display = 'none';
   }
 
   if(!finalInput){
@@ -6108,6 +6578,95 @@ function renderInventoryQuantityHint(){
   const finalQty = calculateInventoryFinalQty();
   finalInput.value = finalQty ? String(finalQty) : '';
   setInventoryFinalQtyValue(finalQty ? String(finalQty) : '尚未輸入');
+}
+
+function isInventoryLookupBoxPackage(item, parsed, packageType){
+  item = item || {};
+  parsed = parsed || {};
+  return packageType === 'box' || (parsed.gtin && sameGtin(parsed.gtin, item.boxGtin || ''));
+}
+
+async function promptInventoryInboundQuantityStep(step){
+  step = step || {};
+  const answer = await showInputDialog(
+    step.title || '入庫數量',
+    step.message || '請輸入數量；沒有可留空。',
+    step.defaultValue || ''
+  );
+
+  if(answer === null){
+    return null;
+  }
+
+  const text = String(answer || '').trim();
+  if(text === ''){
+    return '';
+  }
+
+  const value = Number(text);
+  if(!Number.isFinite(value) || value < 0){
+    showNotice('數量必須是 0 或大於 0 的數字', 'warning', '數量格式錯誤');
+    return await promptInventoryInboundQuantityStep(step);
+  }
+
+  return String(value);
+}
+
+async function promptInventoryInboundQuantitiesAfterLookup(item, parsed, packageType){
+  if(getInventoryOperationType() !== 'inbound'){
+    return;
+  }
+
+  parsed = parsed || {};
+  if(!parsed.gtin){
+    return;
+  }
+
+  const boxQty = getInventoryBoxQuantity();
+  const isBoxScan = isInventoryLookupBoxPackage(item, parsed, packageType);
+  const boxInput = document.getElementById('inventoryBoxQty');
+  const unitInput = document.getElementById('inventoryUnitQty');
+  const name = describeDressingItem(item);
+
+  async function askUnit(){
+    const value = await promptInventoryInboundQuantityStep({
+      title:'本次入庫單位數',
+      message:name + '\n\n請輸入本次額外入庫的最小單位數。\n例如掃到單包通常可填 1；沒有額外單包可留空。',
+      defaultValue:unitInput ? unitInput.value : ''
+    });
+
+    if(value !== null && unitInput){
+      unitInput.value = value;
+    }
+  }
+
+  async function askBox(){
+    if(boxQty <= 0){
+      showNotice('主檔尚未設定一盒數量；本次先略過盒數，請用「設定一盒數量」補主檔，或直接填單位數。', 'warning', '盒數暫不計算');
+      return;
+    }
+
+    const value = await promptInventoryInboundQuantityStep({
+      title:'本次入庫盒數',
+      message:name + '\n\n主檔設定：1 盒 = ' + boxQty + ' 單位。\n請輸入本次入庫幾盒；沒有盒裝可留空。',
+      defaultValue:boxInput ? boxInput.value : ''
+    });
+
+    if(value !== null && boxInput){
+      boxInput.value = value;
+    }
+  }
+
+  if(isBoxScan){
+    await askBox();
+    await askUnit();
+  } else {
+    await askUnit();
+    await askBox();
+  }
+
+  inventoryOperationDirty = true;
+  renderInventoryQuantityHint();
 }
 
 
@@ -6178,10 +6737,20 @@ async function askInventoryUnknownDressingPrefill(options){
 
     packageType = choice === 'box' ? 'box' : 'single';
 
-    return {
+    const guided = await runInventoryNewGtinGuidedMasterFlow({
+      raw:raw,
+      gtin:gtin,
+      packageType:packageType
+    });
+
+    if(!guided){
+      return null;
+    }
+
+    return Object.assign({}, guided, {
       packageType:packageType,
       prefillKind:'gtin'
-    };
+    });
   }
 
   if(/^\d+$/.test(raw)){
@@ -6211,6 +6780,94 @@ async function askInventoryUnknownDressingPrefill(options){
   };
 }
 
+async function runInventoryNewGtinGuidedMasterFlow(options){
+  options = options || {};
+  const gtin = String(options.gtin || '').replace(/[^0-9]/g, '').trim();
+  const packageType = options.packageType === 'box' ? 'box' : 'single';
+  const allItems = getExistingDressingItems();
+
+  const names = Array.from(new Set(
+    allItems.map(function(item){
+      return String(item.dressingName || '').trim();
+    }).filter(Boolean)
+  )).sort();
+
+  const name = await pickValueByPrompt(
+    '步驟 2：請選擇或輸入敷料名稱',
+    names,
+    ''
+  );
+
+  if(name === null){
+    return null;
+  }
+
+  const sizesForName = Array.from(new Set(
+    allItems
+      .filter(function(item){
+        return normalizeTextForCompare(item.dressingName) === normalizeTextForCompare(name);
+      })
+      .map(function(item){
+        return String(item.size || '').trim();
+      })
+      .filter(Boolean)
+  )).sort();
+
+  const size = await pickValueByPrompt(
+    '步驟 3：請選擇或輸入規格描述',
+    sizesForName,
+    ''
+  );
+
+  if(size === null){
+    return null;
+  }
+
+  const existingItem = findExistingItemByNameAndSize(name, size) || {};
+  const hospitalCode = await showInputDialog(
+    '步驟 4：院內碼',
+    '請確認院內碼\n\n已有相同名稱與規格時會自動帶入；沒有也可以手動輸入。',
+    existingItem.hospitalCode || ''
+  );
+
+  if(hospitalCode === null){
+    return null;
+  }
+
+  const boxQty = await showInputDialog(
+    '步驟 5：一盒數量',
+    packageType === 'box'
+      ? '這次是盒裝 GTIN，建議輸入一盒包含幾個最小單位。\n\n如果暫時不知道，可以留空，最後總整理畫面仍可再改。'
+      : '請確認一盒數量。\n\n如果這個敷料沒有盒裝或暫時不知道，可以留空，最後總整理畫面仍可再改。',
+    existingItem.boxQuantity || ''
+  );
+
+  if(boxQty === null){
+    return null;
+  }
+
+  const price = await showInputDialog(
+    '步驟 6：自費價格',
+    '請確認自費價格。\n\n沒有自費價格可以留空，最後總整理畫面仍可再改。',
+    existingItem.category || ''
+  );
+
+  if(price === null){
+    return null;
+  }
+
+  return {
+    hospitalCode:String(hospitalCode || '').trim(),
+    dressingName:String(name || '').trim(),
+    size:String(size || '').trim(),
+    singleGtin:packageType === 'box' ? (existingItem.singleGtin || existingItem.gtin || '') : gtin,
+    boxGtin:packageType === 'box' ? gtin : (existingItem.boxGtin || ''),
+    boxQuantity:String(boxQty || '').trim(),
+    category:String(price || '').trim(),
+    status:existingItem.status || '使用中'
+  };
+}
+
 async function openInventoryNewDressingDialogFromUnknown(options){
   options = options || {};
   const choice = await askInventoryUnknownDressingPrefill(options);
@@ -6233,14 +6890,14 @@ function guessInventoryNewDressingDefaults(options){
   const prefillKind = options.prefillKind || '';
 
   return {
-    hospitalCode:prefillKind === 'hospitalCode' ? raw : '',
-    dressingName:prefillKind === 'dressingName' ? raw : '',
-    size:'',
-    singleGtin:packageType === 'box' ? '' : finalGtin,
-    boxGtin:packageType === 'box' ? finalGtin : '',
-    boxQuantity:'',
-    category:'',
-    status:'使用中'
+    hospitalCode:options.hospitalCode !== undefined ? options.hospitalCode : (prefillKind === 'hospitalCode' ? raw : ''),
+    dressingName:options.dressingName !== undefined ? options.dressingName : (prefillKind === 'dressingName' ? raw : ''),
+    size:options.size || '',
+    singleGtin:options.singleGtin !== undefined ? options.singleGtin : (packageType === 'box' ? '' : finalGtin),
+    boxGtin:options.boxGtin !== undefined ? options.boxGtin : (packageType === 'box' ? finalGtin : ''),
+    boxQuantity:options.boxQuantity || '',
+    category:options.category || '',
+    status:options.status || '使用中'
   };
 }
 
@@ -6277,16 +6934,14 @@ async function openInventoryNewDressingDialog(options){
           </div>
         </label>
         <label>一盒數量
-          <input id="inventoryNewBoxQuantity" type="number" inputmode="decimal" min="0" step="0.01" value="" placeholder="沒有可留空">
+          <input id="inventoryNewBoxQuantity" type="number" inputmode="decimal" min="0" step="0.01" value="${escapeHtml(defaults.boxQuantity || '')}" placeholder="沒有可留空">
         </label>
         <label>自費價格
-          <input id="inventoryNewCategory" type="number" inputmode="numeric" min="0" step="1" value="" placeholder="沒有可留空">
+          <input id="inventoryNewCategory" type="number" inputmode="numeric" min="0" step="1" value="${escapeHtml(defaults.category || '')}" placeholder="沒有可留空">
         </label>
         <label>狀態
           <select id="inventoryNewStatus">
-            <option value="使用中" selected>使用中</option>
-            <option value="試用">試用</option>
-            <option value="停用">停用</option>
+            ${['使用中','試用','停用'].map(function(opt){ return '<option value="' + escapeHtml(opt) + '"' + (opt === (defaults.status || '使用中') ? ' selected' : '') + '>' + escapeHtml(opt) + '</option>'; }).join('')}
           </select>
         </label>
       </div>
@@ -6437,7 +7092,7 @@ async function fillInventoryFormFromLookup(result, parsed){
     if(boxInput) boxInput.value = '';
     if(unitInput) unitInput.value = '';
   } else {
-    const isBoxScan = packageType === 'box' || (parsed.gtin && sameGtin(parsed.gtin, item.boxGtin || ''));
+    const isBoxScan = isInventoryLookupBoxPackage(item, parsed, packageType);
 
     if(boxInput){
       boxInput.value = (isBoxScan && boxQty > 0) ? '1' : '';
@@ -6459,6 +7114,8 @@ async function fillInventoryFormFromLookup(result, parsed){
   }
   clearInventorySearchInput();
   showNotice('已帶入敷料主檔資料，搜尋欄已清空，可直接進行下一步', 'success', '查詢成功');
+
+  await promptInventoryInboundQuantitiesAfterLookup(item, parsed, packageType);
 }
 
 async function lookupInventoryFromInput(){
@@ -6798,14 +7455,50 @@ async function loadInventoryList(options){
   }
 }
 
+function getDressingApiWaitMessage(params){
+  params = params || {};
+  const action = String(params.action || '').trim();
+
+  if(action === 'listDressingInventory') return '正在讀取批號庫存...';
+  if(action === 'addDressingInventoryStock') return '正在寫入庫存...';
+  if(action === 'lookupDressingInventoryBarcode' || action === 'lookupDressingBarcode') return '正在查詢敷料條碼...';
+  if(action === 'listDressingBarcode') return '正在讀取敷料主檔...';
+  if(action === 'saveDressingBarcode') return '正在儲存敷料主檔...';
+  if(action === 'deleteDressingBarcode') return '正在刪除敷料主檔...';
+  if(action === 'reorderDressingBarcode') return '正在儲存排序...';
+
+  return '正在連線處理...';
+}
+
+function runGoogleScriptWithWait(message, methodName, args){
+  const done = pushAppWait(message || '正在連線處理...');
+  return new Promise(function(resolve, reject){
+    try{
+      const runner = google.script.run
+        .withSuccessHandler(function(result){
+          done();
+          resolve(result);
+        })
+        .withFailureHandler(function(error){
+          done();
+          reject(error);
+        });
+
+      if(!runner || typeof runner[methodName] !== 'function'){
+        throw new Error('找不到 Apps Script 函式：' + methodName);
+      }
+
+      runner[methodName].apply(runner, args || []);
+    } catch(error){
+      done();
+      reject(error);
+    }
+  });
+}
+
 function listInventory(){
   if(isAppsScriptMode()){
-    return new Promise(function(resolve, reject){
-      google.script.run
-        .withSuccessHandler(resolve)
-        .withFailureHandler(reject)
-        .listDressingInventory();
-    });
+    return runGoogleScriptWithWait('正在讀取批號庫存...', 'listDressingInventory');
   }
 
   return callDressingBarcodeApi({ action:'listDressingInventory' });
@@ -6815,12 +7508,7 @@ function addInventoryStock(data){
   data = data || {};
 
   if(isAppsScriptMode()){
-    return new Promise(function(resolve, reject){
-      google.script.run
-        .withSuccessHandler(resolve)
-        .withFailureHandler(reject)
-        .addDressingInventoryStock(data);
-    });
+    return runGoogleScriptWithWait('正在寫入庫存...', 'addDressingInventoryStock', [data]);
   }
 
   return callDressingBarcodeApi({
@@ -6839,12 +7527,7 @@ function addInventoryStock(data){
 
 function lookupInventoryBarcode(code){
   if(isAppsScriptMode()){
-    return new Promise(function(resolve, reject){
-      google.script.run
-        .withSuccessHandler(resolve)
-        .withFailureHandler(reject)
-        .lookupDressingInventoryBarcode(code);
-    });
+    return runGoogleScriptWithWait('正在查詢敷料條碼...', 'lookupDressingInventoryBarcode', [code]);
   }
 
   return callDressingBarcodeApi({
@@ -6855,12 +7538,7 @@ function lookupInventoryBarcode(code){
 
 function lookupBarcode(gtin){
   if(isAppsScriptMode()){
-    return new Promise(function(resolve, reject){
-      google.script.run
-        .withSuccessHandler(resolve)
-        .withFailureHandler(reject)
-        .lookupDressingBarcode(gtin);
-    });
+    return runGoogleScriptWithWait('正在查詢敷料條碼...', 'lookupDressingBarcode', [gtin]);
   }
 
   return callDressingBarcodeApi({ action:'lookupDressingBarcode', gtin:gtin });
@@ -6868,12 +7546,7 @@ function lookupBarcode(gtin){
 
 function listBarcode(){
   if(isAppsScriptMode()){
-    return new Promise(function(resolve, reject){
-      google.script.run
-        .withSuccessHandler(resolve)
-        .withFailureHandler(reject)
-        .listDressingBarcode();
-    });
+    return runGoogleScriptWithWait('正在讀取敷料主檔...', 'listDressingBarcode');
   }
 
   return callDressingBarcodeApi({ action:'listDressingBarcode' });
@@ -6881,12 +7554,7 @@ function listBarcode(){
 
 function reorderBarcode(gtins){
   if(isAppsScriptMode()){
-    return new Promise(function(resolve, reject){
-      google.script.run
-        .withSuccessHandler(resolve)
-        .withFailureHandler(reject)
-        .reorderDressingBarcode({ barcodes:gtins });
-    });
+    return runGoogleScriptWithWait('正在儲存排序...', 'reorderDressingBarcode', [{ barcodes:gtins }]);
   }
 
   return callDressingBarcodeApi({ action:'reorderDressingBarcode', barcodes:gtins });
@@ -6894,24 +7562,14 @@ function reorderBarcode(gtins){
 
 function deleteBarcode(gtin, hospitalCode){
   if(isAppsScriptMode()){
-    return new Promise(function(resolve, reject){
-      google.script.run
-        .withSuccessHandler(resolve)
-        .withFailureHandler(reject)
-        .deleteDressingBarcode({ gtin:gtin, hospitalCode:hospitalCode || '' });
-    });
+    return runGoogleScriptWithWait('正在刪除敷料主檔...', 'deleteDressingBarcode', [{ gtin:gtin, hospitalCode:hospitalCode || '' }]);
   }
 
   return callDressingBarcodeApi({ action:'deleteDressingBarcode', gtin:gtin, hospitalCode:hospitalCode || '' });
 }
 function saveBarcode(data){
   if(isAppsScriptMode()){
-    return new Promise(function(resolve, reject){
-      google.script.run
-        .withSuccessHandler(resolve)
-        .withFailureHandler(reject)
-        .saveDressingBarcode(data);
-    });
+    return runGoogleScriptWithWait('正在儲存敷料主檔...', 'saveDressingBarcode', [data]);
   }
 
   return callDressingBarcodeApi({
@@ -6936,6 +7594,7 @@ function callDressingBarcodeApi(params){
 
 function jsonpDressingBarcode(params){
   return new Promise(function(resolve, reject){
+    const done = pushAppWait(getDressingApiWaitMessage(params));
     const callbackName =
       '__dressingBarcodeCallback_' +
       Date.now() +
@@ -6982,6 +7641,7 @@ function jsonpDressingBarcode(params){
     document.head.appendChild(script);
 
     function cleanup(){
+      done();
       clearTimeout(timer);
       if(script.parentNode){
         script.parentNode.removeChild(script);
@@ -7140,7 +7800,7 @@ if (window.location.hostname.includes('github.io')) {
   ghFooter.innerHTML = `
     <div style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">
       <span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>
-      <span>v.2.27.5-202606021441</span>
+      <span>v.2.27.5-202606021457</span>
     </div>
   `;
   document.body.appendChild(ghFooter);
@@ -7157,6 +7817,9 @@ function normalizeTextForCompare(value){
 
 </body>
 </html>
+
+
+
 
 
 
