@@ -28,6 +28,11 @@ function showFrontIndex(){
   template.appProdUrl =
     APP_ENTRY_URL;
 
+  template.appEnv =
+    APP_REQUEST_ENV === 'dev'
+      ? 'dev'
+      : 'prod';
+
   return template
     .evaluate()
     .setTitle(

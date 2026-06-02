@@ -235,6 +235,9 @@ const APP_DEV_URL =
 const APP_PROD_URL =
 '<?= appProdUrl ?>';
 
+const APP_ENV =
+'<?= appEnv ?>';
+
 const DRESSING_GITHUB_URL =
 'https://ndmc402010104.github.io/plastic-surgery-department-system/';
 
@@ -243,6 +246,10 @@ function getCurrentAppEnv(){
 
   if(window.location.hostname.includes('github.io')){
     return 'prod';
+  }
+
+  if(APP_ENV === 'dev' || APP_ENV === 'prod'){
+    return APP_ENV;
   }
 
   const sources = [
