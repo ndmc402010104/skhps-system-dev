@@ -538,6 +538,7 @@ if (Test-Path -LiteralPath $dressingFrontPath) {
   if ($appConfig.DeploymentId) {
     $realUrl = "https://script.google.com/macros/s/$($appConfig.DeploymentId)/exec"
     $dfNewContent = [regex]::Replace($dfNewContent, "(APP_ENTRY_URL\s*=\s*')https://script\.google\.com/macros/s/[^/']+/exec(')", "`${1}$realUrl`$2")
+    $dfNewContent = [regex]::Replace($dfNewContent, "(APP_PROD_URL\s*=\s*')https://script\.google\.com/macros/s/[^/']+/exec(')", "`${1}$($appConfig.EntryUrl)`$2")
   }
 
   if ($dfContent -cne $dfNewContent) {

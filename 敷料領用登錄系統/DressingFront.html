@@ -999,13 +999,21 @@ tr.editing select:not(.readonly):focus{
 
 <script>
 let APP_ENTRY_URL = '<?= appEntryUrl ?>';
+let APP_PROD_URL = '<?= appProdUrl ?>';
 
 if (APP_ENTRY_URL.includes('<' + '?=') || APP_ENTRY_URL.trim() === '') {
   APP_ENTRY_URL = 'https://script.google.com/macros/s/AKfycbwbz8pXfU68j2aFeF_AaDmmG6Vco3JsPSw-PGyYeLu0AF3vCfzaZJQFOjORnwSw8Xp4/exec'; 
 }
 
+if (APP_PROD_URL.includes('<' + '?=') || APP_PROD_URL.trim() === '') {
+  APP_PROD_URL = 'https://script.google.com/macros/s/AKfycbwbz8pXfU68j2aFeF_AaDmmG6Vco3JsPSw-PGyYeLu0AF3vCfzaZJQFOjORnwSw8Xp4/exec';
+}
+
 function goHome(){
-  window.top.location.href = APP_ENTRY_URL;
+  window.top.location.href =
+    window.location.hostname.includes('github.io')
+      ? APP_PROD_URL
+      : APP_ENTRY_URL;
 }
 </script>
 </head>
@@ -5587,7 +5595,7 @@ if (window.location.hostname.includes('github.io')) {
   ghFooter.innerHTML = `
     <div style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">
       <span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>
-      <span>v.2.27.4-202606021100</span>
+      <span>v.2.27.4-202606021105</span>
     </div>
   `;
   document.body.appendChild(ghFooter);
@@ -5604,6 +5612,7 @@ function normalizeTextForCompare(value){
 
 </body>
 </html>
+
 
 
 

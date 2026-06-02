@@ -18,6 +18,9 @@ function showDressingFrontPage(){
       ? APP_DEV_URL
       : APP_ENTRY_URL;
 
+  template.appProdUrl =
+    APP_ENTRY_URL;
+
   template.versionBadgeHtml =
     getVersionBadgeHtml();
 

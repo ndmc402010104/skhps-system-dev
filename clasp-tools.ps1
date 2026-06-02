@@ -718,6 +718,7 @@ function Sync-AppVersion {
     ScriptId = $scriptId
     DeploymentId = $deploymentId
     DevDeploymentId = $devDeploymentId
+    EntryUrl = $entryUrl
     DevUrl = $devUrl
     DefaultEnv = $DefaultEnv
   }
