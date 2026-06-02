@@ -1262,6 +1262,11 @@ function goHome(){
   </div>
 
   <div id="inventoryDetailPanel" class="inventoryStepPanel">
+    <div id="inventoryLookupBox" class="inventoryLookupBox">
+      <div class="inventoryLookupTitle">尚未查詢敷料</div>
+      <div>請先掃描或輸入 GTIN。系統會用敷料主檔帶出院內碼、名稱、規格與一盒數量。</div>
+    </div>
+
     <div class="inventoryGrid">
       <div class="inventoryField full">
         <label>敷料名稱</label>
@@ -1303,11 +1308,6 @@ function goHome(){
         <label>&nbsp;</label>
         <button id="inventorySubmitBtn" type="button" class="primary" onclick="submitInventoryOperationFromForm()">確認入庫</button>
       </div>
-    </div>
-
-    <div id="inventoryLookupBox" class="inventoryLookupBox">
-      <div class="inventoryLookupTitle">尚未查詢敷料</div>
-      <div>請先掃描或輸入 GTIN。系統會用敷料主檔帶出院內碼、名稱、規格與一盒數量。</div>
     </div>
   </div>
 
@@ -5104,12 +5104,17 @@ function parseUDI(barcode){
 let inventoryLookupState = null;
 let inventoryCache = [];
 let pendingInventoryMasterGtinTarget = '';
+let inventoryOperationDirty = false;
+let inventoryBusy = false;
 
 function openInventoryArea(){
   document.getElementById('formArea').style.display = 'none';
   document.getElementById('dictArea').style.display = 'none';
   document.getElementById('inventoryArea').style.display = 'block';
   updateInventorySegmentedButtons();
+  inventoryOperationDirty = false;
+  clearInventorySearchInput();
+  clearInventoryDetailForm();
   setInventoryPanelOpen('inventorySearchPanel', true);
   setInventoryPanelOpen('inventoryDetailPanel', false);
   loadInventoryList(getInventoryCurrentListFilter());
@@ -5292,6 +5297,12 @@ function applyInventoryMasterUpdate(updatedItem){
     inventoryLookupState.item = Object.assign({}, inventoryLookupState.item, updatedItem);
     const boxQty = Number(inventoryLookupState.item.boxQuantity || 0) || 0;
     inventoryLookupState.unitQuantity = boxQty > 0 ? boxQty : 1;
+  }
+
+  const currentItem = getInventoryMasterItem();
+  if(currentItem){
+    setInventoryDressingNameValue(formatDressingDisplayName(currentItem));
+    setInventoryHospitalCodeValue(currentItem.hospitalCode || '');
   }
 
   const currentItem = getInventoryMasterItem();
@@ -5585,6 +5596,42 @@ function getInventoryUnitLabel(){
   return unit === '__ALL__' ? '不限制單位' : unit;
 }
 
+function setInventoryBusy(isBusy, message){
+  inventoryBusy = !!isBusy;
+  if(message){
+    setInventoryStatus(message);
+  }
+
+  document.querySelectorAll('#inventoryArea button, #inventoryArea input').forEach(function(el){
+    if(el.id === 'inventoryOperationType' || el.id === 'inventoryUnit'){
+      return;
+    }
+
+    if(el.closest('#inventoryMasterDialogOverlay')){
+      return;
+    }
+
+    el.disabled = !!isBusy;
+  });
+}
+
+function markInventoryOperationDirty(){
+  inventoryOperationDirty = true;
+}
+
+function bindInventoryOperationDirtyWatch(){
+  ['inventoryLot','inventoryExp','inventoryBoxQty','inventoryUnitQty'].forEach(function(id){
+    const el = document.getElementById(id);
+    if(!el || el.dataset.inventoryDirtyWatchBound === '1'){
+      return;
+    }
+
+    el.dataset.inventoryDirtyWatchBound = '1';
+    el.addEventListener('input', markInventoryOperationDirty);
+    el.addEventListener('change', markInventoryOperationDirty);
+  });
+}
+
 async function canResetInventoryWorkflow(){
   if(!hasPendingInventoryOperationInput()){
     return true;
@@ -5603,11 +5650,9 @@ function hasPendingInventoryOperationInput(){
     return false;
   }
 
-  const ids = ['inventoryLot','inventoryExp','inventoryBoxQty','inventoryUnitQty'];
-  return ids.some(function(id){
-    const el = document.getElementById(id);
-    return el && String(el.value || '').trim();
-  });
+  // 只把使用者實際輸入或修改過的作業資料視為未送出內容。
+  // 查詢自動帶入的院內碼、目前數量、預設 1 單位、INITIAL 不應該觸發切換提示。
+  return !!inventoryOperationDirty;
 }
 
 async function setInventoryOperationType(type){
@@ -5709,6 +5754,7 @@ function setInventoryPanelOpen(panelId, isOpen){
 
 function clearInventoryDetailForm(){
   inventoryLookupState = null;
+  inventoryOperationDirty = false;
 
   ['inventoryLot','inventoryExp','inventoryBoxQty','inventoryUnitQty'].forEach(function(id){
     const el = document.getElementById(id);
@@ -6253,6 +6299,7 @@ async function fillInventoryFormFromLookup(result, parsed){
 
   renderInventoryLookupBox();
   renderInventoryQuantityHint();
+  inventoryOperationDirty = false;
   setInventoryPanelOpen('inventoryDetailPanel', true);
 
   if(Array.isArray(inventoryCache) && inventoryCache.length > 0){
@@ -6272,20 +6319,29 @@ async function lookupInventoryFromInput(){
 
   const parsed = parseUDI(raw);
   if(!parsed.gtin){
-    const handled = await searchOrSelectDressingFromInput('inventory');
-    if(!handled){
-      showNotice('找不到符合的敷料主檔資料', 'warning', '查無資料');
+    setInventoryBusy(true, '正在搜尋敷料主檔...');
+    try{
+      const handled = await searchOrSelectDressingFromInput('inventory');
+      if(!handled){
+        renderSearchSuggestions('inventory', [], raw);
+        showNotice('找不到符合的敷料主檔資料，可直接鍵入新敷料。', 'warning', '查無資料');
+      }
+    } finally {
+      setInventoryBusy(false, '搜尋完成');
     }
     return;
   }
 
   hideSearchSuggestions('inventory');
+  setInventoryBusy(true, '正在查詢條碼與敷料主檔...');
 
   try{
     const res = await lookupBarcode(parsed.gtin);
     await fillInventoryFormFromLookup(res, parsed);
   } catch(error){
     showNotice('查詢失敗：' + (error.message || error), 'error', '查詢錯誤');
+  } finally {
+    setInventoryBusy(false, '查詢完成');
   }
 }
 
@@ -6311,12 +6367,27 @@ function triggerInventoryTest(type){
   lookupInventoryFromInput();
 }
 
+function resetInventoryAfterOperationComplete(options){
+  options = options || {};
+  clearInventorySearchInput();
+  clearInventoryDetailForm();
+  setInventoryPanelOpen('inventorySearchPanel', true);
+  setInventoryPanelOpen('inventoryDetailPanel', false);
+  inventoryOperationDirty = false;
+  renderInventoryOperationMode();
+
+  const input = document.getElementById('inventoryBarcodeInput');
+  if(input){
+    setTimeout(function(){ input.focus(); }, 30);
+  }
+}
+
 async function submitInventoryOperationFromForm(){
   const operationType = getInventoryOperationType();
   const hospitalCode = String(getInventoryReadOnlyValue('inventoryHospitalCode', 'inventoryHospitalCodeText') || '').trim();
   const stockUnit = String(document.getElementById('inventoryUnit').value || '').trim();
   const lotInput = document.getElementById('inventoryLot');
-  const exp = String(document.getElementById('inventoryExp').value || '').trim();
+  let exp = String(document.getElementById('inventoryExp').value || '').trim();
   let lot = String(lotInput ? lotInput.value : '').trim();
 
   if(operationType === 'query'){
@@ -6327,9 +6398,12 @@ async function submitInventoryOperationFromForm(){
   if(!hospitalCode){ showNotice('請先查詢敷料主檔', 'warning'); return; }
   if(!stockUnit || stockUnit === '__ALL__'){ showNotice('入庫與盤點需要指定庫存位置', 'warning'); return; }
 
-  if(operationType === 'stocktake' && !lot){
+  if(operationType === 'stocktake'){
     lot = 'INITIAL';
+    exp = 'INITIAL';
     if(lotInput) lotInput.value = lot;
+    const expInput = document.getElementById('inventoryExp');
+    if(expInput) expInput.value = '';
   }
 
   if(!lot){ showNotice('請輸入批號；期初盤點可用 INITIAL', 'warning'); return; }
@@ -6351,6 +6425,7 @@ async function submitInventoryOperationFromForm(){
 
     if(changeQty === 0){
       showNotice('盤點數量與系統相同，沒有需要修正的庫存差額', 'success', '無差異');
+      resetInventoryAfterOperationComplete({ hospitalCode:hospitalCode });
       return;
     }
   } else {
@@ -6362,6 +6437,8 @@ async function submitInventoryOperationFromForm(){
       return;
     }
   }
+
+  setInventoryBusy(true, operationType === 'stocktake' ? '盤點送出中...' : '入庫送出中...');
 
   try{
     const res = await addInventoryStock({
@@ -6387,18 +6464,16 @@ async function submitInventoryOperationFromForm(){
       successTitle
     );
 
-    const boxInput = document.getElementById('inventoryBoxQty');
-    const unitInput = document.getElementById('inventoryUnitQty');
-    if(boxInput) boxInput.value = '';
-    if(unitInput) unitInput.value = '';
-    renderInventoryQuantityHint();
     await loadInventoryList(getInventoryCurrentListFilter({ hospitalCode:hospitalCode }));
+    resetInventoryAfterOperationComplete({ hospitalCode:hospitalCode });
   } catch(error){
     showNotice(
       (operationType === 'stocktake' ? '盤點失敗：' : '入庫失敗：') + (error.message || error),
       'error',
       operationType === 'stocktake' ? '盤點錯誤' : '入庫錯誤'
     );
+  } finally {
+    setInventoryBusy(false, operationType === 'stocktake' ? '盤點處理完成' : '入庫處理完成');
   }
 }
 
@@ -6835,6 +6910,7 @@ function initDressingFrontLiveSearch(){
 }
 
 initDressingFrontLiveSearch();
+bindInventoryOperationDirtyWatch();
 
 document.addEventListener('click', function(e){
   if(e.target.classList.contains('deleteRow')){
@@ -6905,7 +6981,7 @@ if (window.location.hostname.includes('github.io')) {
   ghFooter.innerHTML = `
     <div style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">
       <span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>
-      <span>v.2.27.5-202606021305</span>
+      <span>v.2.27.5-202606021333</span>
     </div>
   `;
   document.body.appendChild(ghFooter);
@@ -6922,6 +6998,7 @@ function normalizeTextForCompare(value){
 
 </body>
 </html>
+
 
 
 
