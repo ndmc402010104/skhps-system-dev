@@ -1,6 +1,6 @@
 /**
  * 檔案位置：數據網頁&參考系統/DressingInventory.js
- * 時間戳記：2026-06-02 18:55 UTC+8
+ * 時間戳記：2026-06-02 19:05 UTC+8
  * 用途：敷料批號庫存 MVP 後端；讀取與寫入「批號庫存」Sheet，並同步寫入「庫存交易紀錄」。
  *
  * 對應前端：科室系統用戶端/DressingFront.html
@@ -310,7 +310,7 @@ function normalizeDressingInventoryOperationType_(operationType) {
 function isDressingInventoryCoarseStocktake_(lot, exp) {
   const lotText = String(lot || '').trim().toUpperCase();
   const expText = String(exp || '').trim().toUpperCase();
-  return !lotText || lotText === 'INITIAL' || !expText || expText === 'INITIAL';
+  return !lotText || lotText === 'INITIAL' || (lotText === 'INITIAL' && expText === 'INITIAL');
 }
 
 function resolveDressingInventorySingleGtin_(hospitalCode, singleGtin) {
