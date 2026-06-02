@@ -573,6 +573,49 @@ tr.editing .dictGtinScanBtn{
   margin-top:16px;
 }
 
+#inventoryDetailPanel{
+  padding:14px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:rgba(248,250,252,.82);
+}
+
+#inventoryDetailPanel .inventoryLookupBox{
+  margin-top:0;
+  margin-bottom:12px;
+  background:#ffffff;
+}
+
+#inventoryDetailPanel .inventoryGrid{
+  grid-template-columns:repeat(6,minmax(120px,1fr));
+  gap:10px;
+  margin-top:0;
+}
+
+#inventoryDetailPanel .inventoryField{
+  min-width:0;
+  padding:10px;
+  border:1px solid #e2e8f0;
+  border-radius:10px;
+  background:#ffffff;
+}
+
+#inventoryDetailPanel .inventoryField.full{
+  grid-column:1 / -1;
+}
+
+#inventoryDetailPanel .inventoryField label{
+  margin-bottom:2px;
+  color:#475569;
+  font-size:12px;
+  letter-spacing:.02em;
+}
+
+#inventoryDetailPanel .readonlyValue{
+  min-height:30px;
+  padding:4px 0 0;
+}
+
 .inventoryField{
   display:flex;
   flex-direction:column;
@@ -941,6 +984,7 @@ tr.editing .dictGtinScanBtn{
 
 @media(max-width:960px){
   .inventoryGrid{ grid-template-columns:1fr; }
+  #inventoryDetailPanel .inventoryGrid{ grid-template-columns:1fr; }
 }
 
 /* 掃描視窗 */
@@ -1753,7 +1797,7 @@ function goHome(){
       </div>
       <div class="inventoryField" id="inventoryActualBoxQtyField" style="display:none;">
         <label id="inventoryActualBoxQtyLabel">實際盤點盒數</label>
-        <input id="inventoryActualBoxQty" type="number" inputmode="decimal" min="0" step="0.01" placeholder="例如 1" oninput="renderInventoryQuantityHint()">
+        <input id="inventoryActualBoxQty" type="number" inputmode="decimal" min="0" step="0.01" placeholder="一盒幾單位會由主檔帶入" oninput="renderInventoryQuantityHint()">
       </div>
       <div class="inventoryField" id="inventoryUnitQtyField">
         <label id="inventoryUnitQtyLabel">本次入庫單位數</label>
@@ -5828,6 +5872,7 @@ function applyInventoryLotExpInputMode(parsed){
   const operationType = getInventoryOperationType();
   const lotInput = document.getElementById('inventoryLot');
   const expInput = document.getElementById('inventoryExp');
+  const actualBoxInput = document.getElementById('inventoryActualBoxQty');
 
   const lockLot = operationType === 'inbound' && !!String(parsed.lot || '').trim();
   const lockExp = operationType === 'inbound' && !!String(parsed.exp || '').trim();
@@ -6272,6 +6317,35 @@ function syncInventoryControlDisabledState(){
 function setInventoryScannerBusy(isBusy){
   inventoryScannerBusy = !!isBusy;
   syncInventoryControlDisabledState();
+}
+
+function focusInventoryStocktakeLotSelect(){
+  const select = document.getElementById('inventoryStocktakeLotSelect');
+  if(select && select.offsetParent !== null && !select.disabled){
+    setTimeout(function(){
+      select.focus();
+    }, 40);
+    return true;
+  }
+  return false;
+}
+
+function focusInventoryInboundQuantityInput(packageType){
+  const unitInput = document.getElementById('inventoryUnitQty');
+  const boxInput = document.getElementById('inventoryBoxQty');
+  const isBox = packageType === 'box';
+
+  if(isBox && boxInput && boxInput.offsetParent !== null && boxInput.style.display !== 'none' && !boxInput.disabled){
+    setTimeout(function(){ boxInput.focus(); }, 40);
+    return true;
+  }
+
+  if(unitInput && unitInput.offsetParent !== null && !unitInput.disabled){
+    setTimeout(function(){ unitInput.focus(); }, 40);
+    return true;
+  }
+
+  return false;
 }
 
 function markInventoryOperationDirty(){
@@ -6922,6 +6996,9 @@ function renderInventoryOperationMode(){
     if(actualBoxField){
       actualBoxField.style.display = boxQty > 0 ? '' : 'none';
     }
+    if(actualBoxInput){
+      actualBoxInput.placeholder = boxQty > 0 ? ('一盒 ' + formatInventoryQty(boxQty) + ' 單位') : '需先設定一盒數量';
+    }
 
     if(unitLabel) unitLabel.innerText = '實際盤點單位數';
     if(finalLabel) finalLabel.innerText = '盤點差額';
@@ -6965,6 +7042,7 @@ function renderInventoryOperationMode(){
     // 入庫模式隱藏「實際盤點盒數」
     const actualBoxField = document.getElementById('inventoryActualBoxQtyField');
     if(actualBoxField) actualBoxField.style.display = 'none';
+    if(actualBoxInput) actualBoxInput.placeholder = '例如 1';
     
     applyInventoryLotExpInputMode();
   }
@@ -7008,6 +7086,9 @@ function renderInventoryQuantityHint(){
     if(actualBoxField){
       actualBoxField.style.display = boxQty > 0 ? '' : 'none';
     }
+    if(actualBoxInput){
+      actualBoxInput.placeholder = boxQty > 0 ? ('一盒 ' + formatInventoryQty(boxQty) + ' 單位') : '需先設定一盒數量';
+    }
   } else {
     if(boxField){
       boxField.style.display = operationType === 'inbound' && (boxQty > 0 || missingBoxQty) ? '' : 'none';
@@ -7028,6 +7109,9 @@ function renderInventoryQuantityHint(){
     }
     if(actualBoxField){
       actualBoxField.style.display = 'none';
+    }
+    if(actualBoxInput){
+      actualBoxInput.placeholder = '例如 1';
     }
   }
 
@@ -7183,8 +7267,14 @@ async function promptInventoryInboundQuantitiesAfterLookup(item, parsed, package
   renderInventoryQuantityHint();
 
   const boxBtn = document.getElementById('inventoryBoxQtyMasterBtn');
-  if(boxInput && boxInput.style.display !== 'none'){
-    setTimeout(function(){ boxInput.focus(); }, 30);
+  if(isBoxScan){
+    if(boxInput && boxInput.style.display !== 'none'){
+      setTimeout(function(){ boxInput.focus(); }, 30);
+    } else if(unitInput){
+      setTimeout(function(){ unitInput.focus(); }, 30);
+    }
+  } else if(unitInput){
+    setTimeout(function(){ unitInput.focus(); }, 30);
   } else if(boxBtn && boxBtn.style.display !== 'none'){
     setTimeout(function(){ boxBtn.focus(); }, 30);
   }
@@ -7246,6 +7336,74 @@ function findExistingDressingNameForInventoryInput(raw){
   }
 
   return '';
+}
+
+function getInventoryExistingNameCandidatesForRaw(raw){
+  raw = String(raw || '').trim();
+  if(!raw){
+    return [];
+  }
+
+  const seen = {};
+  return searchDressingMaster(raw, 12).map(function(item){
+    return String(item && item.dressingName || '').trim();
+  }).filter(function(name){
+    if(!name){
+      return false;
+    }
+    const key = normalizeTextForCompare(name);
+    if(seen[key]){
+      return false;
+    }
+    seen[key] = true;
+    return true;
+  });
+}
+
+async function askInventoryTextInputKindWithCandidates(raw, candidateNames){
+  raw = String(raw || '').trim();
+  candidateNames = Array.isArray(candidateNames) ? candidateNames.filter(Boolean) : [];
+
+  const choices = candidateNames.map(function(name){
+    return {
+      label:'沿用既有敷料名稱：' + name,
+      value:'name:' + name
+    };
+  });
+
+  choices.push({ label:'➕ 新增敷料名稱：' + raw, value:'newName' });
+  choices.push({ label:'➕ 新增院內碼：' + raw, value:'hospitalCode' });
+
+  const choice = await openAppDialog({
+    title:'入庫新增前先選擇資料類型',
+    message:'你輸入的是：' + raw + '\n\n系統找到相近敷料名稱。請先選擇要沿用哪個名稱，或把這段文字當成全新的敷料名稱 / 院內碼。',
+    input:false,
+    choices:choices,
+    cancelText:'取消'
+  });
+
+  if(choice === null || choice === false){
+    return null;
+  }
+
+  if(String(choice).indexOf('name:') === 0){
+    return {
+      prefillKind:'dressingName',
+      dressingName:String(choice).slice(5)
+    };
+  }
+
+  if(choice === 'hospitalCode'){
+    return {
+      prefillKind:'hospitalCode',
+      dressingName:''
+    };
+  }
+
+  return {
+    prefillKind:'dressingName',
+    dressingName:raw
+  };
 }
 
 async function askInventoryTextInputKind(raw){
@@ -7321,14 +7479,22 @@ async function askInventoryUnknownDressingPrefill(options){
     if(!prefillKind){
       return null;
     }
-  } else {
-    prefillName = findExistingDressingNameForInventoryInput(raw);
-    if(prefillName){
-      prefillKind = 'dressingName';
-    } else if(raw){
+  } else if(raw){
+    const candidateNames = getInventoryExistingNameCandidatesForRaw(raw);
+    if(candidateNames.length > 0){
+      const selected = await askInventoryTextInputKindWithCandidates(raw, candidateNames);
+      if(!selected){
+        return null;
+      }
+      prefillKind = selected.prefillKind || '';
+      prefillName = selected.dressingName || '';
+    } else {
       prefillKind = await askInventoryTextInputKind(raw);
       if(!prefillKind){
         return null;
+      }
+      if(prefillKind === 'dressingName'){
+        prefillName = raw;
       }
     }
   }
@@ -7735,6 +7901,10 @@ async function fillInventoryFormFromLookup(result, parsed){
   }
   clearInventorySearchInput();
   showNotice('已帶入敷料主檔資料，搜尋欄已清空，可直接進行下一步', 'success', '查詢成功');
+
+  if(getInventoryOperationType() === 'stocktake' && !(parsed.lot || parsed.exp)){
+    focusInventoryStocktakeLotSelect();
+  }
 
   await promptInventoryInboundQuantitiesAfterLookup(item, parsed, packageType);
 }
@@ -8520,7 +8690,7 @@ if (window.location.hostname.includes('github.io')) {
   ghFooter.innerHTML = `
     <div style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">
       <span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>
-      <span>v.2.27.7-202606021746</span>
+      <span>v.2.27.7-202606021813</span>
     </div>
   `;
   document.body.appendChild(ghFooter);
