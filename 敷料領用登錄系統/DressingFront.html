@@ -1,8 +1,8 @@
 ﻿<!DOCTYPE html>
 <!--
 檔案位置：科室系統用戶端/DressingFront.html
-時間戳記：2026-06-02 01:12 UTC+8
-用途：敷料領用/建檔/庫存前端；修正庫存表初次載入未先讀取敷料主檔，導致只能顯示未命名敷料；庫存顯示名稱統一為「敷料名稱＋規格」。
+時間戳記：2026-06-02 08:29 UTC+8
+用途：敷料領用/建檔/庫存前端；調整搜尋候選顯示為「院內碼｜敷料名稱＋規格｜自費價格」在左、狀態在右，保留庫存 MVP 與批號明細。
 -->
 <html>
 <head>
@@ -633,8 +633,8 @@ tr.editing .dictGtinScanBtn{
 .searchSuggestItem{
   width:100%;
   display:grid;
-  grid-template-columns:100px 1fr 120px;
-  gap:8px;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:12px;
   align-items:center;
   padding:10px;
   border:0;
@@ -649,24 +649,33 @@ tr.editing .dictGtinScanBtn{
 .searchSuggestItem:last-child{ border-bottom:0; }
 .searchSuggestItem:hover{ background:#f8fafc; }
 
-.searchSuggestCode{
-  font-weight:900;
-  color:#1d4ed8;
-}
-
-.searchSuggestName{
+.searchSuggestMain{
   min-width:0;
   overflow:hidden;
   text-overflow:ellipsis;
   white-space:nowrap;
 }
 
-.searchSuggestSize{
+.searchSuggestCode{
+  font-weight:900;
+  color:#1d4ed8;
+}
+
+.searchSuggestName{
+  font-weight:700;
+  color:#172033;
+}
+
+.searchSuggestPrice{
   color:#64748b;
   font-size:13px;
-  text-align:right;
-  overflow:hidden;
-  text-overflow:ellipsis;
+}
+
+.searchSuggestStatus{
+  justify-self:end;
+  color:#15803d;
+  font-size:13px;
+  font-weight:900;
   white-space:nowrap;
 }
 
@@ -3036,6 +3045,15 @@ function hideSearchSuggestions(context){
   }
 }
 
+function formatDressingPriceForSuggest(item){
+  const price = String((item && item.category) || '').trim();
+  return price ? '自費價格 ' + price + '元' : '自費價格未填';
+}
+
+function formatDressingStatusForSuggest(item){
+  return String((item && item.status) || '').trim() || '狀態未填';
+}
+
 function renderSearchSuggestions(context, matches, query){
   const box = getSearchSuggestBox(context);
   if(!box) return;
@@ -3050,11 +3068,17 @@ function renderSearchSuggestions(context, matches, query){
   box.innerHTML =
     '<div class="searchSuggestMeta">找到 ' + matches.length + ' 筆候選，請點選帶入</div>' +
     matches.map(function(item, idx){
+      const dressingText = [item.dressingName || '', item.size || ''].filter(Boolean).join(' ');
       return `
         <button type="button" class="searchSuggestItem" data-context="${escapeHtml(context)}" data-index="${idx}">
-          <span class="searchSuggestCode">${escapeHtml(item.hospitalCode || '')}</span>
-          <span class="searchSuggestName">${escapeHtml(item.dressingName || '')}</span>
-          <span class="searchSuggestSize">${escapeHtml(item.size || '')}</span>
+          <span class="searchSuggestMain">
+            <span class="searchSuggestCode">${escapeHtml(item.hospitalCode || '')}</span>
+            <span>｜</span>
+            <span class="searchSuggestName">${escapeHtml(dressingText || '未命名敷料')}</span>
+            <span>｜</span>
+            <span class="searchSuggestPrice">${escapeHtml(formatDressingPriceForSuggest(item))}</span>
+          </span>
+          <span class="searchSuggestStatus">${escapeHtml(formatDressingStatusForSuggest(item))}</span>
         </button>
       `;
     }).join('');
@@ -5497,7 +5521,7 @@ if (window.location.hostname.includes('github.io')) {
   ghFooter.innerHTML = `
     <div style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">
       <span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>
-      <span>v.2.27.3-202606020114</span>
+      <span>v.2.27.4-202606020831</span>
     </div>
   `;
   document.body.appendChild(ghFooter);
