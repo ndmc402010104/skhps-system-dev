@@ -8,32 +8,46 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 
 <style>
-
-body{
-  font-family:Arial,"Noto Sans TC","Microsoft JhengHei",sans-serif;
-  color:#172033;
-  background:
-    radial-gradient(circle at top left,rgba(37,99,235,.1),transparent 30rem),
-    linear-gradient(180deg,#fbfdff 0%,#f4f7fb 100%);
-  padding:96px 24px 82px;
-  margin:0;
+:root{
+  --bg:#f4f7fb;
+  --card:#ffffff;
+  --line:#dbe4ef;
+  --text:#172033;
+  --muted:#64748b;
+  --primary:#2563eb;
 }
 
-.wrap{
-  max-width:980px;
+*{ box-sizing:border-box; }
+
+html,body{
+  margin:0;
+  min-height:100%;
+  color:var(--text);
+  background:
+    radial-gradient(circle at top left,rgba(37,99,235,.1),transparent 30rem),
+    linear-gradient(180deg,#fbfdff 0%,var(--bg) 100%);
+  font-family:Arial,"Noto Sans TC","Microsoft JhengHei",sans-serif;
+}
+
+body{
+  padding:118px 24px 82px;
+  overflow-x:hidden;
+}
+
+.shell{
+  width:100%;
+  max-width:1400px;
   margin:0 auto;
 }
 
-.pageHero{
-  margin-bottom:24px;
-}
+.pageHero{ margin-bottom:24px; }
 
 .pageMap{
   display:flex;
   align-items:center;
   gap:8px;
   margin-bottom:24px;
-  color:#64748b;
+  color:var(--muted);
   font-size:13px;
   font-weight:700;
 }
@@ -42,18 +56,13 @@ body{
   border:0;
   padding:0;
   background:transparent;
-  color:#2563eb;
+  color:var(--primary);
   font:inherit;
   cursor:pointer;
 }
 
-.pageMapCurrent{
-  color:#172033;
-}
-
-.pageMapSep{
-  color:#94a3b8;
-}
+.pageMapCurrent{ color:var(--text); }
+.pageMapSep{ color:#94a3b8; }
 
 .eyebrow{
   margin:0 0 10px;
@@ -62,7 +71,7 @@ body{
   font-weight:800;
 }
 
-h2{
+h1{
   margin:0;
   font-size:clamp(28px,4vw,42px);
   line-height:1.18;
@@ -76,88 +85,151 @@ h2{
   line-height:1.7;
 }
 
-.homeBtn{
-  width:auto;
-  padding:12px 22px;
-  font-size:16px;
+.card{
+  width:100%;
+  background:var(--card);
+  padding:28px;
+  border:1px solid var(--line);
   border-radius:8px;
-  border:1px solid #d6dde7;
-  background:#eef2f7;
-  color:#334155;
-  cursor:pointer;
+  box-shadow:0 8px 24px rgba(15,23,42,.06);
 }
 
-#course{
+.formGrid{
+  display:grid;
+  gap:18px;
+}
+
+.fieldLabel{
+  display:grid;
+  gap:8px;
+  color:#334155;
+  font-size:15px;
+  font-weight:800;
+}
+
+select{
   width:100%;
   min-height:58px;
-  padding:0 56px 0 18px;
+  padding:0 52px 0 16px;
+  border:1px solid #cbd5e1;
   border-radius:8px;
-  border:1px solid #d6dde7;
-  font-size:18px;
+  background:#ffffff;
+  color:var(--text);
+  font-size:17px;
   line-height:1.4;
-  background:white;
-  box-sizing:border-box;
 }
 
-#course option{
-  font-size:16px;
+select:focus{
+  outline:3px solid rgba(37,99,235,.18);
+  border-color:#93b4e8;
 }
 
 .optionRow{
   display:flex;
   align-items:center;
   gap:10px;
-  font-size:18px;
-  margin:20px 0;
+  width:max-content;
+  max-width:100%;
+  color:#475569;
+  font-size:16px;
+  font-weight:700;
+  cursor:pointer;
 }
 
 .optionRow input{
-  width:22px;
-  height:22px;
+  width:20px;
+  height:20px;
+  accent-color:var(--primary);
+}
+
+button{
+  border-radius:8px;
+  border:1px solid #d6dde7;
+  background:#ffffff;
+  color:#334155;
+  cursor:pointer;
+  transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease,background .16s ease;
+}
+
+button:hover{
+  transform:translateY(-1px);
+  box-shadow:0 10px 22px rgba(15,23,42,.08);
 }
 
 .mainBtn{
   width:100%;
-  padding:18px;
-  font-size:22px;
-  font-weight:700;
-  border-radius:8px;
-  border:1px solid #d6dde7;
-  background:white;
-  cursor:pointer;
+  min-height:58px;
+  padding:12px 18px;
+  border:0;
+  background:var(--primary);
+  color:#ffffff;
+  font-size:18px;
+  font-weight:800;
 }
 
-.mainBtn:hover,
-.homeBtn:hover{
-  background:#f8fafc;
+.mainBtn:hover{
+  background:#1d4ed8;
 }
 
 #result{
-  margin-top:30px;
+  margin-top:22px;
+}
+
+.qrPreview{
+  display:grid;
+  justify-items:center;
+  gap:14px;
   text-align:center;
 }
 
-#result img{
-  width:400px;
-  max-width:95%;
+.qrPreview h2{
+  margin:0;
+  font-size:clamp(24px,3vw,34px);
+  line-height:1.2;
+}
+
+.qrPreviewTime{
+  margin:0;
+  color:#475569;
+  font-size:18px;
+  font-weight:800;
+}
+
+.qrPreviewHint{
+  margin:0;
+  color:#1d4ed8;
+  font-size:20px;
+  font-weight:800;
+}
+
+.qrPreview img{
+  width:420px;
+  max-width:100%;
   cursor:pointer;
+  background:#ffffff;
+  border:1px solid var(--line);
+  border-radius:8px;
+  padding:14px;
+  box-shadow:0 14px 32px rgba(15,23,42,.08);
 }
 
 @media(max-width:640px){
-
   body{
-    padding:92px 16px 72px;
+    padding:104px 16px 72px;
   }
 
-  h2{
-    font-size:24px;
+  .card{
+    padding:20px;
   }
 
-  #course{
-    font-size:16px;
+  h1{
+    font-size:28px;
+  }
+
+  select{
     min-height:54px;
+    font-size:16px;
   }
-
 }
 
 </style>
@@ -191,7 +263,8 @@ h2{
 
     renderSignQR(
       signUrl,
-      qrUrl
+      qrUrl,
+      meeting
     );
 
     const enablePopup =
@@ -203,7 +276,8 @@ h2{
 
       openSignQRPopup(
         signUrl,
-        qrUrl
+        qrUrl,
+        meeting
       );
 
     }
@@ -256,19 +330,46 @@ h2{
 
   }
 
-  function renderSignQR(signUrl,qrUrl){
+  function renderSignQR(signUrl,qrUrl,meeting){
+
+    const meetingTitle =
+      escapeHtml(meeting && meeting.course ? meeting.course : '會議簽到');
+
+    const meetingTime =
+      escapeHtml(meeting && meeting.date ? meeting.date : '');
+
+    const safeSignUrl =
+      escapeHtml(signUrl);
+
+    const safeQrUrl =
+      escapeHtml(qrUrl);
 
     document
       .getElementById('result')
       .innerHTML =
-        '<h3>請掃描簽到</h3>' +
-        '<a href="' + signUrl + '" target="_blank">' +
-        '<img src="' + qrUrl + '">' +
-        '</a>';
+        '<section class="card qrPreview">' +
+        '<h2>' + meetingTitle + '</h2>' +
+        (meetingTime ? '<p class="qrPreviewTime">' + meetingTime + '</p>' : '') +
+        '<p class="qrPreviewHint">請掃描 QR code 簽到</p>' +
+        '<a href="' + safeSignUrl + '" target="_blank">' +
+        '<img src="' + safeQrUrl + '">' +
+        '</a>' +
+        '</section>';
 
   }
 
-  function openSignQRPopup(signUrl,qrUrl){
+  function escapeHtml(value){
+
+    return String(value || '')
+      .replace(/&/g,'&amp;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;')
+      .replace(/'/g,'&#39;');
+
+  }
+
+  function openSignQRPopup(signUrl,qrUrl,meeting){
 
     const popup =
       window.open(
@@ -286,19 +387,46 @@ h2{
 
     }
 
+    const meetingTitle =
+      escapeHtml(meeting && meeting.course ? meeting.course : '會議簽到');
+
+    const meetingTime =
+      escapeHtml(meeting && meeting.date ? meeting.date : '');
+
+    const safeSignUrl =
+      escapeHtml(signUrl);
+
+    const safeQrUrl =
+      escapeHtml(qrUrl);
+
     popup.document.write(
       '<html>' +
       '<head>' +
       '<title>簽到 QR</title>' +
       '<style>' +
-      'body{margin:0;display:flex;justify-content:center;align-items:center;height:100vh;background:white;}' +
-      'img{max-width:95vw;max-height:95vh;cursor:pointer;}' +
+      'body{margin:0;min-height:100vh;display:flex;justify-content:center;align-items:center;background:#f8fafc;color:#172033;font-family:Arial,"Noto Sans TC","Microsoft JhengHei",sans-serif;}' +
+      '.qrStage{width:100vw;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:32px;box-sizing:border-box;text-align:center;}' +
+      '.qrCopy{max-width:min(88vw,860px);display:grid;justify-items:center;gap:14px;}' +
+      '.meetingName{margin:0;font-size:clamp(34px,5vw,64px);line-height:1.12;font-weight:800;}' +
+      '.meetingTime{margin:0;color:#475569;font-size:clamp(20px,2.8vw,34px);font-weight:700;}' +
+      '.qrHint{margin:0;color:#1d4ed8;font-size:clamp(22px,3vw,38px);font-weight:800;}' +
+      '.qrLink{display:block;}' +
+      'img{width:min(68vh,78vw,680px);max-width:100%;max-height:62vh;cursor:pointer;background:#ffffff;border:1px solid #dbe4ef;border-radius:8px;padding:18px;box-sizing:border-box;box-shadow:0 18px 45px rgba(15,23,42,.12);}' +
+      '@media(orientation:landscape){.qrStage{flex-direction:row;gap:clamp(28px,5vw,70px);padding:clamp(28px,4vw,56px);text-align:left;}.qrCopy{width:min(42vw,560px);justify-items:start;}.meetingName{font-size:clamp(36px,4vw,72px);}.meetingTime{font-size:clamp(22px,2.3vw,38px);}.qrHint{font-size:clamp(24px,2.5vw,42px);}img{width:min(72vh,42vw,720px);max-height:82vh;}}' +
+      '@media(orientation:portrait){.qrStage{padding:28px 18px;}.meetingName{font-size:clamp(30px,8vw,58px);}img{width:min(76vw,58vh,620px);max-height:56vh;}}' +
       '</style>' +
       '</head>' +
       '<body>' +
-      '<a href="' + signUrl + '" target="_blank">' +
-      '<img src="' + qrUrl + '">' +
+      '<main class="qrStage">' +
+      '<section class="qrCopy">' +
+      '<h1 class="meetingName">' + meetingTitle + '</h1>' +
+      (meetingTime ? '<p class="meetingTime">' + meetingTime + '</p>' : '') +
+      '<p class="qrHint">請掃描 QR code 簽到</p>' +
+      '</section>' +
+      '<a class="qrLink" href="' + safeSignUrl + '" target="_blank">' +
+      '<img src="' + safeQrUrl + '">' +
       '</a>' +
+      '</main>' +
       '</body>' +
       '</html>'
     );
@@ -313,9 +441,9 @@ h2{
 
 <body>
 
-<div class="wrap">
+<main class="shell">
 
-  <?!= include('共用設定檔/AppHeader', { subtitle: '簽到 QR 產生器', onClick: 'goHome()', maxWidth: '980px' }) ?>
+  <?!= include('共用設定檔/AppShell', { subtitle: '簽到 QR 產生器', onClick: 'goHome()', maxWidth: '1400px', showCalendarSource: true }) ?>
 
   <nav class="pageMap" aria-label="頁面地圖">
     <button class="pageMapLink" onclick="goHome()">首頁</button>
@@ -325,38 +453,43 @@ h2{
 
   <section class="pageHero">
     <p class="eyebrow">簽到工具</p>
-    <h2>會議簽到 QR</h2>
+    <h1>會議簽到 QR</h1>
     <p class="pageLead">選擇會議後產生簽到連結與 QR Code，供現場投影或列印使用。</p>
   </section>
 
-  <select id="course">
-    <?!= options ?>
-  </select>
+  <section class="card">
+    <div class="formGrid">
+      <label class="fieldLabel" for="course">
+        會議
+        <select id="course">
+          <?!= options ?>
+        </select>
+      </label>
 
-  <label class="optionRow">
+      <label class="optionRow">
 
-    <input
-      type="checkbox"
-      id="popupQR"
-      checked
-    >
+        <input
+          type="checkbox"
+          id="popupQR"
+          checked
+        >
 
-    自動彈出全螢幕 QR
+        自動彈出全螢幕 QR
 
-  </label>
+      </label>
 
-  <button
-    class="mainBtn"
-    onclick="makeSignQR()"
-  >
-    產生 QR
-  </button>
+      <button
+        class="mainBtn"
+        onclick="makeSignQR()"
+      >
+        產生 QR
+      </button>
+    </div>
+  </section>
 
   <div id="result"></div>
 
-</div>
-
-<?!= getVersionBadgeHtml({showCalendarSource:true}) ?>
+</main>
 
 </body>
 

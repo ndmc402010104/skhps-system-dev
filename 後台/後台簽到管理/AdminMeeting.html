@@ -24,13 +24,16 @@
         #172033;
 
       padding:
-        96px 24px 82px;
+        118px 24px 82px;
+
+      width:
+        70vw;
 
       max-width:
-        1600px;
+        none;
 
       margin:
-        auto;
+        0 auto;
 
     }
 
@@ -752,7 +755,27 @@
 
     }
 
-    @media(max-width:1200px){
+    @media(min-width:1200px){
+
+      body{
+        padding-left:
+          0;
+
+        padding-right:
+          0;
+      }
+
+    }
+
+    @media(max-width:1199px){
+
+      body{
+        width:
+          auto;
+
+        margin:
+          0;
+      }
 
       .card.peopleStatusCard{
         padding-left:16px;
@@ -760,12 +783,12 @@
       }
 
       .statusTableWrap{
-        overflow-x:hidden;
+        overflow-x:auto;
       }
 
       .statusTable{
-        min-width:0;
-        table-layout:fixed;
+        min-width:1100px;
+        table-layout:auto;
       }
 
       .statusTable input,
@@ -803,43 +826,6 @@
         padding-right:3px;
       }
 
-      .statusTable th:nth-child(1),
-      .statusTable td:nth-child(1),
-      .statusTable th:nth-child(2),
-      .statusTable td:nth-child(2){
-        width:6%;
-      }
-
-      .statusTable th:nth-child(3),
-      .statusTable td:nth-child(3){
-        width:5%;
-      }
-
-      .statusTable th:nth-child(4),
-      .statusTable td:nth-child(4){
-        width:11%;
-      }
-
-      .statusTable th:nth-child(5),
-      .statusTable td:nth-child(5){
-        width:16%;
-      }
-
-      .statusTable th:nth-child(6),
-      .statusTable td:nth-child(6){
-        width:15%;
-      }
-
-      .statusTable th:nth-child(7),
-      .statusTable td:nth-child(7){
-        width:25%;
-      }
-
-      .statusTable th:nth-child(8),
-      .statusTable td:nth-child(8){
-        width:16%;
-      }
-
       .deleteSourceBtn{
         width:30px;
         min-width:30px;
@@ -859,7 +845,7 @@
     @media(max-width:720px){
 
       body{
-        padding:92px 14px 72px;
+        padding:104px 14px 72px;
       }
 
       .homeBtn{
@@ -907,7 +893,7 @@
 
 <body>
 
-<?!= include('共用設定檔/AppHeader', { subtitle: '簽到管理後台', onClick: 'goHome()', maxWidth: '1600px' }) ?>
+<?!= include('共用設定檔/AppShell', { subtitle: '簽到管理後台', onClick: 'goHome()', maxWidth: '1400px', showCalendarSource: true }) ?>
 
 <nav class="pageMap" aria-label="頁面地圖">
   <button class="pageMapLink" onclick="goHome()">後台首頁</button>
@@ -987,8 +973,6 @@
 
 
 <datalist id="staffNameList"></datalist>
-
-<?!= getVersionBadgeHtml({showCalendarSource:true}) ?>
 
 </body>
 </html>

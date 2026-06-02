@@ -489,7 +489,7 @@ body{
 
 <body>
 
-<?!= include('共用設定檔/AppHeader', { subtitle: 'UI 測試中心', onClick: 'goHome()', maxWidth: '1800px' }) ?>
+<?!= include('共用設定檔/AppShell', { subtitle: 'UI 測試中心', onClick: 'goHome()', maxWidth: '1800px' }) ?>
 
 <main class="testPage">
 
@@ -516,8 +516,6 @@ body{
 </div>
 
 </main>
-
-<?!= getVersionBadgeHtml() ?>
 
 <script>
 (function(){

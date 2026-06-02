@@ -7,14 +7,21 @@
 
 <style>
 body{
+  --bg:#f4f7fb;
+  --card:#ffffff;
+  --line:#dbe4ef;
+  --text:#172033;
+  --muted:#64748b;
+  --primary:#2563eb;
   font-family:Arial,"Noto Sans TC","Microsoft JhengHei",sans-serif;
-  color:#172033;
+  color:var(--text);
   background:
     radial-gradient(circle at top left,rgba(37,99,235,.1),transparent 30rem),
-    linear-gradient(180deg,#fbfdff 0%,#f4f7fb 100%);
+    linear-gradient(180deg,#fbfdff 0%,var(--bg) 100%);
   padding:118px 24px 82px;
-  max-width:760px;
-  margin:auto;
+  width:70vw;
+  max-width:none;
+  margin:0 auto;
 }
 
 .homeBtn{
@@ -32,6 +39,10 @@ body{
   margin-bottom:24px;
 }
 
+.pageHero{
+  padding-bottom:2px;
+}
+
 .eyebrow{
   margin:0 0 10px;
   color:#1d4ed8;
@@ -43,6 +54,8 @@ body{
   margin:0;
   font-size:clamp(28px,4vw,42px);
   line-height:1.18;
+  font-weight:900;
+  letter-spacing:0;
 }
 
 .pageLead{
@@ -53,34 +66,37 @@ body{
 }
 
 .courseBox{
-  padding:22px;
-  background:#ffffff;
-  border:1px solid #dbe4ef;
+  padding:28px;
+  background:var(--card);
+  border:1px solid var(--line);
   border-radius:8px;
   box-shadow:0 8px 24px rgba(15,23,42,.06);
-  margin-bottom:18px;
+  margin-bottom:20px;
 }
 
 label{
   display:block;
-  font-size:16px;
-  color:#64748b;
-  margin-bottom:6px;
+  font-size:13px;
+  color:var(--muted);
+  margin-bottom:7px;
+  font-weight:800;
 }
 
 input,select{
   width:100%;
   box-sizing:border-box;
-  padding:16px;
+  min-height:46px;
+  padding:10px 12px;
   border:1px solid #cbd5e1;
   border-radius:8px;
   background:#ffffff;
-  color:#172033;
+  color:var(--text);
+  font-size:16px;
 }
 
 #courseInput{
-  font-size:28px;
-  font-weight:bold;
+  font-size:22px;
+  font-weight:900;
   margin-bottom:18px;
 }
 
@@ -89,29 +105,63 @@ input,select{
 #nameInput,
 #empInput,
 #roleInput{
-  font-size:22px;
+  font-size:18px;
+  font-weight:800;
   margin-bottom:18px;
 }
 
 .submit{
   width:100%;
-  padding:16px;
+  min-height:48px;
+  padding:10px 14px;
   border:0;
   border-radius:8px;
-  background:#2563eb;
+  background:var(--primary);
   color:white;
-  font-size:22px;
-  margin-top:8px;
-  margin-bottom:24px;
+  font-size:17px;
+  font-weight:900;
+  margin-top:4px;
+  margin-bottom:0;
+  cursor:pointer;
 }
 
 .nameBtn{
   width:100%;
-  padding:16px;
-  font-size:22px;
+  min-height:48px;
+  padding:10px 12px;
+  font-size:17px;
+  font-weight:900;
   border-radius:8px;
-  border:1px solid #dbe4ef;
+  border:1px solid var(--line);
   background:white;
+  color:var(--text);
+  cursor:pointer;
+}
+
+.nameBtn:hover{
+  border-color:#adc2e8;
+  background:#f8fbff;
+}
+
+.signCardTitle{
+  margin:0 0 18px;
+  font-size:20px;
+  font-weight:900;
+  color:var(--text);
+}
+
+.signFieldGrid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:14px;
+}
+
+.signFieldGrid .full{
+  grid-column:1 / -1;
+}
+
+.signNamesBox{
+  margin-top:20px;
 }
 
 @media(max-width:520px){
@@ -134,19 +184,22 @@ input,select{
 
 #roleGrid{
   display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(95px,1fr));
+  grid-template-columns:repeat(auto-fit,minmax(92px,1fr));
   gap:10px;
-  margin-bottom:24px;
+  margin-bottom:18px;
 }
 
 .roleBtn{
   background:white;
   border:1px solid #d6dde7;
-  padding:14px;
-  font-size:18px;
+  min-height:44px;
+  padding:9px 12px;
+  font-size:16px;
+  font-weight:900;
   color:#506070;
   border-radius:8px;
   transition:.15s;
+  cursor:pointer;
 }
 
 .roleBtn:hover{
@@ -154,9 +207,37 @@ input,select{
 }
 
 .roleBtn.active{
-  background:#2563eb;
+  background:var(--primary);
   color:white;
-  border-color:#2563eb;
+  border-color:var(--primary);
+}
+
+@media(min-width:1200px){
+  body{
+    padding-left:0;
+    padding-right:0;
+  }
+}
+
+@media(max-width:1199px){
+  body{
+    width:auto;
+    margin:0;
+  }
+}
+
+@media(max-width:640px){
+  body{
+    padding:104px 16px 72px;
+  }
+
+  .courseBox{
+    padding:20px;
+  }
+
+  .signFieldGrid{
+    grid-template-columns:1fr;
+  }
 }
 </style>
 
@@ -973,7 +1054,7 @@ function submitName(){
 
 <body>
 
-  <?!= include('共用設定檔/AppHeader', { subtitle: '會議簽到', maxWidth: '760px' }) ?>
+  <?!= include('共用設定檔/AppShell', { subtitle: '會議簽到', maxWidth: '1400px', showCalendarSource: true }) ?>
 
   <section class="pageHero">
     <p class="eyebrow">簽到表單</p>
@@ -982,6 +1063,7 @@ function submitName(){
   </section>
 
   <div class="courseBox">
+    <h2 class="signCardTitle">會議資訊</h2>
     <label>會議名稱</label>
     <input id="courseInput" value="<?= course ?>">
 
@@ -998,71 +1080,74 @@ function submitName(){
     >
   </div>
 
-  <label>姓名</label>
-  <input
-    id="nameInput"
-    placeholder="請選擇或輸入姓名"
-    onfocus="handleNameFocus()"
-  >
+  <div class="courseBox">
+    <h2 class="signCardTitle">簽到資料</h2>
 
-  <label>員工編號</label>
-  <input
-    id="empInput"
-    placeholder="點選下方姓名可自動帶入員工編號"
-    onfocus="handleEmpFocus()"
-    onblur="handleEmpBlur()"
-  >
+    <div class="signFieldGrid">
+      <div>
+        <label>姓名</label>
+        <input
+          id="nameInput"
+          placeholder="請選擇或輸入姓名"
+          onfocus="handleNameFocus()"
+        >
+      </div>
 
-  <label>職級</label>
-  <input id="roleInput" type="hidden">
+      <div>
+        <label>員工編號</label>
+        <input
+          id="empInput"
+          placeholder="點選下方姓名可自動帶入員工編號"
+          onfocus="handleEmpFocus()"
+          onblur="handleEmpBlur()"
+        >
+      </div>
 
-  <div id="roleGrid">
-    <button type="button" class="roleBtn" data-role="VS" onclick="pickRole(this,'VS')">VS</button>
-    <button type="button" class="roleBtn" data-role="F" onclick="pickRole(this,'F')">Fellow</button>
-    <button type="button" class="roleBtn" data-role="R6" onclick="pickRole(this,'R6')">R6</button>
-    <button type="button" class="roleBtn" data-role="R5" onclick="pickRole(this,'R5')">R5</button>
-    <button type="button" class="roleBtn" data-role="R4" onclick="pickRole(this,'R4')">R4</button>
-    <button type="button" class="roleBtn" data-role="R3" onclick="pickRole(this,'R3')">R3</button>
-    <button type="button" class="roleBtn" data-role="R2" onclick="pickRole(this,'R2')">R2</button>
-    <button type="button" class="roleBtn" data-role="R1" onclick="pickRole(this,'R1')">R1</button>
-    <button type="button" class="roleBtn" data-role="PGY2" onclick="pickRole(this,'PGY2')">PGY2</button>
-    <button type="button" class="roleBtn" data-role="PGY1" onclick="pickRole(this,'PGY1')">PGY1</button>
-    <button type="button" class="roleBtn" data-role="Clerk" onclick="pickRole(this,'Clerk')">Clerk</button>
-    <button type="button" class="roleBtn" data-role="NP" onclick="pickRole(this,'NP')">NP</button>
-    <button type="button" class="roleBtn" data-role="秘書" onclick="pickRole(this,'秘書')">秘書</button>
-    <button type="button" class="roleBtn" data-role="OTHER" onclick="pickCustomRole(this)">自行輸入</button>
+      <div class="full">
+        <label>職級</label>
+        <input id="roleInput" type="hidden">
+
+        <div id="roleGrid">
+          <button type="button" class="roleBtn" data-role="VS" onclick="pickRole(this,'VS')">VS</button>
+          <button type="button" class="roleBtn" data-role="F" onclick="pickRole(this,'F')">Fellow</button>
+          <button type="button" class="roleBtn" data-role="R6" onclick="pickRole(this,'R6')">R6</button>
+          <button type="button" class="roleBtn" data-role="R5" onclick="pickRole(this,'R5')">R5</button>
+          <button type="button" class="roleBtn" data-role="R4" onclick="pickRole(this,'R4')">R4</button>
+          <button type="button" class="roleBtn" data-role="R3" onclick="pickRole(this,'R3')">R3</button>
+          <button type="button" class="roleBtn" data-role="R2" onclick="pickRole(this,'R2')">R2</button>
+          <button type="button" class="roleBtn" data-role="R1" onclick="pickRole(this,'R1')">R1</button>
+          <button type="button" class="roleBtn" data-role="PGY2" onclick="pickRole(this,'PGY2')">PGY2</button>
+          <button type="button" class="roleBtn" data-role="PGY1" onclick="pickRole(this,'PGY1')">PGY1</button>
+          <button type="button" class="roleBtn" data-role="Clerk" onclick="pickRole(this,'Clerk')">Clerk</button>
+          <button type="button" class="roleBtn" data-role="NP" onclick="pickRole(this,'NP')">NP</button>
+          <button type="button" class="roleBtn" data-role="秘書" onclick="pickRole(this,'秘書')">秘書</button>
+          <button type="button" class="roleBtn" data-role="OTHER" onclick="pickCustomRole(this)">自行輸入</button>
+        </div>
+
+        <input
+          id="customRoleInput"
+          type="text"
+          placeholder="請輸入職級"
+          style="display:none; margin-top:-8px; margin-bottom:18px;"
+          oninput="
+            document
+              .getElementById('roleInput')
+              .value =
+              this.value.trim()
+          "
+        >
+      </div>
+    </div>
+
+    <button class="submit" onclick="submitName()">
+      送出
+    </button>
   </div>
 
-  <input
-    id="customRoleInput"
-    type="text"
-    placeholder="請輸入職級"
-    style="
-      display:none;
-      width:100%;
-      box-sizing:border-box;
-      padding:16px;
-      margin-top:-8px;
-      margin-bottom:24px;
-      border:1px solid #d6dde7;
-      border-radius:8px;
-      font-size:20px;
-    "
-    oninput="
-      document
-        .getElementById('roleInput')
-        .value =
-        this.value.trim()
-    "
-  >
-
-  <button class="submit" onclick="submitName()">
-    送出
-  </button>
-
-  <div id="nameGrid"></div>
-
-<?!= getVersionBadgeHtml({showCalendarSource:true}) ?>
+  <div class="courseBox signNamesBox">
+    <h2 class="signCardTitle">快速選擇姓名</h2>
+    <div id="nameGrid"></div>
+  </div>
 
 </body>
 </html>

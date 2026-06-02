@@ -141,6 +141,9 @@ function doGet(e){
 
   if(
     page ===
+    'dressinguse'
+    ||
+    page ===
     'dressingUse'
   ){
     return showDressingUsePage();
@@ -296,11 +299,14 @@ function showDressingUsePage(){
 
   const template =
     HtmlService.createTemplateFromFile(
-      '敷料領用登錄系統/敷料領用/DressingUse'
+      '敷料領用登錄系統/DressingUse'
     );
 
   template.appEntryUrl =
     getAppEntryUrl();
+
+  template.appProdUrl =
+    APP_ENTRY_URL;
 
   template.versionBadgeHtml =
     getVersionBadgeHtml();

@@ -12,457 +12,197 @@ content="width=device-width,initial-scale=1">
 
 <style>
 
-/*
-========================================
-頁面樣式
-========================================
-*/
-
+:root{
+  --bg:#f4f7fb;
+  --ink:#172033;
+  --muted:#64748b;
+  --line:#dbe4ef;
+  --primary:#2563eb;
+  --primaryDark:#1d4ed8;
+  --mint:#0f766e;
+  --amber:#b45309;
+  --softBlue:#eaf2ff;
+  --softMint:#e8f7f3;
+  --softAmber:#fff4df;
+  --purple:#7c3aed;
+  --softPurple:#ede9fe;
+  --gray:#475569;
+  --softGray:#f1f5f9;
+}
+*{
+  box-sizing:border-box;
+}
 body{
-
-font-family:
-Arial,
-"Noto Sans TC",
-"Microsoft JhengHei",
-sans-serif;
-
-background:
-radial-gradient(circle at top left,rgba(37,99,235,.1),transparent 30rem),
-linear-gradient(180deg,#fbfdff 0%,#f4f7fb 100%);
-
-color:
-#172033;
-
-margin:
-0;
-
-padding:
-96px 28px 82px;
-
+  margin:0;
+  min-height:100vh;
+  font-family:Arial,"Noto Sans TC","Microsoft JhengHei",sans-serif;
+  color:var(--ink);
+  background:
+    radial-gradient(circle at top left,rgba(37,99,235,.1),transparent 30rem),
+    linear-gradient(180deg,#fbfdff 0%,var(--bg) 100%);
 }
-
-.container{
-
-max-width:
-960px;
-
-margin:
-auto;
-
+.shell{
+  width:70vw;
+  max-width:none;
+  margin:0 auto;
+  padding:118px 24px 82px;
 }
-
-.title{
-
-font-size:
-clamp(32px,4.6vw,52px);
-
-font-weight:
-700;
-
-line-height:
-1.12;
-
-margin-bottom:
-10px;
-
+.hero{
+  display:block;
 }
-
-.subtitle{
-
-font-size:
-18px;
-
-color:
-#64748b;
-
-margin:
-0;
-
-}
-
-.header{
-
-position:
-fixed;
-
-top:
-0;
-
-left:
-0;
-
-right:
-0;
-
-z-index:
-20;
-
-display:
-flex;
-
-justify-content:
-space-between;
-
-align-items:
-center;
-
-gap:
-18px;
-
-height:
-76px;
-
-margin:
-0;
-
-padding:
-0 max(28px,calc((100vw - 960px) / 2 + 28px));
-
-box-sizing:
-border-box;
-
-border-bottom:
-1px solid #dbe4ef;
-
-background:
-rgba(248,251,255,.92);
-
-backdrop-filter:
-blur(10px);
-
-box-shadow:
-0 8px 24px rgba(15,23,42,.06);
-
-}
-
-.brand{
-display:flex;
-align-items:center;
-gap:14px;
-cursor:pointer;
-}
-
-.brandMark{
-width:40px;
-height:40px;
-display:grid;
-place-items:center;
-border-radius:14px;
-color:#ffffff;
-font-size:20px;
-font-weight:800;
-background:linear-gradient(135deg,#2563eb,#0f766e);
-box-shadow:0 12px 24px rgba(37,99,235,.2);
-}
-
-.brandText{
-display:grid;
-gap:2px;
-}
-
-.brandName{
-font-size:18px;
-font-weight:800;
-}
-
-.brandSub{
-color:#64748b;
-font-size:13px;
-}
-
-.pageHero{
-margin-bottom:28px;
-}
-
 .pageMap{
-display:flex;
-align-items:center;
-gap:8px;
-margin-bottom:24px;
-color:#64748b;
-font-size:13px;
-font-weight:700;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin-bottom:24px;
+  color:#64748b;
+  font-size:13px;
+  font-weight:700;
 }
-
-.pageMapLink{
-border:0;
-padding:0;
-background:transparent;
-color:#2563eb;
-font:inherit;
-cursor:pointer;
-}
-
 .pageMapCurrent{
-color:#172033;
+  color:#172033;
 }
-
-.pageMapSep{
-color:#94a3b8;
-}
-
 .eyebrow{
-margin:0 0 10px;
-color:#1d4ed8;
-font-size:13px;
-font-weight:800;
+  margin:0 0 10px;
+  color:var(--primaryDark);
+  font-size:13px;
+  font-weight:800;
 }
-
-.homeButton{
-
-border:
-1px solid #d6dde7;
-
-background:
-#eef2f7;
-
-color:
-#475569;
-
-border-radius:
-8px;
-
-padding:
-12px 18px;
-
-font-size:
-16px;
-
-font-weight:
-700;
-
-cursor:
-pointer;
-
-transition:
-0.15s;
-
-white-space:
-nowrap;
-
+h1{
+  margin:0;
+  font-size:clamp(32px,4.6vw,52px);
+  line-height:1.12;
+  letter-spacing:0;
 }
-
-.homeButton:hover{
-
-background:
-white;
-
-color:
-#1e293b;
-
-transform:
-translateY(
--1px
-);
-
-box-shadow:
-0 8px 20px
-rgba(
-0,
-0,
-0,
-0.06
-);
-
+.lead{
+  margin:18px 0 0;
+  color:#475569;
+  font-size:17px;
+  line-height:1.7;
 }
-
-.utilityCard{
-cursor:
-pointer;
+.panel{
+  margin-top:28px;
+  background:#ffffff;
+  border:1px solid var(--line);
+  border-radius:8px;
+  box-shadow:0 8px 24px rgba(15,23,42,.06);
+  overflow:hidden;
 }
-
-.utilityCard:hover{
-border-color:
-#2563eb;
+.panelHead{
+  padding:22px 24px 18px;
+  border-bottom:1px solid var(--line);
 }
-
-.grid{
-
-display:
-grid;
-
-grid-template-columns:
-repeat(
-2,
-1fr
-);
-
-gap:
-20px;
-
+.panelHead h2{
+  margin:0;
+  font-size:20px;
 }
-
-.card{
-
-background:
-white;
-
-border:
-1px solid #dbe4ef;
-
-border-radius:
-8px;
-
-padding:
-32px;
-
-transition:
-0.15s;
-
+.panelHead p{
+  margin:8px 0 0;
+  color:var(--muted);
+  line-height:1.55;
 }
-
-.card:hover{
-
-transform:
-translateY(
--2px
-);
-
-box-shadow:
-0 10px 30px
-rgba(
-15,
-23,
-42,
-0.08
-);
-
+.actions{
+  display:grid;
+  gap:12px;
+  padding:18px;
 }
-
-.mainCard{
-
-cursor:
-pointer;
-
-grid-column:
-span 2;
-
-padding:
-40px;
-
+.entryButton{
+  width:100%;
+  min-height:86px;
+  display:grid;
+  grid-template-columns:48px minmax(0,1fr) 24px;
+  align-items:center;
+  gap:14px;
+  padding:16px;
+  text-align:left;
+  color:var(--ink);
+  background:#ffffff;
+  border:1px solid var(--line);
+  border-radius:8px;
+  cursor:pointer;
+  transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease;
 }
-
-.mainCard:hover{
-
-border-color:
-#2563eb;
-
+.entryButton:hover{
+  transform:translateY(-2px);
+  border-color:#adc2e8;
+  box-shadow:0 12px 24px rgba(15,23,42,.09);
 }
-
-.disabledCard{
-
-opacity:
-0.45;
-
-cursor:
-not-allowed;
-
+.entryButton:focus-visible{
+  outline:3px solid rgba(37,99,235,.25);
+  outline-offset:2px;
 }
-
-.disabledCard:hover{
-
-transform:
-none;
-
-box-shadow:
-none;
-
+.entryButton.disabled{
+  opacity:0.5;
+  cursor:not-allowed;
 }
-
-.cardTitle{
-
-font-size:
-30px;
-
-font-weight:
-700;
-
-margin-bottom:
-18px;
-
+.entryButton.disabled:hover{
+  transform:none;
+  border-color:var(--line);
+  box-shadow:none;
 }
-
-.cardDesc{
-
-font-size:
-18px;
-
-line-height:
-1.8;
-
-color:
-#666;
-
+.entryIcon{
+  width:48px;
+  height:48px;
+  display:grid;
+  place-items:center;
+  border-radius:8px;
+  font-size:22px;
+  font-weight:800;
 }
-
-.footer{
-
-margin-top:
-50px;
-
-font-size:
-14px;
-
-color:
-#64748b;
-
+.entryButton.primary .entryIcon{
+  color:var(--primaryDark);
+  background:var(--softBlue);
 }
-
-
-/*
-========================================
-手機版
-========================================
-*/
-
-@media(
-max-width:720px
-){
-
-body{
-
-padding:
-92px 16px 72px;
-
+.entryButton.secondary .entryIcon{
+  color:var(--mint);
+  background:var(--softMint);
 }
-
-.grid{
-
-grid-template-columns:
-1fr;
-
+.entryButton.purple .entryIcon{
+  color:var(--purple);
+  background:var(--softPurple);
 }
-
-.mainCard{
-
-grid-column:
-span 1;
-
+.entryButton.gray .entryIcon{
+  color:var(--gray);
+  background:var(--softGray);
 }
-
-.title{
-
-font-size:
-34px;
-
+.entryTitle{
+  display:block;
+  font-size:18px;
+  font-weight:800;
 }
-
-.header{
-
-align-items:
-center;
-
-justify-content:
-center;
-
-height:
-76px;
-
-padding:
-0 16px;
-
+.entryDesc{
+  display:block;
+  margin-top:5px;
+  color:var(--muted);
+  font-size:14px;
+  line-height:1.45;
 }
-
+.arrow{
+  color:#94a3b8;
+  font-size:24px;
+  font-weight:400;
+}
+.footerNote{
+  margin-top:18px;
+  color:#64748b;
+  font-size:13px;
+  line-height:1.6;
+}
+@media(max-width:820px){
+  .shell{
+    width:100%;
+    max-width:none;
+    padding:104px 16px 72px;
+  }
+  .entryButton{
+    grid-template-columns:44px minmax(0,1fr) 20px;
+    min-height:78px;
+    padding:14px;
+  }
+  .entryIcon{
+    width:44px;
+    height:44px;
+  }
 }
 
 </style>
@@ -553,172 +293,80 @@ ADMIN_PAGE_KEY;
 
 <body>
 
-<div class="container">
+<main class="shell">
 
-
-<!-- 標題 -->
-
-<div class="header">
-
-<div class="brand" onclick="goAdminHome()">
-<div class="brandMark">S</div>
-<div class="brandText">
-<span class="brandName">新光整形外科科室系統</span>
-<span class="brandSub">後台首頁</span>
-</div>
-</div>
-
-</div>
+<?!= include('共用設定檔/AppShell', { subtitle: '後台首頁', onClick: 'goAdminHome()', maxWidth: '1400px' }) ?>
 
 <nav class="pageMap" aria-label="頁面地圖">
-<span class="pageMapCurrent">後台首頁</span>
+  <span class="pageMapCurrent">後台首頁</span>
 </nav>
 
-<section class="pageHero">
+<section class="hero">
 
-<p class="eyebrow">管理功能</p>
+  <p class="eyebrow">管理功能</p>
 
-<div class="title">
+  <h1>後台首頁</h1>
 
-後台首頁
+  <p class="lead">
+    整形外科科室系統管理後台，選擇下方功能以進行資料維護與設定。
+  </p>
 
-</div>
+  <div class="panel">
 
-<p class="subtitle">
+    <div class="panelHead">
+      <h2>請選擇管理項目</h2>
+      <p>點擊對應模組進入管理頁面。</p>
+    </div>
 
-整形外科科室系統管理後台
+    <div class="actions">
 
-</p>
+      <button class="entryButton primary" onclick="goMeeting()">
+        <span class="entryIcon">會</span>
+        <span>
+          <span class="entryTitle">晨會簽到管理</span>
+          <span class="entryDesc">查詢會議與簽到狀態、補登與請假，並匯出簽到單與原始資料。</span>
+        </span>
+        <span class="arrow">›</span>
+      </button>
+
+      <button class="entryButton secondary" onclick="goSystemHome()">
+        <span class="entryIcon">首</span>
+        <span>
+          <span class="entryTitle">回科室系統首頁</span>
+          <span class="entryDesc">返回前台功能入口。</span>
+        </span>
+        <span class="arrow">›</span>
+      </button>
+
+      <button class="entryButton purple disabled">
+        <span class="entryIcon">人</span>
+        <span>
+          <span class="entryTitle">人員管理</span>
+          <span class="entryDesc">開發中。</span>
+        </span>
+        <span class="arrow">›</span>
+      </button>
+
+      <button class="entryButton gray disabled">
+        <span class="entryIcon">設</span>
+        <span>
+          <span class="entryTitle">系統設定</span>
+          <span class="entryDesc">開發中。</span>
+        </span>
+        <span class="arrow">›</span>
+      </button>
+
+    </div>
+
+  </div>
+
+  <p class="footerNote">
+    新光整形外科科室系統
+  </p>
 
 </section>
 
-
-
-<!-- 功能區 -->
-
-<div class="grid">
-
-
-<!-- 會議簽到管理 -->
-
-<div
-class="
-card
-mainCard
-"
-onclick="
-goMeeting()
-">
-
-<div class="cardTitle">
-
-📅 會議簽到管理
-
-</div>
-
-<div class="cardDesc">
-
-查詢會議與簽到狀態<br>
-
-修改簽到結果、補登與請假<br>
-
-匯出簽到單、原始資料與上傳檔案
-
-</div>
-
-</div>
-
-
-<!-- 返回科室首頁 -->
-
-<div
-class="
-card
-utilityCard
-"
-onclick="
-goSystemHome()
-">
-
-<div class="cardTitle">
-
-↩ 回科室系統首頁
-
-</div>
-
-<div class="cardDesc">
-
-返回前台功能入口。
-
-</div>
-
-</div>
-
-
-
-<!-- 人員管理 -->
-
-<div
-class="
-card
-disabledCard
-">
-
-<div class="cardTitle">
-
-👥 人員管理
-
-</div>
-
-<div class="cardDesc">
-
-開發中
-
-</div>
-
-</div>
-
-
-
-<!-- 系統設定 -->
-
-<div
-class="
-card
-disabledCard
-">
-
-<div class="cardTitle">
-
-⚙️ 系統設定
-
-</div>
-
-<div class="cardDesc">
-
-開發中
-
-</div>
-
-</div>
-
-
-</div>
-
-
-
-<!-- 頁尾 -->
-
-<div class="footer">
-
-新光整形外科科室系統
-
-</div>
-
-
-</div>
-
-<?!= getVersionBadgeHtml() ?>
+</main>
 
 </body>
 

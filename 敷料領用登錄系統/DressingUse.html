@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<!--
+檔案位置：科室系統用戶端/DressingUse.html
+時間戳記：2026-06-03 01:33 UTC+8
+用途：敷料領用獨立前端頁；修正領用敷料明細流程：掃描/搜尋統一在敷料主檔欄位完成，選定後搜尋框消失；手動搜尋只顯示目前領用單位有庫存敷料；領用數量拆成盒數與單位數；備註改為每列領用備註。
+-->
+<html>
+<head>
+<base target="_top">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>敷料領用</title>
+<script src="https://unpkg.com/html5-qrcode"></script>
+<style>
+:root{--bg:#f4f7fb;--card:#fff;--line:#dbe4ef;--text:#172033;--muted:#64748b;--primary:#2563eb;--danger:#991b1b;--danger-bg:#fee2e2;--success:#15803d;--success-bg:#dcfce7}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;color:var(--text);background:radial-gradient(circle at top left,rgba(37,99,235,.1),transparent 30rem),linear-gradient(180deg,#fbfdff 0%,var(--bg) 100%);font-family:Arial,"Noto Sans TC","Microsoft JhengHei",sans-serif}body{padding:118px 24px 82px;overflow-x:hidden}.shell{width:100%;max-width:1400px;margin:0 auto}.pageMap{display:flex;align-items:center;gap:8px;margin-bottom:24px;color:var(--muted);font-size:13px;font-weight:800}.pageMapLink{border:0;padding:0;background:transparent;color:var(--primary);font:inherit;cursor:pointer}.pageMapCurrent{color:var(--text)}.pageMapSep{color:#94a3b8}.pageHero{margin-bottom:24px}.eyebrow{margin:0 0 10px;color:#1d4ed8;font-size:13px;font-weight:900}h1{margin:0;font-size:clamp(28px,4vw,42px);line-height:1.18}.pageLead{margin:12px 0 0;color:#475569;font-size:16px;line-height:1.7}.card{width:100%;background:var(--card);padding:18px;border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 24px rgba(15,23,42,.06)}button{padding:8px 14px;font-size:15px;cursor:pointer;border-radius:8px;border:1px solid #d6dde7;background:#fff;color:#334155;white-space:nowrap}button:disabled{opacity:.55;cursor:not-allowed}.primary{background:var(--primary);color:white;border:none}.danger{background:var(--danger-bg);color:var(--danger)}.ghost{background:#f8fafc;color:#475569}input,select,textarea{width:100%;min-height:40px;padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px;box-sizing:border-box;font-size:16px;font-family:inherit;background:#fff;color:var(--text)}textarea{min-height:76px;resize:vertical}input:disabled,select:disabled,textarea:disabled{background:#f1f5f9!important;color:#64748b!important}.toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:16px}.statusText{color:var(--muted);font-size:13px;font-weight:800;line-height:1.5}.sectionCard{margin-top:14px;border:1px solid var(--line);border-radius:14px;background:#fff;overflow:hidden}.sectionHeader{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:46px;padding:10px 14px;border-bottom:1px solid #e2e8f0;background:linear-gradient(90deg,rgba(37,99,235,.10),rgba(255,255,255,.7))}.sectionHeader h2{display:flex;align-items:center;gap:8px;margin:0;font-size:15px;font-weight:950;letter-spacing:.04em;color:#1d4ed8}.sectionHeader h2:before{content:'';width:8px;height:8px;border-radius:999px;background:var(--primary);box-shadow:0 0 0 4px rgba(37,99,235,.12)}.sectionBody{padding:14px}.formGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.field{display:flex;flex-direction:column;gap:6px;min-width:0}.field label{color:#334155;font-size:13px;font-weight:900}.field.full{grid-column:1/-1}.field.span2{grid-column:span 2}.hisStatusGroup{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.segmentBtn{min-height:40px;font-weight:900;background:#fff}.segmentBtn.active{border-color:var(--primary);background:rgba(37,99,235,.10);color:#1d4ed8;box-shadow:0 0 0 3px rgba(37,99,235,.10)}.useRowsWrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:12px;background:#fff}.useTable{width:100%;min-width:1280px;border-collapse:collapse;table-layout:fixed}.useTable th,.useTable td{border-bottom:1px solid var(--line);border-right:1px solid var(--line);padding:9px;vertical-align:top}.useTable th{background:#f1f5f9;font-size:13px;font-weight:950;color:#334155;text-align:left}.useTable th:last-child,.useTable td:last-child{border-right:0}.useTable tr:last-child td{border-bottom:0}.col-action{width:76px;text-align:center}.col-search{width:260px}.col-master{width:260px}.col-lot{width:260px}.col-stock{width:140px}.col-qty{width:150px}.col-note{width:190px}.rowMeta,.rowSub{margin-top:5px;color:#64748b;font-size:12px;font-weight:800;line-height:1.45}.rowDressingName{color:#0f172a;font-size:14px;font-weight:950;line-height:1.45}.muted{color:#64748b!important}.qtyBadge{display:inline-flex;align-items:center;justify-content:center;min-width:62px;min-height:34px;padding:4px 8px;border-radius:999px;background:var(--success-bg);color:var(--success);font-size:16px;font-weight:950}.qtyBadge.empty{background:#f1f5f9;color:#64748b}.qtyInputWrap{border:1px solid #bfdbfe;border-left:4px solid var(--primary);border-radius:10px;padding:8px;background:#eff6ff}.qtyInputWrap label{display:flex;align-items:center;gap:6px;color:#1d4ed8;font-size:12px;font-weight:950;margin-bottom:6px}.qtyInputWrap label:before{content:'領用';display:inline-flex;align-items:center;justify-content:center;min-width:36px;padding:2px 6px;border-radius:999px;background:#dbeafe;color:#1d4ed8;font-size:11px;font-weight:950}.qtyInputWrap input{font-size:18px;font-weight:950}.searchBox{position:relative}.suggestBox{display:none;position:absolute;z-index:50;top:calc(100% + 6px);left:0;right:0;max-height:280px;overflow-y:auto;border:1px solid var(--line);border-radius:10px;background:#fff;box-shadow:0 12px 30px rgba(15,23,42,.16)}.suggestMeta{padding:8px 10px;background:#f8fafc;color:#64748b;border-bottom:1px solid var(--line);font-size:12px;font-weight:900}.suggestItem{width:100%;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px;border:0;border-bottom:1px solid var(--line);border-radius:0;text-align:left;background:#fff}.suggestItem:last-child{border-bottom:0}.suggestItem:hover{background:#f8fafc}.suggestMain{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.suggestCode{color:#1d4ed8;font-weight:950}.suggestName{color:#0f172a;font-weight:850}.suggestStatus{justify-self:end;color:#15803d;font-size:12px;font-weight:950;white-space:nowrap}.summaryGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.summaryBox{padding:12px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc}.summaryBox label{display:block;margin-bottom:6px;color:#64748b;font-size:12px;font-weight:950}.summaryBox div{color:#0f172a;font-size:18px;font-weight:950}.actionBar{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-top:14px}.noticeWrap{position:fixed;top:10px;right:72px;z-index:1400;width:auto;max-width:320px;pointer-events:none}.noticeStack{display:flex;flex-direction:column;align-items:flex-end;gap:8px}.noticeCard{position:relative;width:auto;max-width:320px;display:flex;align-items:center;gap:8px;min-height:44px;padding:9px 34px 9px 12px;border-radius:12px;background:rgba(255,255,255,.96);border:1px solid #dbe4ef;border-left:4px solid #22c55e;box-shadow:0 4px 12px rgba(15,23,42,.10);backdrop-filter:blur(10px);pointer-events:auto}.noticeCard.error{border-left-color:#dc2626}.noticeCard.warning{border-left-color:#f59e0b}.noticeTitle{font-size:14px;font-weight:900;white-space:nowrap}.noticeMessage{min-width:0;flex:1;color:#64748b;font-size:13px;font-weight:750;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.noticeClose{position:absolute;top:10px;right:10px;border:0;background:transparent;color:#64748b;font-size:20px;line-height:1;padding:0}.waitIndicator{position:fixed;top:12px;left:50%;z-index:1450;display:none;align-items:center;gap:9px;max-width:min(460px,calc(100vw - 32px));padding:9px 14px;border:1px solid #bfdbfe;border-radius:999px;background:rgba(255,255,255,.96);box-shadow:0 8px 24px rgba(15,23,42,.12);color:#1e3a8a;font-size:13px;font-weight:950;transform:translateX(-50%);overflow:hidden}.waitIndicator.active{display:flex}.waitSpinner{width:15px;height:15px;border:2px solid #bfdbfe;border-top-color:#2563eb;border-radius:50%;animation:spin .72s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}.dialogOverlay{display:none;position:fixed;inset:0;z-index:1300;align-items:center;justify-content:center;padding:18px;background:rgba(15,23,42,.48)}.dialog{width:min(560px,100%);border-radius:14px;background:#fff;border:1px solid var(--line);box-shadow:0 18px 50px rgba(15,23,42,.26);padding:18px}.dialog h3{margin:0 0 10px;font-size:18px;font-weight:950}.dialog p{margin:0 0 12px;color:#334155;line-height:1.7;white-space:pre-line}.dialogActions{display:flex;justify-content:flex-end;gap:10px;margin-top:16px}.scannerOverlay{display:none;position:fixed;inset:0;z-index:999;background:rgba(15,23,42,.72);padding:24px}.scannerBox{max-width:520px;margin:60px auto;background:white;border-radius:12px;padding:18px;box-shadow:0 16px 40px rgba(15,23,42,.25)}.scannerTitle{margin:0 0 12px;font-size:20px;font-weight:950}.scannerHint{margin:0 0 12px;color:var(--muted);font-size:14px;line-height:1.6}#scannerReader{width:100%}.scannerActions{margin-top:12px;display:flex;justify-content:flex-end}@media(max-width:960px){body{padding:96px 10px 72px}.shell{max-width:none;width:100%}.formGrid,.summaryGrid{grid-template-columns:1fr}.field.span2{grid-column:auto}.useTable{min-width:1120px}.noticeWrap{top:12px;right:12px;left:12px;max-width:none}.noticeStack{align-items:stretch}}@media(max-width:720px){body{padding:86px 8px 64px}h1{font-size:26px}.card{padding:12px}.sectionBody{padding:12px}.hisStatusGroup{grid-template-columns:1fr}.dialogOverlay{align-items:flex-end;padding:10px}.dialog{max-height:calc(100vh - 24px);overflow-y:auto;border-radius:14px 14px 10px 10px}.dialogActions{display:grid;grid-template-columns:1fr 1fr}.dialogActions button{width:100%;min-height:42px}.useRowsWrap:after{content:'左右滑動查看更多';display:block;position:sticky;left:0;padding:7px 10px;color:#64748b;background:#f8fafc;border-top:1px solid var(--line);font-size:12px;font-weight:900}.scannerOverlay{padding:10px}.scannerBox{margin:10px auto;max-height:calc(100vh - 20px);overflow-y:auto;padding:14px}}
+
+.dataToolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:#f8fafc}.dataToolbar .statusText{flex:1 1 auto;min-width:0}.smallBtn{padding:6px 10px;font-size:13px}.unitGroup{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.unitBtn{min-height:40px;font-weight:900;background:#fff}.unitBtn.active{border-color:var(--primary);background:rgba(37,99,235,.10);color:#1d4ed8;box-shadow:0 0 0 3px rgba(37,99,235,.10)}.clinicalSummary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.summaryLine{padding:12px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc}.summaryLine label{display:block;margin-bottom:6px;color:#64748b;font-size:12px;font-weight:950}.summaryLine div{color:#0f172a;font-size:16px;font-weight:950;line-height:1.45}.summaryItems{grid-column:1/-1;padding:12px;border:1px solid #e2e8f0;border-radius:12px;background:#fff}.summaryItems label{display:block;margin-bottom:8px;color:#64748b;font-size:12px;font-weight:950}.summaryItemList{display:flex;flex-direction:column;gap:8px;color:#0f172a;font-size:15px;font-weight:900;line-height:1.55}.summaryItemMuted{color:#64748b;font-weight:800}@media(max-width:960px){.dataToolbar{align-items:stretch;flex-direction:column}.dataToolbar button{width:100%}.clinicalSummary{grid-template-columns:1fr}.summaryItems{grid-column:auto}}
+
+
+/* 2026-06-03：領用確認摘要與補領用時間 */
+.useTimeDisplayWrap{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.useTimeText{
+  flex:1 1 auto;
+  min-height:40px;
+  display:flex;
+  align-items:center;
+  padding:8px 10px;
+  border:1px solid #e2e8f0;
+  border-radius:8px;
+  background:#f8fafc;
+  color:#0f172a;
+  font-size:16px;
+  font-weight:900;
+}
+.makeupBtn{
+  flex:0 0 auto;
+  padding:7px 10px;
+  font-size:13px;
+  font-weight:900;
+}
+.makeupTimePanel{
+  display:none;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  margin-top:8px;
+}
+.makeupTimePanel.is-open{
+  display:grid;
+}
+.unitBtn{
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.useSummarySentence{
+  padding:16px;
+  border:1px solid #bfdbfe;
+  border-radius:14px;
+  background:linear-gradient(90deg,rgba(37,99,235,.10),rgba(255,255,255,.72));
+  color:#0f172a;
+  font-size:clamp(16px,2.1vw,24px);
+  font-weight:950;
+  line-height:1.65;
+}
+.useSummarySentence .placeholder{
+  color:#94a3b8;
+}
+.useSummarySentence .strong{
+  color:#1d4ed8;
+}
+.useSummaryBoard{
+  display:grid;
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  gap:10px;
+  margin-top:12px;
+}
+.useSummaryCell{
+  min-width:0;
+  padding:10px;
+  border:1px solid #e2e8f0;
+  border-radius:12px;
+  background:#f8fafc;
+}
+.useSummaryCell label{
+  display:block;
+  margin-bottom:5px;
+  color:#64748b;
+  font-size:12px;
+  font-weight:950;
+}
+.useSummaryCell div{
+  min-width:0;
+  color:#0f172a;
+  font-size:clamp(13px,1.5vw,16px);
+  font-weight:950;
+  line-height:1.45;
+  overflow-wrap:anywhere;
+}
+.useSummaryCell.summaryItemsWide{
+  grid-column:1 / -1;
+  background:#fff;
+}
+.useSummaryItemList{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.useSummaryItem{
+  padding:9px 10px;
+  border:1px solid #e2e8f0;
+  border-left:4px solid var(--primary);
+  border-radius:10px;
+  background:#fff;
+}
+.useSummaryItemMain{
+  font-size:clamp(13px,1.7vw,16px);
+  font-weight:950;
+  color:#0f172a;
+  line-height:1.45;
+}
+.useSummaryItemMeta{
+  margin-top:4px;
+  color:#64748b;
+  font-size:clamp(11px,1.3vw,13px);
+  font-weight:850;
+  line-height:1.45;
+}
+@media(max-width:960px){
+  .useSummaryBoard{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+}
+@media(max-width:720px){
+  .useTimeDisplayWrap{
+    align-items:stretch;
+    flex-direction:column;
+  }
+  .makeupBtn{
+    width:100%;
+  }
+  .makeupTimePanel{
+    grid-template-columns:1fr;
+  }
+  .unitGroup{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+  .unitBtn{
+    padding-left:8px;
+    padding-right:8px;
+    font-size:clamp(12px,3.4vw,14px);
+  }
+  .useSummaryBoard{
+    grid-template-columns:1fr;
+  }
+}
+
+
+/* 2026-06-03：摘要改為單句 + 明細；補領用原位置切換可編輯 */
+.useTimeDisplayWrap{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:8px;
+  align-items:center;
+}
+.useTimeText,
+.useTimeEditor{
+  min-height:40px;
+  width:100%;
+  padding:8px 10px;
+  border:1px solid #e2e8f0;
+  border-radius:8px;
+  background:#f8fafc;
+  color:#0f172a;
+  font-size:16px;
+  font-weight:900;
+}
+.useTimeText{
+  display:flex;
+  align-items:center;
+}
+.useTimeEditor{
+  background:#fff;
+}
+.makeupBtn{
+  padding:7px 10px;
+  font-size:13px;
+  font-weight:900;
+}
+.useSummarySentence{
+  padding:18px;
+  border:1px solid #bfdbfe;
+  border-radius:14px;
+  background:linear-gradient(90deg,rgba(37,99,235,.10),rgba(255,255,255,.72));
+  color:#0f172a;
+  font-size:clamp(17px,2.2vw,26px);
+  font-weight:950;
+  line-height:1.7;
+  overflow-wrap:anywhere;
+}
+.useSummarySentence .placeholder{
+  color:#94a3b8;
+}
+.useSummarySentence .strong{
+  color:#1d4ed8;
+}
+.summaryItemsOnly{
+  margin-top:12px;
+  padding:12px;
+  border:1px solid #e2e8f0;
+  border-radius:12px;
+  background:#fff;
+}
+.summaryItemsOnly label{
+  display:block;
+  margin-bottom:8px;
+  color:#64748b;
+  font-size:12px;
+  font-weight:950;
+}
+.useSummaryItemList{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.useSummaryItem{
+  padding:9px 10px;
+  border:1px solid #e2e8f0;
+  border-left:4px solid var(--primary);
+  border-radius:10px;
+  background:#fff;
+}
+.useSummaryItemMain{
+  color:#0f172a;
+  font-size:clamp(13px,1.7vw,16px);
+  font-weight:950;
+  line-height:1.45;
+}
+.useSummaryItemMeta{
+  margin-top:4px;
+  color:#64748b;
+  font-size:clamp(11px,1.3vw,13px);
+  font-weight:850;
+  line-height:1.45;
+}
+@media(max-width:720px){
+  .useTimeDisplayWrap{
+    grid-template-columns:1fr;
+  }
+  .makeupBtn{
+    width:100%;
+  }
+  .unitBtn{
+    padding-left:8px;
+    padding-right:8px;
+    font-size:clamp(12px,3.4vw,14px);
+  }
+}
+
+
+/* 2026-06-03：領用明細修正版 */
+.useTable{
+  min-width:1050px !important;
+}
+.useTable .col-action{ width:74px !important; text-align:center; }
+.useTable .col-master{ width:370px !important; }
+.useTable .col-lot{ width:270px !important; }
+.useTable .col-qty{ width:280px !important; }
+.useTable .col-note{ width:220px !important; }
+
+.masterSearchBox{
+  position:relative;
+}
+.masterPickCard{
+  display:none;
+  padding:10px;
+  border:1px solid #bfdbfe;
+  border-left:5px solid var(--primary);
+  border-radius:12px;
+  background:#eff6ff;
+}
+.masterPickName{
+  color:#0f172a;
+  font-size:16px;
+  font-weight:950;
+  line-height:1.45;
+}
+.masterPickMeta{
+  margin-top:5px;
+  color:#475569;
+  font-size:12px;
+  font-weight:850;
+  line-height:1.45;
+}
+.masterChangeBtn{
+  margin-top:8px;
+  padding:5px 9px;
+  font-size:12px;
+}
+.masterSearchHint{
+  margin-top:5px;
+  color:#64748b;
+  font-size:12px;
+  font-weight:850;
+  line-height:1.45;
+}
+.suggestItem{
+  grid-template-columns:minmax(0,1fr);
+}
+.suggestStatus{
+  justify-self:start;
+}
+.lotStockMeta{
+  margin-top:6px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:30px;
+  padding:4px 10px;
+  border-radius:999px;
+  background:var(--success-bg);
+  color:var(--success);
+  font-size:14px;
+  font-weight:950;
+}
+.qtyDualGrid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+}
+.qtyMiniCard{
+  padding:8px;
+  border:1px solid #bfdbfe;
+  border-left:5px solid var(--primary);
+  border-radius:10px;
+  background:#eff6ff;
+}
+.qtyMiniCard.unit{
+  border-color:#bbf7d0;
+  border-left-color:#16a34a;
+  background:#f0fdf4;
+}
+.qtyMiniCard label{
+  display:block;
+  margin-bottom:6px;
+  color:#1d4ed8;
+  font-size:12px;
+  font-weight:950;
+}
+.qtyMiniCard.unit label{
+  color:#15803d;
+}
+.qtyMiniCard input{
+  min-height:38px;
+  font-size:17px;
+  font-weight:950;
+}
+.qtyTotalHint{
+  margin-top:7px;
+  color:#64748b;
+  font-size:12px;
+  font-weight:850;
+  line-height:1.45;
+}
+.testBtn{
+  padding:7px 10px;
+  font-size:13px;
+  font-weight:900;
+}
+@media(max-width:720px){
+  .qtyDualGrid{
+    grid-template-columns:1fr;
+  }
+  .useTable{
+    min-width:940px !important;
+  }
+}
+
+</style>
+<script>
+let APP_ENTRY_URL = '<?= appEntryUrl ?>';
+let APP_PROD_URL = '<?= appProdUrl ?>';
+if (APP_ENTRY_URL.includes('<' + '?=') || APP_ENTRY_URL.trim() === '') APP_ENTRY_URL = 'https://script.google.com/macros/s/AKfycbwbz8pXfU68j2aFeF_AaDmmG6Vco3JsPSw-PGyYeLu0AF3vCfzaZJQFOjORnwSw8Xp4/exec';
+if (APP_PROD_URL.includes('<' + '?=') || APP_PROD_URL.trim() === '') APP_PROD_URL = 'https://script.google.com/macros/s/AKfycbwbz8pXfU68j2aFeF_AaDmmG6Vco3JsPSw-PGyYeLu0AF3vCfzaZJQFOjORnwSw8Xp4/exec';
+function goHome(){ window.top.location.href = window.location.hostname.includes('github.io') ? APP_PROD_URL : APP_ENTRY_URL; }
+</script>
+<script>
+const DEFAULT_STAFF_LIST = <?!= JSON.stringify(getDefaultStaffList()) ?>;
+</script>
+</head>
+<body>
+<main class="shell">
+<?!= include('共用設定檔/AppHeader', { subtitle: '敷料領用', onClick: 'goHome()', maxWidth: '1400px' }) ?>
+<div class="noticeWrap"><div id="noticeStack" class="noticeStack" aria-live="polite"></div></div>
+<div id="waitIndicator" class="waitIndicator" role="status" aria-live="polite"><span class="waitSpinner" aria-hidden="true"></span><span id="waitText">處理中...</span></div>
+<nav class="pageMap" aria-label="頁面地圖"><button class="pageMapLink" onclick="goHome()">首頁</button><span class="pageMapSep">/</span><span class="pageMapCurrent">敷料領用</span></nav>
+<section class="pageHero"><p class="eyebrow">DRESSING USE</p><h1>敷料領用</h1><p class="pageLead">建立病人敷料領用單，送出後由後端扣除批號庫存，並同步寫入庫存交易紀錄與敷料領用紀錄。</p></section>
+<div class="card">
+  <div class="dataToolbar">
+    <div id="loadStatus" class="statusText">正在準備讀取敷料主檔與批號庫存；讀取完成前暫停搜尋與掃描。</div>
+    <button type="button" class="ghost smallBtn" id="reloadDataBtn" onclick="initializeUsePage()">重新整理資料</button>
+  </div>
+  <section class="sectionCard"><div class="sectionHeader"><h2>領用單資訊</h2></div><div class="sectionBody"><div class="formGrid">
+    <div class="field">
+      <label>領用時間</label>
+      <input id="useTime" type="hidden">
+      <div class="useTimeDisplayWrap">
+        <div id="useTimeText" class="useTimeText">自動帶入現在時間</div>
+        <input id="useTimeEditor" class="useTimeEditor" type="datetime-local" step="60" onchange="applyUseTimeEditor()" style="display:none;">
+        <button id="makeupUseBtn" type="button" class="ghost makeupBtn" onclick="toggleMakeupUseTime()">補領用</button>
+      </div>
+    </div>
+    <div class="field"><label>領用病歷號</label><input id="patientId" placeholder="輸入病歷號"></div>
+    <div class="field"><label>領用人</label><input id="useOperator" list="staffOperatorList" placeholder="選擇或輸入領用人"><datalist id="staffOperatorList"></datalist></div>
+    <div class="field"><label>領用單位</label><input id="useUnit" type="hidden" value=""><input id="stockUnit" type="hidden" value=""><div class="unitGroup" role="group" aria-label="領用單位"><button type="button" class="unitBtn" data-use-unit="5A" onclick="setUseUnit('5A')">5A</button><button type="button" class="unitBtn" data-use-unit="傷口照護中心" onclick="setUseUnit('傷口照護中心')">傷口照護中心</button></div></div>
+    <div class="field"><label>領用主治醫師</label><input id="attendingDoctor" list="attendingDoctorList" placeholder="選擇或輸入主治醫師"><datalist id="attendingDoctorList"></datalist></div>
+    
+    <div class="field span2"><label>HIS計價狀態</label><input id="hisStatus" type="hidden" value="未計價"><div class="hisStatusGroup" role="group" aria-label="HIS計價狀態"><button type="button" class="segmentBtn active" data-his-status="未計價" onclick="setHisStatus('未計價')">未計價</button><button type="button" class="segmentBtn" data-his-status="已計價" onclick="setHisStatus('已計價')">已計價</button><button type="button" class="segmentBtn" data-his-status="不需計價" onclick="setHisStatus('不需計價')">不需計價</button></div></div>
+    
+  </div></div></section>
+  <section class="sectionCard"><div class="sectionHeader"><h2>領用敷料明細</h2><div class="toolbar" style="margin-bottom:0;"><button type="button" onclick="startUseScanner()" id="scanBtn" disabled>掃描敷料 📷</button><button type="button" class="ghost testBtn" onclick="useTestSingleCode()" id="testSingleBtn" disabled>測試單包碼</button><button type="button" class="ghost testBtn" onclick="useTestBoxCode()" id="testBoxBtn" disabled>測試盒裝碼</button><button type="button" onclick="addUseRow()" id="addRowBtn2" disabled>新增一列</button></div></div><div class="sectionBody"><div class="useRowsWrap"><table class="useTable"><thead><tr><th class="col-action">操作</th><th class="col-master">敷料主檔</th><th class="col-lot">批號與效期</th><th class="col-qty">領用數量</th><th class="col-note">領用備註</th></tr></thead><tbody id="useTbody"><tr><td colspan="5" style="text-align:center;color:#64748b;padding:20px;">尚未新增敷料列</td></tr></tbody></table></div></div></section>
+  <section class="sectionCard">
+    <div class="sectionHeader"><h2>送出摘要</h2></div>
+    <div class="sectionBody">
+      <div id="summarySentence" class="useSummarySentence">
+        請完成領用資料與敷料明細。
+      </div>
+
+      <div class="summaryItemsOnly">
+        <label>敷料明細</label>
+        <div id="summaryItemList" class="useSummaryItemList">
+          <div class="summaryItemMuted">尚未新增敷料</div>
+        </div>
+      </div>
+
+      <div class="actionBar">
+        <button type="button" onclick="validateUseForm()">檢查資料</button>
+        <button type="button" onclick="clearUseForm()" class="ghost">清空本頁</button>
+        <button type="button" class="primary" onclick="submitUseForm(false)" id="submitBtn" disabled>確認領用扣庫後繼續領用</button>
+      </div>
+    </div>
+  </section>
+</div>
+</main>
+<div id="dialogOverlay" class="dialogOverlay"><div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dialogTitle"><h3 id="dialogTitle">確認</h3><p id="dialogMessage"></p><div class="dialogActions"><button type="button" id="dialogCancelBtn">取消</button><button type="button" id="dialogOkBtn" class="primary">確定</button></div></div></div>
+<div id="scannerOverlay" class="scannerOverlay"><div class="scannerBox"><h3 class="scannerTitle">掃描敷料條碼</h3><p class="scannerHint">請將 QR code 或傳統條碼對準畫面。掃描成功後會帶入敷料，並依扣庫位置列出可領用批號。</p><div id="scannerReader"></div><div class="scannerActions"><button type="button" onclick="closeUseScanner()">關閉</button></div></div></div>
+<script>
+let dressingMasterCache = [], inventoryCache = [], dataReady = false, rowSeq = 0, scanner = null, activeScanRowId = '';
+const USE_TEST_CODES = {
+  single:'(01)04052199255484(11)250324(17)280301(10)500113156',
+  box:'(01)04052199255491(11)250324(17)280301(10)500113156'
+};
+function isAppsScriptMode(){ return typeof google !== 'undefined' && google.script && google.script.run; }
+function escapeHtml(v){ return String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+function normalizeText(v){ return String(v||'').trim(); }
+function normalizeDigits(v){ return String(v||'').replace(/[^0-9]/g,'').trim(); }
+function normalizeGtinForCompare(v){ const c=normalizeDigits(v); if(!c)return ''; const s=c.replace(/^0+/,''); return s||'0'; }
+function sameGtin(a,b){ const na=normalizeGtinForCompare(a), nb=normalizeGtinForCompare(b); return !!na && !!nb && na===nb; }
+function toNumber(v){ const n=Number(v); return Number.isFinite(n)?n:0; }
+function formatQty(v){ const n=toNumber(v); return Math.abs(n-Math.round(n))<.000001?String(Math.round(n)):String(Math.round(n*100)/100); }
+function nowTaipeiInput(){ const p=new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).formatToParts(new Date()).reduce((a,p)=>{a[p.type]=p.value;return a;},{}); return p.year+'-'+p.month+'-'+p.day+' '+p.hour+':'+p.minute+':'+p.second; }
+function toDatetimeLocalValue(value){
+  const text = String(value || '').trim();
+  const match = text.match(/^(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2})/);
+  if(!match){
+    return '';
+  }
+  return match[1] + '-' + match[2] + '-' + match[3] + 'T' + match[4] + ':' + match[5];
+}
+function fromDatetimeLocalValue(value){
+  const text = String(value || '').trim();
+  if(!text){
+    return '';
+  }
+  return text.replace('T', ' ') + ':00';
+}
+function syncUseTimeDisplay(){
+  const value = normalizeText(document.getElementById('useTime').value);
+  const textEl = document.getElementById('useTimeText');
+  const editor = document.getElementById('useTimeEditor');
+
+  if(textEl){
+    textEl.innerText = value || '自動帶入現在時間';
+  }
+
+  if(editor && editor.style.display !== 'none'){
+    editor.value = toDatetimeLocalValue(value);
+  }
+}
+function setUseTimeValue(value){
+  document.getElementById('useTime').value = value || '';
+  syncUseTimeDisplay();
+}
+function toggleMakeupUseTime(){
+  const textEl = document.getElementById('useTimeText');
+  const editor = document.getElementById('useTimeEditor');
+  const button = document.getElementById('makeupUseBtn');
+  const willEdit = editor.style.display === 'none';
+
+  if(willEdit){
+    editor.value = toDatetimeLocalValue(document.getElementById('useTime').value || nowTaipeiInput());
+    textEl.style.display = 'none';
+    editor.style.display = 'block';
+    button.innerText = '使用現在時間';
+    setTimeout(function(){ editor.focus(); }, 30);
+  } else {
+    textEl.style.display = 'flex';
+    editor.style.display = 'none';
+    button.innerText = '補領用';
+    setUseTimeValue(nowTaipeiInput());
+  }
+}
+function applyUseTimeEditor(){
+  const editor = document.getElementById('useTimeEditor');
+  if(!editor || !editor.value){
+    return;
+  }
+  document.getElementById('useTime').value = fromDatetimeLocalValue(editor.value);
+}
+function isMakeupUseTimeOpen(){
+  const editor = document.getElementById('useTimeEditor');
+  return !!(editor && editor.style.display !== 'none');
+}
+
+function setBusy(b,msg){ document.getElementById('waitIndicator').classList.toggle('active',!!b); document.getElementById('waitText').innerText=msg||'處理中...'; document.querySelectorAll('button,input,select,textarea').forEach(el=>{ if(el.closest('#dialogOverlay'))return; el.disabled=!!b; }); if(!b)renderControls(); }
+function showNotice(message,type,title){ const stack=document.getElementById('noticeStack'); stack.innerHTML=''; const card=document.createElement('div'); card.className='noticeCard '+(type||'success'); card.innerHTML='<button type="button" class="noticeClose">×</button>'+(title?'<div class="noticeTitle">'+escapeHtml(title)+'</div>':'')+(message?'<div class="noticeMessage">'+escapeHtml(message)+'</div>':''); stack.appendChild(card); card.querySelector('.noticeClose').onclick=()=>card.remove(); setTimeout(()=>{card.style.opacity='0';card.style.transition='all .2s ease';setTimeout(()=>card.remove(),220);},3600); }
+function openDialog(o){ return new Promise(resolve=>{ const overlay=document.getElementById('dialogOverlay'), title=document.getElementById('dialogTitle'), msg=document.getElementById('dialogMessage'), ok=document.getElementById('dialogOkBtn'), cancel=document.getElementById('dialogCancelBtn'); title.innerText=o.title||'確認'; msg.innerText=o.message||''; ok.innerText=o.okText||'確定'; cancel.innerText=o.cancelText||'取消'; cancel.style.display=o.cancel===false?'none':'inline-block'; overlay.style.display='flex'; function cleanup(v){ overlay.style.display='none'; ok.onclick=null; cancel.onclick=null; resolve(v); } ok.onclick=()=>cleanup(true); cancel.onclick=()=>cleanup(false); }); }
+function setHisStatus(s){ document.getElementById('hisStatus').value=s; document.querySelectorAll('[data-his-status]').forEach(btn=>btn.classList.toggle('active',btn.dataset.hisStatus===s)); updateSummary(); }
+function getStaffListSafe(){
+  return Array.isArray(DEFAULT_STAFF_LIST) ? DEFAULT_STAFF_LIST : [];
+}
+function setupStaffDatalists(){
+  const staff = getStaffListSafe();
+  const operatorList = document.getElementById('staffOperatorList');
+  const attendingList = document.getElementById('attendingDoctorList');
+
+  if(operatorList){
+    operatorList.innerHTML = staff
+      .filter(function(person){ return String(person && person.role || '').trim() !== '秘書'; })
+      .map(function(person){
+        const label = [person.name || '', person.role || '', person.emp || ''].filter(Boolean).join('｜');
+        return '<option value="' + escapeHtml(person.name || '') + '" label="' + escapeHtml(label) + '"></option>';
+      })
+      .join('');
+  }
+
+  if(attendingList){
+    attendingList.innerHTML = staff
+      .filter(function(person){
+        const role = String(person && person.role || '').trim();
+        return role === 'VS' || role === 'F';
+      })
+      .map(function(person){
+        const label = [person.name || '', person.role || '', person.emp || ''].filter(Boolean).join('｜');
+        return '<option value="' + escapeHtml(person.name || '') + '" label="' + escapeHtml(label) + '"></option>';
+      })
+      .join('');
+  }
+}
+function setUseUnit(unit){
+  document.getElementById('useUnit').value = unit;
+  document.getElementById('stockUnit').value = unit;
+  document.querySelectorAll('[data-use-unit]').forEach(function(btn){
+    btn.classList.toggle('active', btn.dataset.useUnit === unit);
+  });
+  refreshAllRowLotOptions();
+  updateSummary();
+}
+function renderControls(){
+  document.getElementById('addRowBtn2').disabled=!dataReady;
+  document.getElementById('scanBtn').disabled=!dataReady;
+  document.getElementById('testSingleBtn').disabled=!dataReady;
+  document.getElementById('testBoxBtn').disabled=!dataReady;
+  document.getElementById('submitBtn').disabled=!dataReady || getValidRows().length===0;
+}
+function callServer(fn,args){ args=args||[]; return new Promise((resolve,reject)=>{ if(!isAppsScriptMode()){ reject(new Error('目前不是 Apps Script 執行環境，無法呼叫後端：'+fn)); return; } const runner=google.script.run.withSuccessHandler(resolve).withFailureHandler(e=>reject(e&&e.message?new Error(e.message):e)); if(typeof runner[fn] !== 'function'){ reject(new Error('後端函式不存在：'+fn)); return; } runner[fn].apply(runner,args); }); }
+async function listBarcode(){ return await callServer('listBarcode'); }
+async function listDressingInventory(){ return await callServer('listDressingInventory'); }
+async function submitDressingUse(payload){ return await callServer('submitDressingUse',[payload]); }
+function parseGs1Barcode(raw){ const text=String(raw||'').trim(), result={raw:text,gtin:'',lot:'',exp:'',mfg:''}; if(!text)return result; const pairs=text.replace(/\u001d/g,'').match(/\((\d{2})\)([^()]*)/g); if(pairs){ pairs.forEach(part=>{ const m=part.match(/^\((\d{2})\)(.*)$/); if(!m)return; if(m[1]==='01')result.gtin=normalizeDigits(m[2]).slice(0,14); if(m[1]==='10')result.lot=m[2].trim(); if(m[1]==='17')result.exp=parseGs1Date(m[2]); if(m[1]==='11')result.mfg=parseGs1Date(m[2]); }); return result; } const d=normalizeDigits(text); result.gtin=d.length>=14?d.slice(0,14):d; return result; }
+function parseGs1Date(value){ const d=normalizeDigits(value).slice(0,6); if(d.length!==6)return ''; const yy=Number(d.slice(0,2)), yyyy=yy>=70?1900+yy:2000+yy; return yyyy+'-'+d.slice(2,4)+'-'+d.slice(4,6); }
+async function initializeUsePage(){ setBusy(true,'正在讀取敷料主檔與批號庫存...'); dataReady=false; document.getElementById('loadStatus').innerText='讀取中，搜尋與掃描暫停開放...'; try{ const b=await listBarcode(); if(!b||!b.ok)throw new Error((b&&b.message)||'敷料主檔讀取失敗'); const inv=await listDressingInventory(); if(!inv||!inv.ok)throw new Error((inv&&inv.message)||'批號庫存讀取失敗'); dressingMasterCache=b.data||[]; inventoryCache=inv.data||[]; dataReady=true; document.getElementById('loadStatus').innerText='已讀取敷料主檔 '+dressingMasterCache.length+' 筆；批號庫存 '+inventoryCache.length+' 筆。可開始建立領用單。'; if(document.getElementById('useTbody').querySelector('td[colspan]'))addUseRow(); showNotice('已完成讀取，可以開始領用','success','讀取完成'); }catch(e){ dataReady=false; document.getElementById('loadStatus').innerText='讀取失敗：'+(e.message||String(e)); showNotice(e.message||String(e),'error','讀取失敗'); }finally{ setBusy(false); } }
+function getDressingDisplayName(item){ return [item.dressingName||'',item.size||''].filter(Boolean).join(' '); }
+function getMasterByHospitalCode(code){ code=normalizeText(code); return dressingMasterCache.find(item=>normalizeText(item.hospitalCode)===code)||null; }
+function getUnitsPerBoxFromMaster(item){
+  const candidates = [
+    item.unitsPerBox,
+    item.unitPerBox,
+    item.boxUnit,
+    item.boxUnits,
+    item.boxQuantity,
+    item.packageUnits,
+    item.packageQuantity,
+    item.piecesPerBox,
+    item.countPerBox,
+    item['一盒數量'],
+    item['盒裝數量'],
+    item['包裝內數量'],
+    item['一盒幾片']
+  ];
+  for(const value of candidates){
+    const n = Number(value);
+    if(Number.isFinite(n) && n > 0) return n;
+  }
+  return 0;
+}
+function getAvailableLotTotalForMaster(hospitalCode){
+  const stockUnit = normalizeText(document.getElementById('stockUnit').value);
+  if(!stockUnit || !hospitalCode) return 0;
+  return getAvailableLots(hospitalCode, stockUnit).reduce(function(sum, lot){
+    return sum + toNumber(lot.quantity);
+  }, 0);
+}
+function findMastersByQuery(query){
+  const raw=normalizeText(query), q=raw.toLowerCase(), digits=normalizeDigits(raw);
+  const stockUnit=normalizeText(document.getElementById('stockUnit').value);
+  if(!raw || !stockUnit) return [];
+
+  return dressingMasterCache
+    .filter(function(item){
+      const hospitalCode=normalizeText(item.hospitalCode);
+      const name=normalizeText(item.dressingName);
+      const size=normalizeText(item.size);
+      const single=normalizeDigits(item.singleGtin||item.gtin||'');
+      const box=normalizeDigits(item.boxGtin||'');
+      const hay=[hospitalCode,name,size,single,box].join(' ').toLowerCase();
+      const matched=hay.indexOf(q)>=0 || (!!digits && (hospitalCode.indexOf(digits)>=0 || sameGtin(single,digits) || sameGtin(box,digits)));
+      if(!matched) return false;
+      return getAvailableLotTotalForMaster(hospitalCode) > 0;
+    })
+    .slice(0,20);
+}
+function findMasterByCodeOrGtin(raw){ const parsed=parseGs1Barcode(raw), gtin=parsed.gtin||normalizeDigits(raw), text=normalizeText(raw); if(gtin){ const f=dressingMasterCache.find(item=>sameGtin(item.singleGtin||item.gtin||'',gtin)||sameGtin(item.boxGtin||'',gtin)); if(f)return {item:f,parsed}; } return {item:dressingMasterCache.find(item=>normalizeText(item.hospitalCode)===text)||null,parsed}; }
+function getAvailableLots(code,unit){ code=normalizeText(code); unit=normalizeText(unit); if(!code||!unit)return []; return inventoryCache.filter(item=>normalizeText(item.hospitalCode)===code && normalizeText(item.stockUnit)===unit && toNumber(item.quantity)>0).sort((a,b)=>{ const ea=normalizeText(a.exp)||'9999-99-99', eb=normalizeText(b.exp)||'9999-99-99'; if(ea!==eb)return ea.localeCompare(eb); return normalizeText(a.lot).localeCompare(normalizeText(b.lot)); }); }
+function addUseRow(seed){
+  if(!dataReady){
+    showNotice('請先讀取敷料主檔與批號庫存','warning','尚未讀取');
+    return;
+  }
+  const tbody=document.getElementById('useTbody');
+  if(tbody.querySelector('td[colspan]'))tbody.innerHTML='';
+  rowSeq++;
+  const rowId='use-row-'+rowSeq;
+  const tr=document.createElement('tr');
+  tr.dataset.rowId=rowId;
+  tr.dataset.hospitalCode='';
+  tr.dataset.singleGtin='';
+  tr.dataset.dressingName='';
+  tr.dataset.size='';
+  tr.dataset.lot='';
+  tr.dataset.exp='';
+  tr.dataset.currentQty='0';
+  tr.dataset.unitsPerBox='0';
+
+  tr.innerHTML=`
+    <td class="col-action"><button type="button" class="danger" onclick="removeUseRow('${rowId}')">刪除</button></td>
+    <td class="col-master">
+      <div class="searchBox masterSearchBox">
+        <input class="rowSearchInput" placeholder="搜尋有庫存敷料，例如 Hydroclean 5.5*5.5" oninput="handleRowSearchInput('${rowId}')" onkeydown="handleRowSearchKeydown(event,'${rowId}')">
+        <div class="suggestBox"></div>
+      </div>
+      <div class="masterPickCard">
+        <div class="masterPickName">尚未選擇敷料</div>
+        <div class="masterPickMeta">院內碼：—｜單包GTIN：—</div>
+        <button type="button" class="ghost masterChangeBtn" onclick="resetRowMaster('${rowId}')">重新選擇</button>
+      </div>
+      <div class="masterSearchHint">只能搜尋目前領用單位有庫存的敷料。</div>
+    </td>
+    <td class="col-lot">
+      <select class="rowLotSelect" onchange="applyLotSelection('${rowId}')">
+        <option value="">請先選擇敷料</option>
+      </select>
+      <div class="rowSub lotMeta">掃描會自動帶入批號；手動輸入請選批次。</div>
+      <div class="lotStockMeta">—</div>
+    </td>
+    <td class="col-qty">
+      <div class="qtyDualGrid">
+        <div class="qtyMiniCard box">
+          <label>領用盒數</label>
+          <input class="rowUseBoxQty" type="number" inputmode="decimal" min="0" step="0.01" placeholder="盒數" oninput="handleQtyInput('${rowId}')">
+        </div>
+        <div class="qtyMiniCard unit">
+          <label>領用單位數</label>
+          <input class="rowUseUnitQty" type="number" inputmode="decimal" min="0" step="0.01" placeholder="單位數" oninput="handleQtyInput('${rowId}')">
+        </div>
+      </div>
+      <div class="qtyTotalHint">請先選擇敷料與批號</div>
+    </td>
+    <td class="col-note"><textarea class="rowNote" placeholder="領用備註，可空白" oninput="updateSummary()"></textarea></td>
+  `;
+  tbody.appendChild(tr);
+  updateQuantityPlaceholders(rowId);
+  updateSummary();
+
+  if(seed&&seed.raw){
+    tr.querySelector('.rowSearchInput').value=seed.raw;
+    selectByRawCode(rowId,seed.raw);
+  } else {
+    setTimeout(()=>tr.querySelector('.rowSearchInput').focus(),30);
+  }
+}
+function removeUseRow(rowId){ const tr=getRow(rowId); if(tr)tr.remove(); const tbody=document.getElementById('useTbody'); if(!tbody.querySelector('tr'))tbody.innerHTML='<tr><td colspan="5" style="text-align:center;color:#64748b;padding:20px;">尚未新增敷料列</td></tr>'; updateSummary(); }
+function getRow(rowId){ return document.querySelector('tr[data-row-id="'+rowId+'"]'); }
+function handleRowSearchKeydown(e,rowId){ if(e.key==='Enter'){ e.preventDefault(); const tr=getRow(rowId); selectByRawCode(rowId,tr?tr.querySelector('.rowSearchInput').value:''); } }
+function handleRowSearchInput(rowId){
+  const tr=getRow(rowId);
+  if(!tr)return;
+  const input=tr.querySelector('.rowSearchInput');
+  const suggest=tr.querySelector('.suggestBox');
+  const value=normalizeText(input.value);
+  const stockUnit=normalizeText(document.getElementById('stockUnit').value);
+
+  if(!stockUnit){
+    suggest.style.display='block';
+    suggest.innerHTML='<div class="suggestMeta">請先選擇領用單位，才能搜尋目前有庫存的敷料。</div>';
+    return;
+  }
+
+  if(!value){
+    suggest.style.display='none';
+    suggest.innerHTML='';
+    return;
+  }
+
+  const matches=findMastersByQuery(value);
+  if(matches.length===0){
+    suggest.style.display='block';
+    suggest.innerHTML='<div class="suggestMeta">目前領用單位沒有符合且可領用的庫存。</div>';
+    return;
+  }
+
+  suggest.style.display='block';
+  suggest.innerHTML='<div class="suggestMeta">只顯示目前領用單位有庫存的敷料</div>'+matches.map(item=>{
+    const total=formatQty(getAvailableLotTotalForMaster(item.hospitalCode));
+    const label=getDressingDisplayName(item)||item.hospitalCode||'未命名敷料';
+    return `<button type="button" class="suggestItem" onclick="selectMasterForRow('${rowId}','${escapeHtml(item.hospitalCode||'')}')"><span class="suggestMain"><span class="suggestName">${escapeHtml(label)}</span></span><span class="suggestStatus">庫存數量 ${escapeHtml(total)}</span></button>`;
+  }).join('');
+}
+function selectByRawCode(rowId,raw){ const r=findMasterByCodeOrGtin(raw); if(!r.item){ showNotice('找不到敷料主檔，請先到後端主檔新增','warning','查無主檔'); return; } selectMasterForRow(rowId,r.item.hospitalCode,r.parsed); }
+function selectMasterForRow(rowId,hospitalCode,parsed){
+  const tr=getRow(rowId), item=getMasterByHospitalCode(hospitalCode);
+  if(!tr||!item)return;
+  parsed=parsed||{};
+  const unitsPerBox=getUnitsPerBoxFromMaster(item);
+
+  tr.dataset.hospitalCode=item.hospitalCode||'';
+  tr.dataset.singleGtin=item.singleGtin||item.gtin||'';
+  tr.dataset.dressingName=item.dressingName||'';
+  tr.dataset.size=item.size||'';
+  tr.dataset.lot=parsed.lot||'';
+  tr.dataset.exp=parsed.exp||'';
+  tr.dataset.unitsPerBox=String(unitsPerBox||0);
+
+  const name=getDressingDisplayName(item)||'未命名敷料';
+  tr.querySelector('.masterSearchBox').style.display='none';
+  const card=tr.querySelector('.masterPickCard');
+  card.style.display='block';
+  card.querySelector('.masterPickName').innerText=name;
+  card.querySelector('.masterPickMeta').innerHTML=
+    '院內碼：'+escapeHtml(item.hospitalCode||'—')+
+    '｜單包GTIN：'+escapeHtml(item.singleGtin||item.gtin||'—')+
+    (unitsPerBox ? '｜一盒 '+escapeHtml(formatQty(unitsPerBox))+' 單位' : '｜未設定盒數');
+
+  const suggest=tr.querySelector('.suggestBox');
+  suggest.style.display='none';
+  suggest.innerHTML='';
+
+  renderLotOptionsForRow(rowId,parsed);
+  updateQuantityPlaceholders(rowId);
+  updateSummary();
+  setTimeout(()=>{const s=tr.querySelector('.rowLotSelect'); if(s&&!s.disabled)s.focus();},30);
+}
+function resetRowMaster(rowId){
+  const tr=getRow(rowId);
+  if(!tr)return;
+  tr.dataset.hospitalCode='';
+  tr.dataset.singleGtin='';
+  tr.dataset.dressingName='';
+  tr.dataset.size='';
+  tr.dataset.lot='';
+  tr.dataset.exp='';
+  tr.dataset.currentQty='0';
+  tr.dataset.unitsPerBox='0';
+
+  tr.querySelector('.masterSearchBox').style.display='block';
+  tr.querySelector('.masterPickCard').style.display='none';
+  tr.querySelector('.rowSearchInput').value='';
+  tr.querySelector('.rowLotSelect').innerHTML='<option value="">請先選擇敷料</option>';
+  tr.querySelector('.rowLotSelect').disabled=true;
+  tr.querySelector('.lotMeta').innerText='掃描會自動帶入批號；手動輸入請選批次。';
+  tr.querySelector('.lotStockMeta').innerText='—';
+  tr.querySelector('.rowUseBoxQty').value='';
+  tr.querySelector('.rowUseUnitQty').value='';
+  updateQuantityPlaceholders(rowId);
+  updateSummary();
+  setTimeout(()=>tr.querySelector('.rowSearchInput').focus(),30);
+}
+function renderLotOptionsForRow(rowId,parsed){ const tr=getRow(rowId); if(!tr)return; parsed=parsed||{}; const lotSelect=tr.querySelector('.rowLotSelect'), stockUnit=normalizeText(document.getElementById('stockUnit').value), code=normalizeText(tr.dataset.hospitalCode); if(!code){ lotSelect.innerHTML='<option value="">請先選擇敷料</option>'; lotSelect.disabled=true; applyLotSelection(rowId); return; } if(!stockUnit){ lotSelect.innerHTML='<option value="">請先選擇領用單位</option>'; lotSelect.disabled=true; applyLotSelection(rowId); return; } const lots=getAvailableLots(code,stockUnit); if(lots.length===0){ lotSelect.innerHTML='<option value="">此敷料在本領用單位沒有可領用庫存</option>'; lotSelect.disabled=true; applyLotSelection(rowId); return; } let preferred=0; if(parsed&&(parsed.lot||parsed.exp)){ const idx=lots.findIndex(l=>{ const lotMatch=!parsed.lot||normalizeText(l.lot)===normalizeText(parsed.lot); const expMatch=!parsed.exp||normalizeText(l.exp)===normalizeText(parsed.exp); return lotMatch&&expMatch; }); if(idx>=0)preferred=idx; } lotSelect.disabled=false; lotSelect.innerHTML=lots.map((lot,i)=>{ const label=['批號 '+(lot.lot||'未填'),lot.exp?'效期 '+lot.exp:'效期未填','可領 '+formatQty(lot.quantity)].join('｜'); const value=encodeURIComponent(JSON.stringify({lot:lot.lot||'',exp:lot.exp||'',quantity:toNumber(lot.quantity)})); return '<option value="'+value+'"'+(i===preferred?' selected':'')+'>'+escapeHtml(label)+'</option>'; }).join(''); applyLotSelection(rowId); }
+function applyLotSelection(rowId){
+  const tr=getRow(rowId);
+  if(!tr)return;
+  const lotSelect=tr.querySelector('.rowLotSelect');
+  const lotMeta=tr.querySelector('.lotMeta');
+  const lotStockMeta=tr.querySelector('.lotStockMeta');
+
+  let data={lot:'',exp:'',quantity:0};
+  if(lotSelect&&lotSelect.value){
+    try{data=JSON.parse(decodeURIComponent(lotSelect.value));}catch(e){}
+  }
+
+  tr.dataset.lot=data.lot||'';
+  tr.dataset.exp=data.exp||'';
+  tr.dataset.currentQty=String(toNumber(data.quantity));
+
+  const empty=lotSelect.disabled||!lotSelect.value;
+  lotMeta.innerText=empty
+    ? '尚未選擇可領用批號'
+    : '批號：'+(data.lot||'未填')+'｜效期：'+(data.exp||'未填');
+  lotStockMeta.innerText=empty ? '—' : '目前可領 '+formatQty(data.quantity)+' 單位';
+
+  handleQtyInput(rowId);
+}
+function refreshAllRowLotOptions(){ document.querySelectorAll('#useTbody tr[data-row-id]').forEach(tr=>renderLotOptionsForRow(tr.dataset.rowId)); updateSummary(); }
+function updateQuantityPlaceholders(rowId){
+  const tr=getRow(rowId);
+  if(!tr)return;
+  const unitsPerBox=toNumber(tr.dataset.unitsPerBox);
+  const boxInput=tr.querySelector('.rowUseBoxQty');
+  const unitInput=tr.querySelector('.rowUseUnitQty');
+
+  if(unitsPerBox>0){
+    boxInput.disabled=false;
+    boxInput.placeholder='一盒 '+formatQty(unitsPerBox)+' 單位';
+  } else {
+    boxInput.disabled=true;
+    boxInput.placeholder='未設定盒數';
+    boxInput.value='';
+  }
+  unitInput.placeholder='領用單位數';
+}
+function getRowUseQuantity(tr){
+  const unitsPerBox=toNumber(tr.dataset.unitsPerBox);
+  const boxQty=toNumber(tr.querySelector('.rowUseBoxQty').value);
+  const unitQty=toNumber(tr.querySelector('.rowUseUnitQty').value);
+  return boxQty*unitsPerBox+unitQty;
+}
+function getRowQuantityRaw(tr){
+  return normalizeText(tr.querySelector('.rowUseBoxQty').value) || normalizeText(tr.querySelector('.rowUseUnitQty').value);
+}
+function handleQtyInput(rowId){
+  const tr=getRow(rowId);
+  if(!tr)return;
+  updateQuantityPlaceholders(rowId);
+  const hint=tr.querySelector('.qtyTotalHint');
+  const qty=getRowUseQuantity(tr);
+  const current=toNumber(tr.dataset.currentQty);
+
+  if(!getRowQuantityRaw(tr)){
+    hint.innerText='可同時輸入盒數與單位數。';
+    hint.style.color='#64748b';
+  } else if(qty<=0){
+    hint.innerText='領用數量必須大於 0';
+    hint.style.color='#991b1b';
+  } else if(qty>current){
+    hint.innerText='庫存不足，最多可領 '+formatQty(current)+' 單位';
+    hint.style.color='#991b1b';
+  } else {
+    hint.innerText='本列合計 '+formatQty(qty)+' 單位，送出後剩餘 '+formatQty(current-qty)+' 單位';
+    hint.style.color='#15803d';
+  }
+  updateSummary();
+}
+function getUseRows(){
+  return Array.from(document.querySelectorAll('#useTbody tr[data-row-id]')).map((tr,index)=>({
+    rowId:tr.dataset.rowId,
+    index,
+    hospitalCode:tr.dataset.hospitalCode||'',
+    singleGtin:tr.dataset.singleGtin||'',
+    dressingName:tr.dataset.dressingName||'',
+    size:tr.dataset.size||'',
+    lot:tr.dataset.lot||'',
+    exp:tr.dataset.exp||'',
+    currentQty:toNumber(tr.dataset.currentQty),
+    unitsPerBox:toNumber(tr.dataset.unitsPerBox),
+    boxQuantity:toNumber(tr.querySelector('.rowUseBoxQty').value),
+    unitQuantity:toNumber(tr.querySelector('.rowUseUnitQty').value),
+    quantity:getRowUseQuantity(tr),
+    quantityRaw:getRowQuantityRaw(tr),
+    note:normalizeText(tr.querySelector('.rowNote').value)
+  }));
+}
+function getValidRows(){ return getUseRows().filter(row=>row.hospitalCode && row.lot!=='' && row.quantity>0); }
+function getHisStatusPhrase(status){
+  if(status === '已計價') return '已經HIS計價';
+  if(status === '不需計價') return '不需要HIS計價';
+  return '還沒有HIS計價';
+}
+function getSummaryItemName(row){
+  return [row.dressingName || '', row.size || ''].filter(Boolean).join(' ') || row.hospitalCode || '未命名敷料';
+}
+function buildPrimaryItemSummary(validRows){
+  if(!validRows.length){
+    return '_敷料名稱+敷料規格+數量_';
+  }
+
+  if(validRows.length === 1){
+    const row = validRows[0];
+    return getSummaryItemName(row) + ' ' + formatQty(row.quantity) + '單位';
+  }
+
+  const totalQty = validRows.reduce(function(sum, row){ return sum + row.quantity; }, 0);
+  return validRows.length + '種敷料，共 ' + formatQty(totalQty) + '單位';
+}
+function buildSummarySentence(validRows, patientId, operator, useUnit, attending, his, note){
+  const itemText = buildPrimaryItemSummary(validRows);
+  const operatorText = operator || '_領用人_';
+  const useUnitText = useUnit || '_扣庫單位_';
+  const attendingText = attending || '_主治醫師_';
+  const patientText = patientId || '_病歷號_';
+  const noteText = note ? '。備註：' + note : '';
+
+  const sentence =
+    operatorText +
+    '從' +
+    useUnitText +
+    '領用' +
+    itemText +
+    '給' +
+    attendingText +
+    '的' +
+    patientText +
+    '，' +
+    getHisStatusPhrase(his) +
+    noteText +
+    '。';
+
+  const isReady = operator && useUnit && patientId && attending && validRows.length > 0;
+  if(!isReady){
+    return '<span class="placeholder">' + escapeHtml(sentence) + '</span>';
+  }
+
+  return escapeHtml(sentence)
+    .replace(escapeHtml(operatorText), '<span class="strong">' + escapeHtml(operatorText) + '</span>')
+    .replace(escapeHtml(useUnitText), '<span class="strong">' + escapeHtml(useUnitText) + '</span>')
+    .replace(escapeHtml(itemText), '<span class="strong">' + escapeHtml(itemText) + '</span>')
+    .replace(escapeHtml(attendingText), '<span class="strong">' + escapeHtml(attendingText) + '</span>')
+    .replace(escapeHtml(patientText), '<span class="strong">' + escapeHtml(patientText) + '</span>');
+}
+function updateSummary(){
+  const valid = getValidRows();
+  const his = document.getElementById('hisStatus').value;
+  const patientId = normalizeText(document.getElementById('patientId').value);
+  const operator = normalizeText(document.getElementById('useOperator').value);
+  const attending = normalizeText(document.getElementById('attendingDoctor').value);
+  const useUnit = normalizeText(document.getElementById('useUnit').value);
+  const note = valid.map(r => r.note).filter(Boolean).join('；');
+  const itemList = document.getElementById('summaryItemList');
+
+  document.getElementById('summarySentence').innerHTML =
+    buildSummarySentence(valid, patientId, operator, useUnit, attending, his, note);
+
+  if(itemList){
+    if(valid.length === 0){
+      itemList.innerHTML = '<div class="summaryItemMuted">尚未新增敷料</div>';
+    } else {
+      itemList.innerHTML = valid.map(function(row, index){
+        const name = getSummaryItemName(row);
+        const stockAfter = formatQty(row.currentQty - row.quantity);
+        return '<div class="useSummaryItem">' +
+          '<div class="useSummaryItemMain">' + (index + 1) + '. ' + escapeHtml(name) +
+          ' 領用 ' + escapeHtml(formatQty(row.quantity)) + '單位' + '</div>' +
+          '<div class="useSummaryItemMeta">領用單位剩餘 ' + escapeHtml(stockAfter) + '單位' +
+          '｜批號 ' + escapeHtml(row.lot || '未填') +
+          '｜效期 ' + escapeHtml(row.exp || '未填') +
+          '</div>' +
+          '</div>';
+      }).join('');
+    }
+  }
+
+  renderControls();
+}
+function getUseFormErrors(){ const errors=[], rows=getUseRows(); if(!normalizeText(document.getElementById('patientId').value))errors.push('請輸入領用病歷號。'); if(!normalizeText(document.getElementById('useOperator').value))errors.push('請輸入領用人。'); if(!normalizeText(document.getElementById('useUnit').value))errors.push('請輸入領用單位。'); if(!normalizeText(document.getElementById('stockUnit').value))errors.push('請選擇領用單位。'); if(!normalizeText(document.getElementById('attendingDoctor').value))errors.push('請輸入領用主治醫師。'); if(rows.length===0)errors.push('請至少新增一筆敷料列。'); rows.forEach((row,i)=>{ const label='第 '+(i+1)+' 列'; if(!row.hospitalCode)errors.push(label+'：尚未選擇敷料。'); if(!row.lot&&!row.exp)errors.push(label+'：尚未選擇可領用批號。'); if(!row.quantityRaw)errors.push(label+'：請輸入領用數量。'); if(row.quantity<=0)errors.push(label+'：領用數量必須大於 0。'); if(row.quantity>row.currentQty)errors.push(label+'：庫存不足，目前最多可領 '+formatQty(row.currentQty)+'。'); }); return errors; }
+function validateUseForm(){ const errors=getUseFormErrors(); if(errors.length){ openDialog({title:'資料尚未完成',message:errors.join('\n'),okText:'知道了',cancel:false}); return false; } showNotice('資料檢查通過，可以送出','success','檢查通過'); return true; }
+function buildUsePayload(force){
+  return {
+    forceSubmit:!!force,
+    useTime:normalizeText(document.getElementById('useTime').value),
+    patientId:normalizeText(document.getElementById('patientId').value),
+    hisStatus:normalizeText(document.getElementById('hisStatus').value),
+    attendingDoctor:normalizeText(document.getElementById('attendingDoctor').value),
+    operator:normalizeText(document.getElementById('useOperator').value),
+    useUnit:normalizeText(document.getElementById('useUnit').value),
+    stockUnit:normalizeText(document.getElementById('stockUnit').value),
+    note:'',
+    rows:getUseRows().filter(r=>r.hospitalCode).map(r=>({
+      hospitalCode:r.hospitalCode,
+      singleGtin:r.singleGtin,
+      dressingName:r.dressingName,
+      size:r.size,
+      lot:r.lot,
+      exp:r.exp,
+      currentQty:r.currentQty,
+      unitsPerBox:r.unitsPerBox,
+      boxQuantity:r.boxQuantity,
+      unitQuantity:r.unitQuantity,
+      quantity:r.quantity,
+      note:r.note
+    }))
+  };
+}
+async function submitUseForm(force){ if(!validateUseForm())return; if(!force){ const ok=await openDialog({title:'確認領用並扣庫',message:'送出後會扣除批號庫存，並寫入庫存交易紀錄與敷料領用紀錄。\n\n確定要送出嗎？',okText:'確認送出',cancelText:'回去檢查'}); if(!ok)return; } setBusy(true,'正在送出領用紀錄...'); try{ const res=await submitDressingUse(buildUsePayload(force)); if(res&&res.duplicateWarning&&!force){ setBusy(false); const ok=await openDialog({title:'可能重複領用',message:(res.message||'同一病歷號近期已有相同敷料領用紀錄。')+'\n\n是否仍要建立新的領用紀錄？',okText:'仍要送出',cancelText:'取消，回去檢查'}); if(ok)await submitUseForm(true); return; } if(!res||!res.ok)throw new Error((res&&res.message)||'領用送出失敗'); showNotice('領用成功：'+(res.useId||'已送出'),'success','送出完成'); await refreshInventoryAfterSubmit(); clearUseAfterSubmitAndContinue(); }catch(e){ showNotice(e.message||String(e),'error','送出失敗'); }finally{ setBusy(false); } }
+async function refreshInventoryAfterSubmit(){ try{ const inv=await listDressingInventory(); if(inv&&inv.ok)inventoryCache=inv.data||[]; }catch(e){ console.warn('refresh inventory failed',e); } }
+function clearUseRowsOnly(){ document.getElementById('useTbody').innerHTML='<tr><td colspan="5" style="text-align:center;color:#64748b;padding:20px;">尚未新增敷料列</td></tr>'; rowSeq=0; updateSummary(); }
+function clearUseAfterSubmitAndContinue(){
+  document.getElementById('patientId').value = '';
+  
+  clearUseRowsOnly();
+  if(dataReady){
+    addUseRow();
+  }
+  updateSummary();
+  setTimeout(function(){
+    const patientInput = document.getElementById('patientId');
+    if(patientInput) patientInput.focus();
+  }, 80);
+}
+function clearUseForm(){
+  ['patientId','useOperator','useUnit','stockUnit','attendingDoctor'].forEach(function(id){
+    const el = document.getElementById(id);
+    if(el) el.value = '';
+  });
+  document.querySelectorAll('[data-use-unit]').forEach(function(btn){ btn.classList.remove('active'); });
+  const useTimeText = document.getElementById('useTimeText');
+  const useTimeEditor = document.getElementById('useTimeEditor');
+  const makeupBtn = document.getElementById('makeupUseBtn');
+  if(useTimeText) useTimeText.style.display = 'flex';
+  if(useTimeEditor) useTimeEditor.style.display = 'none';
+  if(makeupBtn) makeupBtn.innerText = '補領用';
+  setUseTimeValue(nowTaipeiInput());
+  setHisStatus('未計價');
+  clearUseRowsOnly();
+  updateSummary();
+  setTimeout(function(){
+    const patientInput = document.getElementById('patientId');
+    if(patientInput) patientInput.focus();
+  }, 30);
+}
+function useTestSingleCode(){
+  addUseRow({raw:USE_TEST_CODES.single});
+}
+function useTestBoxCode(){
+  addUseRow({raw:USE_TEST_CODES.box});
+}
+function startUseScanner(){ if(!dataReady){ showNotice('請先讀取資料','warning','尚未讀取'); return; } if(getUseRows().length===0)addUseRow(); const last=Array.from(document.querySelectorAll('#useTbody tr[data-row-id]')).pop(); activeScanRowId=last?last.dataset.rowId:''; document.getElementById('scannerOverlay').style.display='block'; if(scanner){try{scanner.clear();}catch(e){} scanner=null;} scanner=new Html5Qrcode('scannerReader'); scanner.start({facingMode:'environment'},{fps:10,qrbox:{width:260,height:260}},decoded=>handleScannedCode(decoded),()=>{}).catch(e=>{ showNotice(e.message||String(e),'error','相機開啟失敗'); closeUseScanner(); }); }
+async function closeUseScanner(){ document.getElementById('scannerOverlay').style.display='none'; if(scanner){ try{await scanner.stop();}catch(e){} try{await scanner.clear();}catch(e){} scanner=null; } }
+async function handleScannedCode(decoded){ await closeUseScanner(); let rowId=activeScanRowId, tr=getRow(rowId); if(!tr||tr.dataset.hospitalCode){ addUseRow({raw:decoded}); return; } tr.querySelector('.rowSearchInput').value=decoded; selectByRawCode(rowId,decoded); }
+document.addEventListener('DOMContentLoaded', function(){
+  setupStaffDatalists();
+
+  const useTimeInput = document.getElementById('useTime');
+  if(useTimeInput){
+    setUseTimeValue(nowTaipeiInput());
+  }
+
+  ['patientId','useOperator','attendingDoctor'].forEach(function(id){
+    const el = document.getElementById(id);
+    if(el){
+      el.addEventListener('input', updateSummary);
+    }
+  });
+
+  setInterval(function(){
+    const el = document.getElementById('useTime');
+    if(el && !isMakeupUseTimeOpen()){
+      setUseTimeValue(nowTaipeiInput());
+    }
+  }, 10000);
+
+  renderControls();
+  updateSummary();
+  initializeUsePage();
+});
+</script>
+</body>
+</html>
