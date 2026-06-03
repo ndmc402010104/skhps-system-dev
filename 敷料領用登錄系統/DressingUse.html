@@ -514,7 +514,7 @@ const DEFAULT_STAFF_LIST = <?!= JSON.stringify(getDefaultStaffList()) ?>;
 </head>
 <body>
 <main class="shell">
-<?!= include('共用設定檔/AppHeader', { subtitle: '敷料領用', onClick: 'goHome()', maxWidth: '1400px' }) ?>
+<?!= include('共用設定檔/AppShell', { subtitle: '敷料領用', onClick: 'goHome()', maxWidth: '1400px' }) ?>
 <div class="noticeWrap"><div id="noticeStack" class="noticeStack" aria-live="polite"></div></div>
 <div id="waitIndicator" class="waitIndicator" role="status" aria-live="polite"><span class="waitSpinner" aria-hidden="true"></span><span id="waitText">處理中...</span></div>
 <nav class="pageMap" aria-label="頁面地圖"><button class="pageMapLink" onclick="goHome()">首頁</button><span class="pageMapSep">/</span><span class="pageMapCurrent">敷料領用</span></nav>

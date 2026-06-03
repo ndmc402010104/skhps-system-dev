@@ -239,6 +239,12 @@ button:hover{
   const APP_ENTRY_URL =
     '<?= appEntryUrl ?>';
 
+  const QR_KEEPALIVE_REFRESH_MS =
+    4 * 60 * 1000;
+
+  let qrPreviewRefreshTimer =
+    null;
+
   function goHome(){
 
     window.top.location.href =
@@ -330,6 +336,68 @@ button:hover{
 
   }
 
+  function buildKeepAliveSignUrl(signUrl){
+
+    try{
+      const url =
+        new URL(
+          signUrl,
+          window.location.href
+        );
+
+      url.searchParams.set(
+        'v',
+        Date.now()
+      );
+
+      return url.toString();
+    }
+    catch(error){
+      const separator =
+        signUrl.indexOf('?') >= 0
+          ? '&'
+          : '?';
+
+      return signUrl +
+        separator +
+        'v=' +
+        Date.now();
+    }
+
+  }
+
+  function startQRPreviewKeepAlive(signUrl){
+
+    if(qrPreviewRefreshTimer){
+      clearInterval(
+        qrPreviewRefreshTimer
+      );
+    }
+
+    qrPreviewRefreshTimer =
+      setInterval(
+        function(){
+          const img =
+            document.querySelector(
+              '#result .qrPreview img'
+            );
+
+          if(!img){
+            return;
+          }
+
+          img.src =
+            buildQRCodeImageUrl(
+              buildKeepAliveSignUrl(
+                signUrl
+              )
+            );
+        },
+        QR_KEEPALIVE_REFRESH_MS
+      );
+
+  }
+
   function renderSignQR(signUrl,qrUrl,meeting){
 
     const meetingTitle =
@@ -355,6 +423,10 @@ button:hover{
         '<img src="' + safeQrUrl + '">' +
         '</a>' +
         '</section>';
+
+    startQRPreviewKeepAlive(
+      signUrl
+    );
 
   }
 
@@ -399,6 +471,43 @@ button:hover{
     const safeQrUrl =
       escapeHtml(qrUrl);
 
+    const popupRefreshScript =
+      [
+        '(function(){',
+        'var originalSignUrl=' + JSON.stringify(signUrl) + ';',
+        'var refreshMs=' + QR_KEEPALIVE_REFRESH_MS + ';',
+        'var wakeLock=null;',
+        'function buildSignUrl(){',
+        'try{var url=new URL(originalSignUrl,window.location.href);url.searchParams.set("v",Date.now());return url.toString();}',
+        'catch(error){return originalSignUrl+(originalSignUrl.indexOf("?")>=0?"&":"?")+"v="+Date.now();}',
+        '}',
+        'function buildQrUrl(url){',
+        'return "https://api.qrserver.com/v1/create-qr-code/?size=1000x1000&margin=30&data="+encodeURIComponent(url);',
+        '}',
+        'function updateQr(){',
+        'var img=document.getElementById("qrImage");',
+        'var link=document.getElementById("qrLink");',
+        'var stamp=document.getElementById("refreshStamp");',
+        'var nextSignUrl=buildSignUrl();',
+        'if(link){link.href=nextSignUrl;}',
+        'if(img){img.src=buildQrUrl(nextSignUrl);}',
+        'if(stamp){stamp.textContent="QR 已刷新 "+new Date().toLocaleTimeString("zh-TW",{hour12:false});}',
+        '}',
+        'async function requestWakeLock(){',
+        'try{',
+        'if(!("wakeLock" in navigator)){return;}',
+        'wakeLock=await navigator.wakeLock.request("screen");',
+        'wakeLock.addEventListener("release",function(){wakeLock=null;});',
+        '}catch(error){}',
+        '}',
+        'document.addEventListener("visibilitychange",function(){',
+        'if(document.visibilityState==="visible"){requestWakeLock();updateQr();}',
+        '});',
+        'requestWakeLock();',
+        'setInterval(updateQr,refreshMs);',
+        '})();'
+      ].join('');
+
     popup.document.write(
       '<html>' +
       '<head>' +
@@ -410,6 +519,7 @@ button:hover{
       '.meetingName{margin:0;font-size:clamp(34px,5vw,64px);line-height:1.12;font-weight:800;}' +
       '.meetingTime{margin:0;color:#475569;font-size:clamp(20px,2.8vw,34px);font-weight:700;}' +
       '.qrHint{margin:0;color:#1d4ed8;font-size:clamp(22px,3vw,38px);font-weight:800;}' +
+      '.refreshStamp{position:fixed;right:14px;bottom:12px;margin:0;padding:6px 8px;border:1px solid #dbe4ef;border-radius:8px;background:rgba(255,255,255,.82);color:#64748b;font-size:12px;font-weight:700;}' +
       '.qrLink{display:block;}' +
       'img{width:min(68vh,78vw,680px);max-width:100%;max-height:62vh;cursor:pointer;background:#ffffff;border:1px solid #dbe4ef;border-radius:8px;padding:18px;box-sizing:border-box;box-shadow:0 18px 45px rgba(15,23,42,.12);}' +
       '@media(orientation:landscape){.qrStage{flex-direction:row;gap:clamp(28px,5vw,70px);padding:clamp(28px,4vw,56px);text-align:left;}.qrCopy{width:min(42vw,560px);justify-items:start;}.meetingName{font-size:clamp(36px,4vw,72px);}.meetingTime{font-size:clamp(22px,2.3vw,38px);}.qrHint{font-size:clamp(24px,2.5vw,42px);}img{width:min(72vh,42vw,720px);max-height:82vh;}}' +
@@ -423,10 +533,14 @@ button:hover{
       (meetingTime ? '<p class="meetingTime">' + meetingTime + '</p>' : '') +
       '<p class="qrHint">請掃描 QR code 簽到</p>' +
       '</section>' +
-      '<a class="qrLink" href="' + safeSignUrl + '" target="_blank">' +
-      '<img src="' + safeQrUrl + '">' +
+      '<a id="qrLink" class="qrLink" href="' + safeSignUrl + '" target="_blank">' +
+      '<img id="qrImage" src="' + safeQrUrl + '">' +
       '</a>' +
       '</main>' +
+      '<p id="refreshStamp" class="refreshStamp">QR 自動刷新中</p>' +
+      '<script>' +
+      popupRefreshScript +
+      '<\/script>' +
       '</body>' +
       '</html>'
     );
