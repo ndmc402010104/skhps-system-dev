@@ -447,6 +447,16 @@ function handleDressingInventoryAction_(params) {
     return lookupDressingInventoryBarcode(params.code || params.gtin || '');
   }
 
+  if (action === 'submitDressingUse') {
+    let payload = params.payload || params;
+
+    if (typeof payload === 'string') {
+      payload = JSON.parse(payload || '{}');
+    }
+
+    return submitDressingUse(payload);
+  }
+
   return null;
 }
 

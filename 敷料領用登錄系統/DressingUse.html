@@ -743,10 +743,95 @@ function renderControls(){
   document.getElementById('testBoxBtn').disabled=!dataReady;
   document.getElementById('submitBtn').disabled=!dataReady || getValidRows().length===0;
 }
-function callServer(fn,args){ args=args||[]; return new Promise((resolve,reject)=>{ if(!isAppsScriptMode()){ reject(new Error('目前不是 Apps Script 執行環境，無法呼叫後端：'+fn)); return; } const runner=google.script.run.withSuccessHandler(resolve).withFailureHandler(e=>reject(e&&e.message?new Error(e.message):e)); if(typeof runner[fn] !== 'function'){ reject(new Error('後端函式不存在：'+fn)); return; } runner[fn].apply(runner,args); }); }
-async function listBarcode(){ return await callServer('listBarcode'); }
-async function listDressingInventory(){ return await callServer('listDressingInventory'); }
-async function submitDressingUse(payload){ return await callServer('submitDressingUse',[payload]); }
+function runGoogleScript(methodName,args){
+  args = args || [];
+  return new Promise(function(resolve,reject){
+    try{
+      const runner = google.script.run
+        .withSuccessHandler(resolve)
+        .withFailureHandler(function(error){
+          reject(error && error.message ? new Error(error.message) : error);
+        });
+
+      if(!runner || typeof runner[methodName] !== 'function'){
+        throw new Error('後端函式不存在：' + methodName);
+      }
+
+      runner[methodName].apply(runner,args);
+    }catch(error){
+      reject(error);
+    }
+  });
+}
+function callDressingUseApi(params){
+  return jsonpDressingUseApi(params || {});
+}
+function jsonpDressingUseApi(params){
+  return new Promise(function(resolve,reject){
+    const callbackName =
+      '__dressingUseCallback_' +
+      Date.now() +
+      '_' +
+      Math.random().toString(36).slice(2);
+    const query = new URLSearchParams();
+
+    Object.keys(params).forEach(function(key){
+      const value = params[key];
+      if(value !== undefined && value !== null){
+        query.set(key, typeof value === 'object' ? JSON.stringify(value) : value);
+      }
+    });
+
+    query.set('callback', callbackName);
+
+    const script = document.createElement('script');
+    const timer = setTimeout(function(){
+      cleanup();
+      reject(new Error('API 逾時，請檢查部署網址或 Sheet 權限'));
+    }, 20000);
+
+    window[callbackName] = function(result){
+      cleanup();
+      if(!result || typeof result !== 'object'){
+        reject(new Error('API 回傳格式錯誤'));
+        return;
+      }
+      resolve(result);
+    };
+
+    script.onerror = function(){
+      cleanup();
+      reject(new Error('API 載入失敗，請檢查部署網址或 Apps Script 權限'));
+    };
+
+    script.src = APP_ENTRY_URL + '?' + query.toString();
+    document.head.appendChild(script);
+
+    function cleanup(){
+      clearTimeout(timer);
+      if(script.parentNode){
+        script.parentNode.removeChild(script);
+      }
+      try{
+        delete window[callbackName];
+      }catch(error){
+        window[callbackName] = undefined;
+      }
+    }
+  });
+}
+async function listBarcode(){
+  if(isAppsScriptMode()) return await runGoogleScript('listBarcode');
+  return await callDressingUseApi({ action:'listDressingBarcode' });
+}
+async function listDressingInventory(){
+  if(isAppsScriptMode()) return await runGoogleScript('listDressingInventory');
+  return await callDressingUseApi({ action:'listDressingInventory' });
+}
+async function submitDressingUse(payload){
+  if(isAppsScriptMode()) return await runGoogleScript('submitDressingUse',[payload]);
+  return await callDressingUseApi({ action:'submitDressingUse', payload:payload });
+}
 function parseGs1Barcode(raw){ const text=String(raw||'').trim(), result={raw:text,gtin:'',lot:'',exp:'',mfg:''}; if(!text)return result; const pairs=text.replace(/\u001d/g,'').match(/\((\d{2})\)([^()]*)/g); if(pairs){ pairs.forEach(part=>{ const m=part.match(/^\((\d{2})\)(.*)$/); if(!m)return; if(m[1]==='01')result.gtin=normalizeDigits(m[2]).slice(0,14); if(m[1]==='10')result.lot=m[2].trim(); if(m[1]==='17')result.exp=parseGs1Date(m[2]); if(m[1]==='11')result.mfg=parseGs1Date(m[2]); }); return result; } const d=normalizeDigits(text); result.gtin=d.length>=14?d.slice(0,14):d; return result; }
 function parseGs1Date(value){ const d=normalizeDigits(value).slice(0,6); if(d.length!==6)return ''; const yy=Number(d.slice(0,2)), yyyy=yy>=70?1900+yy:2000+yy; return yyyy+'-'+d.slice(2,4)+'-'+d.slice(4,6); }
 async function initializeUsePage(){ setBusy(true,'正在讀取敷料主檔與批號庫存...'); dataReady=false; document.getElementById('loadStatus').innerText='讀取中，搜尋與掃描暫停開放...'; try{ const b=await listBarcode(); if(!b||!b.ok)throw new Error((b&&b.message)||'敷料主檔讀取失敗'); const inv=await listDressingInventory(); if(!inv||!inv.ok)throw new Error((inv&&inv.message)||'批號庫存讀取失敗'); dressingMasterCache=b.data||[]; inventoryCache=inv.data||[]; dataReady=true; document.getElementById('loadStatus').innerText='已讀取敷料主檔 '+dressingMasterCache.length+' 筆；批號庫存 '+inventoryCache.length+' 筆。可開始建立領用單。'; if(document.getElementById('useTbody').querySelector('.useRowsEmpty'))addUseRow(); showNotice('已完成讀取，可以開始領用','success','讀取完成'); }catch(e){ dataReady=false; document.getElementById('loadStatus').innerText='讀取失敗：'+(e.message||String(e)); showNotice(e.message||String(e),'error','讀取失敗'); }finally{ setBusy(false); } }

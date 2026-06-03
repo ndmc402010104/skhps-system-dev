@@ -80,8 +80,8 @@ function getDefaultStaffList() {
     { name: '林培新', emp: 'M011646', role: 'VS' },
     { name: '張耀仁', emp: 'M013078', role: 'VS' },
     { name: '蔡可威', emp: 'M013423', role: 'VS' },
+    { name: '李冠臻', emp: 'M013934', role: 'VS' },
 
-    { name: '李冠臻', emp: 'M013934', role: 'F' },
     { name: '郭曰誠', emp: 'M014534', role: 'F' },
 
     { name: '馬玉坤', emp: 'M015711', role: 'R6' },

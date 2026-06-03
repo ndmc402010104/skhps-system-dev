@@ -280,7 +280,8 @@ function isDressingInventoryAction_(action){
   return [
     'listDressingInventory',
     'addDressingInventoryStock',
-    'lookupDressingInventoryBarcode'
+    'lookupDressingInventoryBarcode',
+    'submitDressingUse'
   ].indexOf(action || '') >= 0;
 
 }
