@@ -68,7 +68,7 @@ function listDressingInventory() {
           hospitalCode: String(row[0] || '').trim(),
           stockUnit: String(row[1] || '').trim(),
           lot: String(row[2] || '').trim(),
-          exp: normalizeInventoryDateForClient_(row[3]),
+          exp: readInventoryExpText_(row[3]),
           quantity: Number(row[4] || 0) || 0
         };
       })
@@ -94,7 +94,7 @@ function addDressingInventoryStock(payload) {
     const hospitalCode = String(payload.hospitalCode || '').trim();
     const stockUnit = String(payload.stockUnit || '').trim();
     let lot = String(payload.lot || '').trim();
-    const exp = normalizeInventoryDateForClient_(payload.exp || '');
+    const exp = readInventoryExpText_(payload.exp || '');
     const operationType = normalizeDressingInventoryOperationType_(payload.operationType);
     const quantity = Number(payload.quantity || 0);
     const hasActualQuantity =
@@ -143,7 +143,7 @@ function addDressingInventoryStock(payload) {
           const rowHospitalCode = String(row[0] || '').trim();
           const rowStockUnit = String(row[1] || '').trim();
           const rowLot = String(row[2] || '').trim();
-          const rowExp = normalizeInventoryDateForClient_(row[3]);
+          const rowExp = readInventoryExpText_(row[3]);
 
           if (isCoarseStocktake) {
             if (rowHospitalCode === hospitalCode && rowStockUnit === stockUnit) {
@@ -244,6 +244,120 @@ function addDressingInventoryStock(payload) {
         addedQuantity: changeQuantity,
         changeQuantity: changeQuantity,
         newQuantity: newQuantity
+      };
+    } finally {
+      lock.releaseLock();
+    }
+  } catch (error) {
+    return { ok: false, message: error && error.message ? error.message : String(error) };
+  }
+}
+
+/**
+ * 修正既有批號庫存列的批號 / 效期。數量不變；若修正後撞到既有列，合併數量並刪除原列。
+ */
+function updateDressingInventoryLotMetadata(payload) {
+  try {
+    payload = payload || {};
+
+    const hospitalCode = String(payload.hospitalCode || '').trim();
+    const stockUnit = String(payload.stockUnit || '').trim();
+    const oldLot = String(payload.oldLot || '').trim();
+    const oldExp = readInventoryExpText_(payload.oldExp || '');
+    const newLot = String(payload.newLot || '').trim();
+    const newExp = readInventoryExpText_(payload.newExp || '');
+    const singleGtin = resolveDressingInventorySingleGtin_(hospitalCode, payload.singleGtin || payload.gtin || '');
+    const operator = String(payload.operator || '').trim() || '前端使用者';
+
+    if (!hospitalCode) throw new Error('缺少院內碼');
+    if (!stockUnit) throw new Error('缺少扣庫單位');
+    if (!oldLot && !oldExp) throw new Error('缺少原批號或原效期，無法定位庫存列');
+    if (!newLot && !newExp) throw new Error('修正後至少要有批號或效期');
+
+    const lock = LockService.getScriptLock();
+    lock.waitLock(10000);
+
+    try {
+      const sheet = getDressingInventorySheet_();
+      ensureDressingInventoryHeader_(sheet);
+      const transactionSheet = getDressingInventoryTransactionSheet_();
+      ensureDressingInventoryTransactionHeader_(transactionSheet);
+
+      const lastRow = sheet.getLastRow();
+      if (lastRow < 2) throw new Error('目前沒有批號庫存資料');
+
+      const values = sheet.getRange(2, 1, lastRow - 1, DRESSING_INVENTORY_HEADERS.length).getValues();
+      let sourceRowNumber = 0;
+      let sourceQuantity = 0;
+      let targetRowNumber = 0;
+      let targetQuantity = 0;
+
+      for (let i = 0; i < values.length; i++) {
+        const row = values[i];
+        const rowNumber = i + 2;
+        const rowHospitalCode = String(row[0] || '').trim();
+        const rowStockUnit = String(row[1] || '').trim();
+        const rowLot = String(row[2] || '').trim();
+        const rowExp = readInventoryExpText_(row[3]);
+        const rowQuantity = Number(row[4] || 0) || 0;
+
+        if (rowHospitalCode !== hospitalCode || rowStockUnit !== stockUnit) {
+          continue;
+        }
+
+        if (rowLot === oldLot && rowExp === oldExp) {
+          sourceRowNumber = rowNumber;
+          sourceQuantity = rowQuantity;
+        }
+
+        if (rowLot === newLot && rowExp === newExp) {
+          targetRowNumber = rowNumber;
+          targetQuantity = rowQuantity;
+        }
+      }
+
+      if (!sourceRowNumber) {
+        throw new Error('找不到要修正的批號庫存列');
+      }
+
+      const note =
+        '批號/效期修正：' +
+        (oldLot || '未填') + ' / ' + (oldExp || '未填') +
+        ' → ' +
+        (newLot || '未填') + ' / ' + (newExp || '未填');
+
+      if (targetRowNumber && targetRowNumber !== sourceRowNumber) {
+        sheet.getRange(targetRowNumber, 5).setValue(targetQuantity + sourceQuantity);
+        sheet.deleteRow(sourceRowNumber);
+      } else {
+        sheet.getRange(sourceRowNumber, 3, 1, 2).setValues([[newLot, newExp]]);
+      }
+
+      appendDressingInventoryTransaction_({
+        sheet: transactionSheet,
+        operationType: '資料修正',
+        hospitalCode: hospitalCode,
+        singleGtin: singleGtin,
+        stockUnit: stockUnit,
+        lot: newLot,
+        exp: newExp,
+        oldQuantity: sourceQuantity,
+        changeQuantity: 0,
+        newQuantity: targetRowNumber && targetRowNumber !== sourceRowNumber
+          ? targetQuantity + sourceQuantity
+          : sourceQuantity,
+        operator: operator,
+        note: note
+      });
+
+      return {
+        ok: true,
+        merged: !!(targetRowNumber && targetRowNumber !== sourceRowNumber),
+        oldLot: oldLot,
+        oldExp: oldExp,
+        newLot: newLot,
+        newExp: newExp,
+        quantity: sourceQuantity
       };
     } finally {
       lock.releaseLock();
@@ -443,6 +557,19 @@ function handleDressingInventoryAction_(params) {
     });
   }
 
+  if (action === 'updateDressingInventoryLotMetadata') {
+    return updateDressingInventoryLotMetadata({
+      hospitalCode: params.hospitalCode || '',
+      stockUnit: params.stockUnit || '',
+      oldLot: params.oldLot || '',
+      oldExp: params.oldExp || '',
+      newLot: params.newLot || '',
+      newExp: params.newExp || '',
+      singleGtin: params.singleGtin || params.gtin || '',
+      operator: params.operator || ''
+    });
+  }
+
   if (action === 'lookupDressingInventoryBarcode') {
     return lookupDressingInventoryBarcode(params.code || params.gtin || '');
   }
@@ -517,7 +644,7 @@ function normalizeDressingUsePayload_(payload) {
         dressingName: String(row.dressingName || '').trim(),
         size: String(row.size || '').trim(),
         lot: String(row.lot || '').trim(),
-        exp: normalizeInventoryDateForClient_(row.exp || ''),
+        exp: readInventoryExpText_(row.exp || ''),
         quantity: quantity,
         note: String(row.note || '').trim()
       };
@@ -652,7 +779,7 @@ function findDressingUseInventoryRow_(inventoryValues, useRow, stockUnit) {
     const rowHospitalCode = String(row[0] || '').trim();
     const rowStockUnit = String(row[1] || '').trim();
     const rowLot = String(row[2] || '').trim();
-    const rowExp = normalizeInventoryDateForClient_(row[3]);
+    const rowExp = readInventoryExpText_(row[3]);
 
     if (
       rowHospitalCode === useRow.hospitalCode &&
@@ -886,7 +1013,7 @@ function appendDressingInventoryTransaction_(payload) {
     singleGtin,
     String(payload.stockUnit || '').trim(),
     String(payload.lot || '').trim(),
-    normalizeInventoryDateForClient_(payload.exp || ''),
+    readInventoryExpText_(payload.exp || ''),
     Number(payload.oldQuantity || 0) || 0,
     Number(payload.changeQuantity || 0) || 0,
     Number(payload.newQuantity || 0) || 0,
@@ -992,33 +1119,12 @@ function ensureDressingInventoryTransactionHeader_(sheet) {
   }
 }
 
-function normalizeInventoryDateForClient_(value) {
+function readInventoryExpText_(value) {
   if (!value) return '';
 
   if (Object.prototype.toString.call(value) === '[object Date]' && !isNaN(value.getTime())) {
-    return Utilities.formatDate(value, 'Asia/Taipei', 'yyyy-MM-dd');
+    return Utilities.formatDate(value, 'Asia/Taipei', 'yyyy/MM/dd');
   }
 
-  const text = String(value || '').trim();
-  if (!text) return '';
-
-  const slashMatch = text.match(/^(\d{4})[\/](\d{1,2})[\/](\d{1,2})$/);
-  if (slashMatch) {
-    return [
-      slashMatch[1],
-      String(slashMatch[2]).padStart(2, '0'),
-      String(slashMatch[3]).padStart(2, '0')
-    ].join('-');
-  }
-
-  const dashMatch = text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
-  if (dashMatch) {
-    return [
-      dashMatch[1],
-      String(dashMatch[2]).padStart(2, '0'),
-      String(dashMatch[3]).padStart(2, '0')
-    ].join('-');
-  }
-
-  return text;
+  return String(value || '').trim();
 }
