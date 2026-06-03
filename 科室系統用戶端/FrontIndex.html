@@ -242,6 +242,9 @@ const GITHUB_PAGE_MAP = {
   dressingUse: '敷料領用登錄系統/DressingUse.html'
 };
 
+const GITHUB_PAGES_BASE_URL =
+'https://ndmc402010104.github.io/plastic-surgery-department-system/';
+
 
 function getGithubRepoBasePath(){
 
@@ -260,8 +263,13 @@ function getGithubPageUrl(pageKey){
   const path =
     GITHUB_PAGE_MAP[pageKey] || GITHUB_PAGE_MAP.home;
 
-  return window.location.origin +
-    getGithubRepoBasePath() +
+  if(window.location.hostname.includes('github.io')){
+    return window.location.origin +
+      getGithubRepoBasePath() +
+      path;
+  }
+
+  return GITHUB_PAGES_BASE_URL +
     path;
 
 }

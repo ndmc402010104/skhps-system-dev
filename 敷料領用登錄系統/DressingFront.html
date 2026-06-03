@@ -1897,6 +1897,9 @@ const GITHUB_PAGE_MAP = {
   dressingDict: '敷料領用登錄系統/敷料建檔/DressingDict.html'
 };
 
+const GITHUB_PAGES_BASE_URL =
+  'https://ndmc402010104.github.io/plastic-surgery-department-system/';
+
 if (APP_ENTRY_URL.includes('<' + '?=') || APP_ENTRY_URL.trim() === '') {
   APP_ENTRY_URL = 'https://script.google.com/macros/s/AKfycbwbz8pXfU68j2aFeF_AaDmmG6Vco3JsPSw-PGyYeLu0AF3vCfzaZJQFOjORnwSw8Xp4/exec'; 
 }
@@ -1916,7 +1919,10 @@ function getGithubRepoBasePath(){
 
 function getGithubPageUrl(pageKey){
   const path = GITHUB_PAGE_MAP[pageKey] || GITHUB_PAGE_MAP.home;
-  return window.location.origin + getGithubRepoBasePath() + path;
+  if(isGithubPage()){
+    return window.location.origin + getGithubRepoBasePath() + path;
+  }
+  return GITHUB_PAGES_BASE_URL + path;
 }
 
 function getAppScriptBaseUrl(){
@@ -1959,13 +1965,7 @@ function goHome(){
 }
 
 function goDressingUse(){
-  if(isGithubPage()){
-    window.top.location.href = getGithubPageUrl('dressingUse');
-    return;
-  }
-
-  window.top.location.href =
-    getAppScriptPageUrl('dressinguse');
+  window.top.location.href = getGithubPageUrl('dressingUse');
 }
 </script>
 </head>
@@ -9205,7 +9205,7 @@ if (window.location.hostname.includes('github.io')) {
   ghFooter.innerHTML = `
     <div style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">
       <span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>
-      <span>v.2.27.10-202606030826</span>
+      <span>v.2.27.10-202606031058</span>
     </div>
   `;
   document.body.appendChild(ghFooter);
@@ -9222,6 +9222,7 @@ function normalizeTextForCompare(value){
 
 </body>
 </html>
+
 
 
 
