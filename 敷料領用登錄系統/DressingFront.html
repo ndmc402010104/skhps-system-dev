@@ -1919,6 +1919,38 @@ function getGithubPageUrl(pageKey){
   return window.location.origin + getGithubRepoBasePath() + path;
 }
 
+function getAppScriptBaseUrl(){
+  const sources = [
+    window.location.href,
+    APP_ENTRY_URL || '',
+    APP_PROD_URL || ''
+  ];
+
+  for(let i = 0; i < sources.length; i++){
+    const source = String(sources[i] || '');
+    const match = source.match(/^(https:\/\/script\.google\.com\/macros\/s\/[^?#]+\/(?:exec|dev))/);
+    if(match){
+      return match[1];
+    }
+  }
+
+  return APP_ENTRY_URL;
+}
+
+function getAppScriptPageUrl(page){
+  const baseUrl = getAppScriptBaseUrl();
+  const separator = baseUrl.indexOf('?') >= 0 ? '&' : '?';
+  const params = new URLSearchParams();
+  params.set('page', page);
+
+  const appEnvMatch = String(window.location.search || '').match(/[?&]appEnv=(dev|prod)(?:&|$)/);
+  if(appEnvMatch){
+    params.set('appEnv', appEnvMatch[1]);
+  }
+
+  return baseUrl + separator + params.toString();
+}
+
 function goHome(){
   window.top.location.href =
     isGithubPage()
@@ -1932,12 +1964,8 @@ function goDressingUse(){
     return;
   }
 
-  const baseUrl =
-    APP_ENTRY_URL;
-
   window.top.location.href =
-    baseUrl +
-    '?page=dressinguse';
+    getAppScriptPageUrl('dressinguse');
 }
 </script>
 </head>
@@ -9177,7 +9205,7 @@ if (window.location.hostname.includes('github.io')) {
   ghFooter.innerHTML = `
     <div style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">
       <span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>
-      <span>v.2.27.8-202606030755</span>
+      <span>v.2.27.8-202606030803</span>
     </div>
   `;
   document.body.appendChild(ghFooter);
@@ -9194,6 +9222,7 @@ function normalizeTextForCompare(value){
 
 </body>
 </html>
+
 
 
 
