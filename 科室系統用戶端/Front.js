@@ -87,42 +87,9 @@ const EXTRA_HOSPITAL_LOGIN = [
 
 
 function showHospitalSignInPage(){
-
-  const template =
-
-    HtmlService
-
-      .createTemplateFromFile(
-        HOSPITAL_SIGNIN_PAGE_NAME
-      );
-
-
-  template.appEntryUrl =
-    getAppEntryUrl();
-
-
-  template.staffList =
-
-    JSON.stringify(
-      getDefaultStaffList()
-    );
-
-
-  template.extraList =
-
-    JSON.stringify(
-      EXTRA_HOSPITAL_LOGIN
-    );
-
-
-  return template
-
-    .evaluate()
-
-    .setTitle(
-      getAppPageTitle(
-        '醫院系統登入'
-      )
-    );
-
+  const template = HtmlService.createTemplateFromFile(HOSPITAL_SIGNIN_PAGE_NAME);
+  template.appEntryUrl = getAppEntryUrl();
+  template.staffList = JSON.stringify(getDefaultStaffList());
+  template.extraList = JSON.stringify(EXTRA_HOSPITAL_LOGIN);
+  return template.evaluate().setTitle(getAppPageTitle('醫院系統登入'));
 }

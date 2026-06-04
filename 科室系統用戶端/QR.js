@@ -12,27 +12,10 @@ QR.gs
 
 //進到Route.gs查詢會議 QR 產生位置，開啟getSignQRMeetingOptions()
 function showSignQRGeneratorPage(){
-
-  const template =
-    HtmlService.createTemplateFromFile(
-      QR_PAGE_NAME
-    );
-
-  template.options =
-    //進網頁先跑QR.gs裡面的這個函數
-    getSignQRMeetingOptions();
-
-  template.appEntryUrl =
-    getAppEntryUrl();
-
-  return template
-    .evaluate()
-    .setTitle(
-      getAppPageTitle(
-        '會議 QR 產生'
-      )
-    );
-
+  const template = HtmlService.createTemplateFromFile(QR_PAGE_NAME);
+  template.options = getSignQRMeetingOptions();
+  template.appEntryUrl = getAppEntryUrl();
+  return template.evaluate().setTitle(getAppPageTitle('會議 QR 產生'));
 }
 
 //叫出calendar裡面前後Config.gs裡面設定的天數的會議
