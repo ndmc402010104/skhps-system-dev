@@ -2,7 +2,7 @@
 <!--
 檔案位置：科室系統用戶端/DressingFront.html
 時間戳記：2026-06-05 01:23 UTC+8
-用途：敷料領用/建檔/庫存前端；修正敷料查詢/建檔的庫存單位篩選回到上方固定位置選擇，查詢預設不限制單位；主清單欄寬依內容調整並置中院內碼、庫存狀態、自費價格；庫存「無」維持未選定中性樣式，只有已建庫但數量 0 顯示紅色。
+用途：敷料領用/建檔/庫存前端；修正敷料查詢/建檔的庫存位置篩選固定使用上方位置按鈕；查詢預設不限制單位；主清單後三欄依內容微寬並置中；庫存「無」定義為沒有批號紀錄且維持中性樣式，只有已有批號紀錄但數量為 0 才顯示紅色。
 -->
 <html>
 <head>
@@ -1507,9 +1507,9 @@ tr.editing select:not(.readonly):focus{
   box-shadow:0 0 0 3px rgba(37,99,235,.15);
 }
 
-.dictTable .col-code{ width:112px; }
-.dictTable .col-stock-status{ width:166px; }
-.dictTable .col-category{ width:92px; }
+.dictTable .col-code{ width:132px; }
+.dictTable .col-stock-status{ width:188px; }
+.dictTable .col-category{ width:108px; }
 
 .dictTable th.col-code,
 .dictTable th.col-stock-status,
@@ -1536,7 +1536,7 @@ tr.editing select:not(.readonly):focus{
 
 .dictSummaryGrid{
   display:grid;
-  grid-template-columns:minmax(0,1fr) 112px 166px 92px;
+  grid-template-columns:minmax(0,1fr) 132px 188px 108px;
   align-items:center;
   min-height:56px;
 }
@@ -1663,9 +1663,9 @@ tr.editing select:not(.readonly):focus{
 }
 
 .dictSummaryStockPill.is-empty{
-  border-color:#e2e8f0;
-  background:#ffffff;
-  color:#64748b;
+  border-color:#dbe4ef;
+  background:#f8fafc;
+  color:#94a3b8;
   box-shadow:none;
 }
 
@@ -2175,7 +2175,7 @@ tr.editing select:not(.readonly):focus{
   }
 
   .dictSummaryGrid{
-    grid-template-columns:42% 16% 30% 12%;
+    grid-template-columns:minmax(0,1fr) 86px 124px 68px;
   }
 
   .dictSummaryStockStatus{
@@ -2194,8 +2194,8 @@ tr.editing select:not(.readonly):focus{
   }
 
   .dictSummaryStockPill{
-    flex-basis:50px;
-    width:50px;
+    flex-basis:56px;
+    width:56px;
     min-height:34px;
     padding:3px 4px;
     border-radius:8px;
@@ -3573,8 +3573,17 @@ function getInventorySummaryForHospitalCode(hospitalCode){
   rows.forEach(function(row){
     const unit = getInventoryDisplayUnitKey(row.stockUnit);
     const qty = Number(row.quantity || 0) || 0;
+    const hasBatchRecord = !!(String(row.lot || '').trim() || String(row.exp || '').trim());
+
     totalQty += qty;
-    unitHasRecord[unit] = true;
+
+    // 建庫判斷：必須真的有批號/效期紀錄。
+    // 後端若只是用院內碼 + 庫存位置補出 0 的占位資料，不能算「已建庫」。
+    // 因此：完全沒有批號紀錄 = 顯示「無」且中性；有批號紀錄但合計 0 = 顯示「0」且紅色。
+    if(hasBatchRecord){
+      unitHasRecord[unit] = true;
+    }
+
     unitTotals[unit] = (unitTotals[unit] || 0) + qty;
   });
 
@@ -3598,10 +3607,11 @@ function setDictStockPill(el, label, qty, hasRecord){
   }
 
   const value = Number(qty || 0) || 0;
-  const hasStock = hasRecord && value > 0;
-  const isZeroStock = hasRecord && value <= 0;
+  const hasRealBatchRecord = !!hasRecord;
+  const hasStock = hasRealBatchRecord && value > 0;
+  const isZeroStock = hasRealBatchRecord && value <= 0;
   const qtyText = hasStock ? formatInventoryQty(value) : (isZeroStock ? '0' : '無');
-  const text = label + ' ' + qtyText + (isZeroStock ? '（已建庫但目前為 0）' : (!hasRecord ? '（未建庫）' : ''));
+  const text = label + ' ' + qtyText + (isZeroStock ? '（有批號紀錄但目前為 0）' : (!hasRealBatchRecord ? '（沒有批號紀錄）' : ''));
   const unitEl = el.querySelector('.dictSummaryStockUnit');
   const qtyEl = el.querySelector('.dictSummaryStockQty');
 
@@ -3618,7 +3628,7 @@ function setDictStockPill(el, label, qty, hasRecord){
   el.title = text;
   el.classList.toggle('is-active', hasStock);
   el.classList.toggle('is-zero', isZeroStock);
-  el.classList.toggle('is-empty', !hasRecord);
+  el.classList.toggle('is-empty', !hasRealBatchRecord);
 }
 
 function renderDictRowLotDetails(tr, inventorySummary){
@@ -8080,7 +8090,7 @@ function updateInventorySegmentedButtons(){
 
   const unitSetupField = document.querySelector('.inventoryUnitSetupField');
   if(unitSetupField){
-    unitSetupField.style.display = operationType === 'query' ? 'none' : '';
+    unitSetupField.style.display = '';
   }
 
   document.querySelectorAll('[data-inventory-unit]').forEach(function(btn){
