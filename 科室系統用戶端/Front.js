@@ -89,7 +89,15 @@ const EXTRA_HOSPITAL_LOGIN = [
 function showHospitalSignInPage(){
   const template = HtmlService.createTemplateFromFile(HOSPITAL_SIGNIN_PAGE_NAME);
   template.appEntryUrl = getAppEntryUrl();
-  template.staffList = JSON.stringify(getDefaultStaffList());
-  template.extraList = JSON.stringify(EXTRA_HOSPITAL_LOGIN);
+  template.staffList = '[]';
+  template.extraList = '[]';
   return template.evaluate().setTitle(getAppPageTitle('Hospital Sign In'));
+}
+
+function getHospitalSignInLists(){
+  return {
+    ok:true,
+    staffList:getDefaultStaffList(),
+    extraList:EXTRA_HOSPITAL_LOGIN
+  };
 }

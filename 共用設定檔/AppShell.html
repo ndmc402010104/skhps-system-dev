@@ -183,6 +183,9 @@ textarea:disabled{
   display:flex;
   align-items:center;
   gap:14px;
+  cursor:default;
+}
+.appHeader .brand.is-clickable{
   cursor:pointer;
 }
 .appHeader .brandMark{
@@ -307,7 +310,7 @@ textarea:disabled{
 </style>
 
 <header class="appHeader">
-  <div class="brand" <?!= typeof onClick !== 'undefined' && onClick ? 'onclick="' + onClick + '"' : '' ?>>
+  <div class="brand<?= typeof onClick !== 'undefined' && onClick ? ' is-clickable' : '' ?>" <?!= typeof onClick !== 'undefined' && onClick ? 'onclick="' + onClick + '"' : '' ?>>
     <div class="brandMark">S</div>
     <div class="brandText">
       <span class="brandName">新光整形外科科室系統</span>

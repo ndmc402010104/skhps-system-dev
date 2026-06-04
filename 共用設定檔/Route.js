@@ -345,11 +345,7 @@ function handleFrontendApiAction_(params){
   }
 
   if(action === 'getHospitalSignInLists'){
-    return {
-      ok:true,
-      staffList:getDefaultStaffList(),
-      extraList:EXTRA_HOSPITAL_LOGIN
-    };
+    return getHospitalSignInLists();
   }
 
   if(action === 'getSignQRMeetingOptions'){

@@ -89,31 +89,42 @@ h1{
   background:white;
   border:1px solid #dbe4ef;
   border-radius:8px;
-  padding:28px;
-  margin-bottom:22px;
+  padding:22px 24px;
+  margin-bottom:16px;
   box-shadow:0 8px 24px rgba(15,23,42,.06);
 }
 
 h2{
-  margin-top:0;
-  font-size:24px;
+  margin:0 0 16px;
+  font-size:22px;
+  line-height:1.25;
 }
 
 .grid{
   display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
-  gap:14px;
+  grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:10px;
+  min-height:48px;
+  opacity:1;
+  transition:opacity .18s ease;
+}
+
+.grid.is-empty{
+  min-height:16px;
+  opacity:0;
 }
 
 .loginBtn{
-  padding:18px;
+  min-height:48px;
+  padding:10px 14px;
   border-radius:8px;
   border:1px solid #dbe4ff;
   background:#eef2ff;
   color:#1e293b;
-  font-size:20px;
+  font-size:16px;
   font-weight:700;
   cursor:pointer;
+  line-height:1.25;
 }
 
 .loginBtn:hover{
@@ -136,25 +147,15 @@ h2{
 
 .manualRow input{
   flex:1;
-  padding:16px;
+  min-height:48px;
+  padding:10px 14px;
   border-radius:8px;
   border:1px solid #cbd5e1;
-  font-size:20px;
+  font-size:18px;
 }
 
 .manualRow button{
   width:160px;
-}
-
-.notice{
-  padding:14px;
-  border:1px dashed #cbd5e1;
-  border-radius:8px;
-  background:#f8fafc;
-  color:#64748b;
-  font-size:14px;
-  font-weight:700;
-  line-height:1.6;
 }
 
 @media(max-width:640px){
@@ -190,6 +191,13 @@ function isGithubPage(){
   return window.location.hostname.includes('github.io');
 }
 
+function isAppsScriptPage(){
+  return !isGithubPage() &&
+    typeof google !== 'undefined' &&
+    google.script &&
+    google.script.run;
+}
+
 function getGithubRepoBasePath(){
   const parts = window.location.pathname.split('/').filter(Boolean);
   return parts.length ? '/' + parts[0] + '/' : '/';
@@ -202,15 +210,27 @@ function getGithubPageUrl(pageKey){
 
 function getAppEntryUrl(){
   const value = String(APP_ENTRY_URL || '').trim();
-  if(value.includes('<' + '?=') || !value){
+  if(value && !value.includes('<' + '?=')){
+    return value;
+  }
+
+  if(isGithubPage()){
     return 'https://script.google.com/macros/s/AKfycbwbz8pXfU68j2aFeF_AaDmmG6Vco3JsPSw-PGyYeLu0AF3vCfzaZJQFOjORnwSw8Xp4/exec';
   }
-  return value;
+
+  try{
+    const currentUrl = new URL(window.location.href);
+    currentUrl.search = '';
+    currentUrl.hash = '';
+    return currentUrl.toString();
+  } catch(error){
+    return window.location.href.split('?')[0].split('#')[0];
+  }
 }
 
 function parseTemplateJson(text, fallback){
   text = String(text || '').trim();
-  if(!text || text.indexOf('<?') >= 0){
+  if(!text || text.indexOf('<' + '?') >= 0){
     return fallback || [];
   }
   try{
@@ -332,6 +352,8 @@ function renderStaff(){
 
   vsBox.innerHTML = '';
   residentBox.innerHTML = '';
+  vsBox.classList.remove('is-empty');
+  residentBox.classList.remove('is-empty');
 
   staffList.forEach(function(person){
 
@@ -382,10 +404,8 @@ function renderStaff(){
   });
 
   if(staffList.length === 0){
-    vsBox.innerHTML =
-      '<div class="notice">人員清單尚未載入；仍可使用下方手動輸入員工編號。</div>';
-    residentBox.innerHTML =
-      '<div class="notice">清單讀取完成後會顯示完整人員按鈕。</div>';
+    vsBox.classList.add('is-empty');
+    residentBox.classList.add('is-empty');
   }
 
 }
@@ -396,6 +416,7 @@ function renderExtra(){
     document.getElementById('extraBox');
 
   extraBox.innerHTML = '';
+  extraBox.classList.remove('is-empty');
 
   extraList.forEach(function(person){
 
@@ -425,26 +446,54 @@ function renderExtra(){
   });
 
   if(extraList.length === 0){
-    extraBox.innerHTML =
-      '<div class="notice">額外帳號清單尚未載入。</div>';
+    extraBox.classList.add('is-empty');
   }
 
 }
 
-async function loadHospitalSignInListsFromApi(){
+function applyHospitalSignInLists(res){
+  res = res || {};
+  staffList = Array.isArray(res.staffList) ? res.staffList : [];
+  extraList = Array.isArray(res.extraList) ? res.extraList : [];
+  renderStaff();
+  renderExtra();
+}
+
+function loadHospitalSignInListsFromAppsScript(){
+  return new Promise(function(resolve, reject){
+    if(!isAppsScriptPage()){
+      reject(new Error('google.script.run 不可用'));
+      return;
+    }
+
+    google.script.run
+      .withSuccessHandler(function(res){
+        applyHospitalSignInLists(res);
+        resolve(res);
+      })
+      .withFailureHandler(function(error){
+        reject(error);
+      })
+      .getHospitalSignInLists();
+  });
+}
+
+async function loadHospitalSignInLists(){
   if(staffList.length > 0 || extraList.length > 0){
     return;
   }
 
   try{
-    const res = await callAppsScriptApi({ action:'getHospitalSignInLists' });
-    if(!res || !res.ok){
-      throw new Error((res && res.message) || '清單讀取失敗');
+    if(isGithubPage()){
+      const res = await callAppsScriptApi({ action:'getHospitalSignInLists' });
+      if(!res || !res.ok){
+        throw new Error((res && res.message) || '清單讀取失敗');
+      }
+      applyHospitalSignInLists(res);
+      return;
     }
-    staffList = Array.isArray(res.staffList) ? res.staffList : [];
-    extraList = Array.isArray(res.extraList) ? res.extraList : [];
-    renderStaff();
-    renderExtra();
+
+    await loadHospitalSignInListsFromAppsScript();
   } catch(error){
     console.warn('load hospital sign-in lists failed', error);
   }
@@ -510,7 +559,7 @@ function initPage(){
   installGithubAppShellFallback();
   renderStaff();
   renderExtra();
-  loadHospitalSignInListsFromApi();
+  loadHospitalSignInLists();
 
 }
 
