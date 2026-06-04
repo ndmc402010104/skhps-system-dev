@@ -1,170 +1,197 @@
 /*
+檔案位置：科室系統用戶端/QR.js
+時間戳記：2026-06-04 19:41 UTC+8
+用途：負責簽到 QR 頁面載入與會議清單 option 產生；修正 Apps Script template evaluate 與 GitHub / Apps Script 雙模式載入。
 ========================================
-QR.gs
+QR.gs / QR.js
 負責簽到 QR 功能
 包含：
-- 課程清單取得
-- 驗證碼建立
-- QR 資料組裝
 - QR 頁面顯示
+- 課程清單取得
+- QR 會議 option 資料組裝
 ========================================
 */
 
-//進到Route.gs查詢會議 QR 產生位置，開啟getSignQRMeetingOptions()
-function showSignQRGeneratorPage(){
-  const template = HtmlService.createTemplateFromFile(QR_PAGE_NAME);
-  template.options = getSignQRMeetingOptions();
-  template.appEntryUrl = getAppEntryUrl();
-  return template.evaluate().setTitle(getAppPageTitle('會議 QR 產生'));
+function showSignQRGeneratorPage() {
+  var template;
+  var output;
+
+  template = HtmlService.createTemplateFromFile('科室系統用戶端/SignQRGenerator');
+
+  /*
+   * 不在 render 前同步讀 Calendar。
+   * 頁面先開，會議清單交給 SignQRGenerator.html：
+   * - Apps Script 版用 google.script.run 讀 getSignQRMeetingOptions()
+   * - GitHub 版用 JSONP API 讀 action=getSignQRMeetingOptions
+   */
+  template.options = '<option value="">會議清單載入中...</option>';
+  template.appEntryUrl = getAppEntryUrlSafeForQR_();
+
+  output = template.evaluate();
+  output.setTitle('Sign QR Generator');
+
+  return output;
 }
 
-//叫出calendar裡面前後Config.gs裡面設定的天數的會議
+function getAppEntryUrlSafeForQR_() {
+  try {
+    if (typeof getAppEntryUrl === 'function') {
+      return getAppEntryUrl();
+    }
+  } catch (error) {
+    Logger.log('getAppEntryUrlSafeForQR_ failed: ' + error);
+  }
+
+  return '';
+}
+
 function getSignQRMeetingOptions() {
+  var now;
+  var first;
+  var last;
+  var events;
+  var options;
 
-  const now =
-    new Date();
+  now = new Date();
 
-  const first =
-    new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate()
-    );
+  first = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate()
+  );
 
   first.setDate(
-    first.getDate()
-    -
-    QR_EVENT_LOOKBACK_DAYS
+    first.getDate() - QR_EVENT_LOOKBACK_DAYS
   );
 
-  const last =
-    new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate()
-    );
+  last = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate()
+  );
 
   last.setDate(
-    last.getDate()
-    +
-    QR_EVENT_LOOKAHEAD_DAYS
+    last.getDate() + QR_EVENT_LOOKAHEAD_DAYS
   );
 
-  const events =
-    getConfiguredCalendarEvents(
-      first,
-      last
-    );
+  events = getConfiguredCalendarEvents(
+    first,
+    last
+  );
 
-  events.sort(function(a,b){
-
+  events.sort(function(a, b) {
     return b.getStartTime() - a.getStartTime();
-
   });
 
-  let options =
-    '';
+  options = '';
 
   events.forEach(function(event) {
+    var title;
+    var date;
+    var start;
+    var end;
+    var tokenCourse;
+    var time;
+    var startWindow;
+    var endWindow;
+    var isRunning;
+    var displayTime;
+    var token;
+    var selectedText;
+    var optionValue;
+    var optionLabel;
 
-    const title =
-      event.getTitle();
+    title = event.getTitle();
 
-    const date =
-      Utilities.formatDate(
-        event.getStartTime(),
-        Session.getScriptTimeZone(),
-        'M/d'
-      );
-
-    const start =
-      Utilities.formatDate(
-        event.getStartTime(),
-        Session.getScriptTimeZone(),
-        'H:mm'
-      );
-
-    const end =
-      Utilities.formatDate(
-        event.getEndTime(),
-        Session.getScriptTimeZone(),
-        'H:mm'
-      );
-
-    const tokenCourse =
-      date +
-      ' ' +
-      title;
-
-    const time =
-      start +
-      '-' +
-      end;
-
-    const startWindow =
-    new Date(
-    event.getStartTime()
-    .getTime()
-    -
-    MEETING_RUNNING_BEFORE_MIN
-    *
-    60000
+    date = Utilities.formatDate(
+      event.getStartTime(),
+      Session.getScriptTimeZone(),
+      'M/d'
     );
 
-    const endWindow =
-    new Date(
-    event.getEndTime()
-    .getTime()
-    +
-    MEETING_RUNNING_AFTER_MIN
-    *
-    60000
+    start = Utilities.formatDate(
+      event.getStartTime(),
+      Session.getScriptTimeZone(),
+      'H:mm'
     );
 
-    const isRunning =
-    now >= startWindow
-    &&
-    now <= endWindow;
+    end = Utilities.formatDate(
+      event.getEndTime(),
+      Session.getScriptTimeZone(),
+      'H:mm'
+    );
 
-    const displayTime =
+    tokenCourse = date + ' ' + title;
+    time = start + '-' + end;
+
+    startWindow = new Date(
+      event.getStartTime().getTime() -
+      MEETING_RUNNING_BEFORE_MIN * 60000
+    );
+
+    endWindow = new Date(
+      event.getEndTime().getTime() +
+      MEETING_RUNNING_AFTER_MIN * 60000
+    );
+
+    isRunning =
+      now >= startWindow &&
+      now <= endWindow;
+
+    displayTime =
       time +
       (
         isRunning
-        ? (
-          '〈簽到開放中〉'
-        )
-        : ''
+          ? '〈簽到開放中〉'
+          : ''
       );
 
-    const token =
-      generateSignToken(
-        tokenCourse,
-        time
-      );
+    token = generateSignToken(
+      tokenCourse,
+      time
+    );
 
-    options +=
-      '<option ' +
-      (
-        isRunning
-        ? 'selected '
-        : ''
-      ) +
-      'value="' +
+    selectedText =
+      isRunning
+        ? ' selected'
+        : '';
+
+    optionValue =
       encodeURIComponent(
         tokenCourse +
         '||' +
         time +
         '||' +
         token
-      ) +
-      '">' +
-      tokenCourse +
-      '｜' +
-      displayTime +
-      '</option>';
+      );
 
+    optionLabel =
+      escapeHtmlForQROption_(tokenCourse) +
+      '｜' +
+      escapeHtmlForQROption_(displayTime);
+
+    options +=
+      '<option' +
+      selectedText +
+      ' value="' +
+      optionValue +
+      '">' +
+      optionLabel +
+      '</option>';
   });
 
-  return options;
+  if (!options) {
+    options = '<option value="">目前沒有可用會議</option>';
+  }
 
+  return options;
+}
+
+function escapeHtmlForQROption_(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }

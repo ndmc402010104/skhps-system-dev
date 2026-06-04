@@ -91,5 +91,5 @@ function showHospitalSignInPage(){
   template.appEntryUrl = getAppEntryUrl();
   template.staffList = JSON.stringify(getDefaultStaffList());
   template.extraList = JSON.stringify(EXTRA_HOSPITAL_LOGIN);
-  return template.evaluate().setTitle(getAppPageTitle('醫院系統登入'));
+  return template.evaluate().setTitle(getAppPageTitle('Hospital Sign In'));
 }

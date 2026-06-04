@@ -1,4 +1,9 @@
 <!DOCTYPE html>
+<!--
+檔案位置：科室系統用戶端/SignQRGenerator.html
+時間戳記：2026-06-04 19:41 UTC+8
+用途：簽到 QR 產生器；修正 Apps Script template evaluate 會誤判前端字串小於號加問號的問題，並支援 Apps Script / GitHub 雙模式載入會議清單。
+-->
 <html>
 
 <head>
@@ -660,17 +665,34 @@ button:hover{
 
   }
 
-  function ensureGithubMeetingOptions(){
+  function hasSelectableMeetingOption(select){
+    if(!select){
+      return false;
+    }
+
+    return Array.from(select.options).some(function(option){
+      const value = String(option.value || '').trim();
+      const text = String(option.textContent || '').trim();
+
+      if(!value){
+        return false;
+      }
+
+      if(value.indexOf('<' + '?') >= 0 || text.indexOf('<' + '?') >= 0){
+        return false;
+      }
+
+      return true;
+    });
+  }
+
+  function ensureMeetingOptionsPlaceholder(){
     const select = document.getElementById('course');
     if(!select){
       return;
     }
 
-    const hasUsableOption = Array.from(select.options).some(function(option){
-      return String(option.value || option.textContent || '').indexOf('<?') < 0;
-    });
-
-    if(hasUsableOption){
+    if(hasSelectableMeetingOption(select)){
       return;
     }
 
@@ -678,29 +700,68 @@ button:hover{
       '<option value="">正在載入會議清單...</option>';
   }
 
-  async function loadSignQRMeetingOptionsFromApi(){
+  function applyMeetingOptions(options){
     const select = document.getElementById('course');
     if(!select){
       return;
     }
 
-    const hasUsableOption = Array.from(select.options).some(function(option){
-      return String(option.value || option.textContent || '').indexOf('<?') < 0;
-    });
+    const html = String(options || '').trim();
 
-    if(hasUsableOption){
+    if(html){
+      select.innerHTML = html;
+    } else {
+      select.innerHTML = '<option value="">目前沒有可用會議</option>';
+    }
+  }
+
+  async function loadSignQRMeetingOptionsFromGithubApi(){
+    const res = await callAppsScriptApi({ action:'getSignQRMeetingOptions' });
+    if(!res || !res.ok){
+      throw new Error((res && res.message) || '會議清單讀取失敗');
+    }
+
+    applyMeetingOptions(res.options);
+  }
+
+  function loadSignQRMeetingOptionsFromAppsScript(){
+    return new Promise(function(resolve, reject){
+      if(
+        typeof google === 'undefined' ||
+        !google.script ||
+        !google.script.run
+      ){
+        reject(new Error('google.script.run 不可用'));
+        return;
+      }
+
+      google.script.run
+        .withSuccessHandler(function(options){
+          applyMeetingOptions(options);
+          resolve(options);
+        })
+        .withFailureHandler(function(error){
+          reject(error);
+        })
+        .getSignQRMeetingOptions();
+    });
+  }
+
+  async function loadSignQRMeetingOptions(){
+    const select = document.getElementById('course');
+    if(!select){
+      return;
+    }
+
+    if(hasSelectableMeetingOption(select)){
       return;
     }
 
     try{
-      const res = await callAppsScriptApi({ action:'getSignQRMeetingOptions' });
-      if(!res || !res.ok){
-        throw new Error((res && res.message) || '會議清單讀取失敗');
-      }
-      if(String(res.options || '').trim()){
-        select.innerHTML = res.options;
+      if(isGithubPage()){
+        await loadSignQRMeetingOptionsFromGithubApi();
       } else {
-        select.innerHTML = '<option value="">目前沒有可用會議</option>';
+        await loadSignQRMeetingOptionsFromAppsScript();
       }
     } catch(error){
       console.warn('load sign QR options failed', error);
@@ -764,13 +825,13 @@ button:hover{
   }
 
   document.addEventListener('DOMContentLoaded', function(){
-    if(!isGithubPage()){
-      return;
+    ensureMeetingOptionsPlaceholder();
+
+    if(isGithubPage()){
+      installGithubAppShellFallback();
     }
 
-    ensureGithubMeetingOptions();
-    installGithubAppShellFallback();
-    loadSignQRMeetingOptionsFromApi();
+    loadSignQRMeetingOptions();
   });
 
 </script>
