@@ -1,8 +1,8 @@
 ﻿<!DOCTYPE html>
 <!--
 檔案位置：科室系統用戶端/DressingFront.html
-時間戳記：2026-06-05 01:23 UTC+8
-用途：敷料領用/建檔/庫存前端；移除敷料查詢/建檔區塊重複標題與搜尋列，保留上方一致搜尋入口；修正主清單後三欄置中與欄寬；新增敷料名稱英文順/反序排序；庫存狀態以「無=沒有批號紀錄、0=有批號紀錄但庫存為 0」區分。
+時間戳記：2026-06-05 02:02 UTC+8
+用途：敷料領用/建檔/庫存前端；修正敷料查詢主清單欄位對齊，鎖定欄寬與庫存狀態置中，避免 colspan 展開列造成視覺跑格。
 -->
 <html>
 <head>
@@ -1507,9 +1507,16 @@ tr.editing select:not(.readonly):focus{
   box-shadow:0 0 0 3px rgba(37,99,235,.15);
 }
 
-.dictTable .col-code{ width:150px; }
-.dictTable .col-stock-status{ width:210px; }
-.dictTable .col-category{ width:132px; }
+.dictTable{
+  --dict-code-w:168px;
+  --dict-stock-w:236px;
+  --dict-price-w:150px;
+}
+
+.dictTable .col-name{ width:auto; }
+.dictTable .col-code{ width:var(--dict-code-w); }
+.dictTable .col-stock-status{ width:var(--dict-stock-w); }
+.dictTable .col-category{ width:var(--dict-price-w); }
 
 .dictTable th.col-code,
 .dictTable th.col-stock-status,
@@ -1517,8 +1524,47 @@ tr.editing select:not(.readonly):focus{
   text-align:center;
 }
 
+.dictSortableHeader{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  min-width:0;
+}
+
+.dictSortArrows{
+  display:inline-flex;
+  flex-direction:column;
+  gap:2px;
+  flex:0 0 auto;
+}
+
+.dictSortArrowBtn{
+  width:18px;
+  height:16px;
+  min-height:0;
+  padding:0;
+  border:1px solid #cbd5e1;
+  border-radius:5px;
+  background:#ffffff;
+  color:#64748b;
+  font-size:9px;
+  line-height:1;
+  font-weight:900;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.dictSortArrowBtn.active,
+.dictSortArrowBtn.primary{
+  border-color:#2563eb;
+  background:#2563eb;
+  color:#ffffff;
+}
+
 .dictTable .dictCompactCell{
   padding:0;
+  border-right:0;
 }
 
 .dictRowDetails{
@@ -1536,15 +1582,24 @@ tr.editing select:not(.readonly):focus{
 
 .dictSummaryGrid{
   display:grid;
-  grid-template-columns:minmax(360px,1fr) 150px 210px 132px;
-  align-items:center;
+  grid-template-columns:minmax(0,1fr) var(--dict-code-w) var(--dict-stock-w) var(--dict-price-w);
+  align-items:stretch;
   min-height:56px;
+  width:100%;
 }
 
 .dictSummaryCell,
 .dictSummaryActions{
-  padding:10px 12px;
+  display:flex;
+  align-items:center;
   min-width:0;
+  padding:10px 12px;
+  border-right:1px solid var(--line);
+}
+
+.dictSummaryCell:last-child,
+.dictSummaryActions:last-child{
+  border-right:0;
 }
 
 .dictSummaryValue{
@@ -1559,13 +1614,14 @@ tr.editing select:not(.readonly):focus{
 
 .dict-summary-code,
 .dict-summary-category{
+  width:100%;
   text-align:center;
   font-variant-numeric:tabular-nums;
 }
 
 .dict-summary-stock-status-cell{
-  display:flex;
   justify-content:center;
+  text-align:center;
 }
 
 .dict-summary-category{
@@ -1618,10 +1674,11 @@ tr.editing select:not(.readonly):focus{
 }
 
 .dictSummaryStockStatus{
-  display:flex;
+  display:grid;
+  grid-template-columns:repeat(2, 74px);
   align-items:center;
   justify-content:center;
-  gap:6px;
+  gap:8px;
   width:100%;
   min-width:0;
 }
@@ -1631,10 +1688,9 @@ tr.editing select:not(.readonly):focus{
   grid-template-rows:auto auto;
   align-items:center;
   justify-items:center;
-  flex:0 0 64px;
-  width:64px;
+  width:74px;
   min-width:0;
-  min-height:36px;
+  min-height:38px;
   padding:3px 4px;
   border-radius:8px;
   border:1px solid #dbe4ef;
@@ -2175,11 +2231,18 @@ tr.editing select:not(.readonly):focus{
     min-width:0;
   }
 
+  .dictTable{
+    --dict-code-w:92px;
+    --dict-stock-w:142px;
+    --dict-price-w:78px;
+  }
+
   .dictSummaryGrid{
-    grid-template-columns:minmax(0,1fr) 86px 124px 68px;
+    grid-template-columns:minmax(0,1fr) var(--dict-code-w) var(--dict-stock-w) var(--dict-price-w);
   }
 
   .dictSummaryStockStatus{
+    grid-template-columns:repeat(2, 62px);
     gap:4px;
   }
 
@@ -2195,8 +2258,7 @@ tr.editing select:not(.readonly):focus{
   }
 
   .dictSummaryStockPill{
-    flex-basis:56px;
-    width:56px;
+    width:62px;
     min-height:34px;
     padding:3px 4px;
     border-radius:8px;
@@ -2526,8 +2588,6 @@ function openGithubHashRoute(){
       <button type="button" id="testHydrocleanSingleBtn" onclick="triggerInventoryTest('single')">測試單包碼</button>
       <button type="button" id="testHydrocleanBoxBtn" onclick="triggerInventoryTest('box')">測試盒裝碼</button>
       <button type="button" onclick="loadInventoryList(getInventoryCurrentListFilter())">重新整理</button>
-      <button type="button" id="sortDictNameAscBtn" onclick="setDictNameSortMode('asc')">敷料 A→Z</button>
-      <button type="button" id="sortDictNameDescBtn" onclick="setDictNameSortMode('desc')">敷料 Z→A</button>
       <button type="button" id="reorderBtn" onclick="toggleReorderMode()">更改排序</button>
       <button type="button" id="saveOrderBtn" class="primary" style="display:none;" onclick="saveDictOrder()">儲存排序</button>
       <button type="button" id="batchSaveBtn" onclick="batchSaveDict()" style="display:none;">批次儲存</button>
@@ -2668,9 +2728,23 @@ function openGithubHashRoute(){
 
   <div class="dictTableWrap">
     <table class="dictTable" id="dictTable">
+      <colgroup>
+        <col class="col-name">
+        <col class="col-code">
+        <col class="col-stock-status">
+        <col class="col-category">
+      </colgroup>
       <thead>
         <tr>
-          <th class="col-name">敷料名稱</th>
+          <th class="col-name">
+            <span class="dictSortableHeader">
+              <span>敷料名稱</span>
+              <span class="dictSortArrows" aria-label="敷料名稱排序">
+                <button type="button" id="sortDictNameAscBtn" class="dictSortArrowBtn" title="敷料名稱 A 到 Z" onclick="event.stopPropagation(); setDictNameSortMode('asc')">▲</button>
+                <button type="button" id="sortDictNameDescBtn" class="dictSortArrowBtn" title="敷料名稱 Z 到 A" onclick="event.stopPropagation(); setDictNameSortMode('desc')">▼</button>
+              </span>
+            </span>
+          </th>
           <th class="col-code">院內碼</th>
           <th class="col-stock-status">庫存狀態</th>
           <th class="col-category">自費價格</th>
@@ -3321,10 +3395,12 @@ function updateDictNameSortButtons(){
   const ascBtn = document.getElementById('sortDictNameAscBtn');
   const descBtn = document.getElementById('sortDictNameDescBtn');
   if(ascBtn){
-    ascBtn.classList.toggle('primary', dictNameSortMode === 'asc');
+    ascBtn.classList.toggle('active', dictNameSortMode === 'asc');
+    ascBtn.setAttribute('aria-pressed', dictNameSortMode === 'asc' ? 'true' : 'false');
   }
   if(descBtn){
-    descBtn.classList.toggle('primary', dictNameSortMode === 'desc');
+    descBtn.classList.toggle('active', dictNameSortMode === 'desc');
+    descBtn.setAttribute('aria-pressed', dictNameSortMode === 'desc' ? 'true' : 'false');
   }
 }
 
