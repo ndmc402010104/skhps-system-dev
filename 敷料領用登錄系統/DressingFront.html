@@ -1,8 +1,8 @@
 ﻿<!DOCTYPE html>
 <!--
 檔案位置：科室系統用戶端/DressingFront.html
-時間戳記：2026-06-05 01:32 UTC+8
-用途：敷料領用/建檔/庫存前端；修正敷料查詢/建檔主清單不橫拉，將查詢模式預設為不限制單位，庫存單位改為查詢結果篩選，並區分「未建庫＝無」與「已建庫但數量 0＝紅色 0」。
+時間戳記：2026-06-05 01:23 UTC+8
+用途：敷料領用/建檔/庫存前端；修正敷料查詢/建檔的庫存單位篩選回到上方固定位置選擇，查詢預設不限制單位；主清單欄寬依內容調整並置中院內碼、庫存狀態、自費價格；庫存「無」維持未選定中性樣式，只有已建庫但數量 0 顯示紅色。
 -->
 <html>
 <head>
@@ -1507,10 +1507,15 @@ tr.editing select:not(.readonly):focus{
   box-shadow:0 0 0 3px rgba(37,99,235,.15);
 }
 
-.dictTable .col-name{ width:44%; }
-.dictTable .col-code{ width:15%; }
-.dictTable .col-stock-status{ width:29%; }
-.dictTable .col-category{ width:12%; }
+.dictTable .col-code{ width:112px; }
+.dictTable .col-stock-status{ width:166px; }
+.dictTable .col-category{ width:92px; }
+
+.dictTable th.col-code,
+.dictTable th.col-stock-status,
+.dictTable th.col-category{
+  text-align:center;
+}
 
 .dictTable .dictCompactCell{
   padding:0;
@@ -1531,7 +1536,7 @@ tr.editing select:not(.readonly):focus{
 
 .dictSummaryGrid{
   display:grid;
-  grid-template-columns:44% 15% 29% 12%;
+  grid-template-columns:minmax(0,1fr) 112px 166px 92px;
   align-items:center;
   min-height:56px;
 }
@@ -1552,13 +1557,23 @@ tr.editing select:not(.readonly):focus{
 }
 
 
+.dict-summary-code,
 .dict-summary-category{
-  text-align:right;
+  text-align:center;
   font-variant-numeric:tabular-nums;
 }
 
+.dict-summary-stock-status-cell{
+  display:flex;
+  justify-content:center;
+}
+
+.dict-summary-category{
+  font-weight:950;
+}
+
 .dictTable th.col-category{
-  text-align:right;
+  text-align:center;
 }
 
 .dict-summary-name-size{
@@ -1605,7 +1620,7 @@ tr.editing select:not(.readonly):focus{
 .dictSummaryStockStatus{
   display:flex;
   align-items:center;
-  gap:8px;
+  gap:6px;
   width:100%;
   min-width:0;
 }
@@ -1615,12 +1630,12 @@ tr.editing select:not(.readonly):focus{
   grid-template-rows:auto auto;
   align-items:center;
   justify-items:center;
-  flex:0 0 58px;
-  width:58px;
+  flex:0 0 64px;
+  width:64px;
   min-width:0;
-  min-height:38px;
+  min-height:36px;
   padding:3px 4px;
-  border-radius:9px;
+  border-radius:8px;
   border:1px solid #dbe4ef;
   background:#f8fafc;
   color:#94a3b8;
@@ -1649,8 +1664,9 @@ tr.editing select:not(.readonly):focus{
 
 .dictSummaryStockPill.is-empty{
   border-color:#e2e8f0;
-  background:#f8fafc;
-  color:#94a3b8;
+  background:#ffffff;
+  color:#64748b;
+  box-shadow:none;
 }
 
 .dictSummaryStockPill.is-zero{
@@ -2109,7 +2125,6 @@ tr.editing select:not(.readonly):focus{
   }
 
   .useTableWrap,
-  .dictTableWrap,
   .inventoryTableWrap{
     margin-left:-4px;
     margin-right:-4px;
@@ -2118,7 +2133,6 @@ tr.editing select:not(.readonly):focus{
   }
 
   .useTableWrap::after,
-  .dictTableWrap::after,
   .inventoryTableWrap::after{
     content:'左右滑動查看更多';
     display:block;
@@ -2668,13 +2682,6 @@ function openGithubHashRoute(){
     </div>
   </div>
 
-  <div class="dictStockFilterBar" aria-label="庫存單位篩選">
-    <span class="dictStockFilterLabel">庫存篩選</span>
-    <input id="dictStockFilter" type="hidden" value="__ALL__">
-    <button type="button" class="dictStockFilterBtn active" data-dict-stock-filter="__ALL__" onclick="setDictStockFilter('__ALL__')">全部</button>
-    <button type="button" class="dictStockFilterBtn" data-dict-stock-filter="5A" onclick="setDictStockFilter('5A')">5A 有建庫</button>
-    <button type="button" class="dictStockFilterBtn" data-dict-stock-filter="傷中" onclick="setDictStockFilter('傷中')">傷中有建庫</button>
-  </div>
 
   <div class="dictTableWrap">
     <table class="dictTable" id="dictTable">
@@ -3217,11 +3224,7 @@ async function openDressingDict(){
   document.getElementById('inventoryArea').style.display = 'block';
   document.getElementById('dictArea').style.display = 'block';
   setInventoryUnitSilently('__ALL__');
-  inventoryUnitChoiceMade = false;
-  const dictFilterInput = document.getElementById('dictStockFilter');
-  if(dictFilterInput){
-    dictFilterInput.value = '__ALL__';
-  }
+  inventoryUnitChoiceMade = true;
   updateDictStockFilterButtons();
   if(!inventoryListReady && !inventoryListLoading){
     loadInventoryList(getInventoryCurrentListFilter());
@@ -3249,12 +3252,8 @@ async function openInventoryDictAjax(){
   }
   setInventoryUnitSilently('__ALL__');
   inventoryOperationChoiceMade = true;
-  inventoryUnitChoiceMade = false;
+  inventoryUnitChoiceMade = true;
   inventoryOperationDirty = false;
-  const dictFilterInput = document.getElementById('dictStockFilter');
-  if(dictFilterInput){
-    dictFilterInput.value = '__ALL__';
-  }
   updateDictStockFilterButtons();
   clearInventorySearchInput();
   clearInventoryDetailForm();
@@ -3294,8 +3293,11 @@ function makeStatusSelect(value){
 }
 
 function getDictStockFilterValue(){
-  const input = document.getElementById('dictStockFilter');
-  return input ? String(input.value || '__ALL__').trim() || '__ALL__' : '__ALL__';
+  const operationType = getInventoryOperationType();
+  if(operationType !== 'query' || !inventoryUnitChoiceMade){
+    return '__ALL__';
+  }
+  return getInventoryUnitValue();
 }
 
 function normalizeDictStockFilterUnit(unit){
@@ -3307,10 +3309,7 @@ function normalizeDictStockFilterUnit(unit){
 }
 
 function updateDictStockFilterButtons(){
-  const value = getDictStockFilterValue();
-  document.querySelectorAll('[data-dict-stock-filter]').forEach(function(btn){
-    btn.classList.toggle('active', btn.dataset.dictStockFilter === value);
-  });
+  updateInventorySegmentedButtons();
 }
 
 function shouldShowDictItemForStockFilter(item){
@@ -3358,20 +3357,7 @@ function renderDictListFromCache(){
 }
 
 function setDictStockFilter(unit){
-  const input = document.getElementById('dictStockFilter');
-  const next = normalizeDictStockFilterUnit(unit);
-  if(input){
-    input.value = next;
-  }
-
-  updateDictStockFilterButtons();
-  if(dictLoaded && Array.isArray(dressingMasterCache)){
-    renderDictListFromCache();
-    const total = dressingMasterCache.length;
-    const shown = getFilteredDressingMasterCache().length;
-    const label = next === '__ALL__' ? '全部敷料' : next + ' 已建庫';
-    setDictLoadState('ready', '已顯示 ' + shown + ' / ' + total + ' 筆：' + label);
-  }
+  setInventoryUnit(unit);
 }
 
 async function loadDictList(){
@@ -3439,7 +3425,7 @@ function createDictRow(item, isNew){
           <span class="dictSummaryCell">
             <span class="dictSummaryValue dict-summary-code">-</span>
           </span>
-          <span class="dictSummaryCell">
+          <span class="dictSummaryCell dict-summary-stock-status-cell">
             <span class="dictSummaryStockStatus" aria-label="庫存狀態">
               <span class="dictSummaryStockPill dict-summary-stock-5a is-empty"><span class="dictSummaryStockUnit">5A</span><span class="dictSummaryStockQty">無</span></span>
               <span class="dictSummaryStockPill dict-summary-stock-wound is-empty"><span class="dictSummaryStockUnit">傷中</span><span class="dictSummaryStockQty">無</span></span>
@@ -8037,6 +8023,28 @@ async function setInventoryUnit(unit, options){
   if(unit === currentUnit){
     updateInventorySegmentedButtons();
     setInventoryPanelOpen('inventorySearchPanel', canShowInventorySearchPanel());
+    const dictArea = document.getElementById('dictArea');
+    const dictOpen = dictArea && dictArea.style.display !== 'none';
+    if(getInventoryOperationType() === 'query' && dictOpen && dictLoaded && Array.isArray(dressingMasterCache)){
+      renderDictListFromCache();
+    }
+    focusInventorySearchInput();
+    return;
+  }
+
+  const dictArea = document.getElementById('dictArea');
+  const dictOpen = dictArea && dictArea.style.display !== 'none';
+  if(getInventoryOperationType() === 'query' && dictOpen){
+    setInventoryUnitSilently(unit);
+    updateInventorySegmentedButtons();
+    if(dictLoaded && Array.isArray(dressingMasterCache)){
+      renderDictListFromCache();
+      const total = dressingMasterCache.length;
+      const shown = getFilteredDressingMasterCache().length;
+      const next = normalizeDictStockFilterUnit(unit);
+      const label = next === '__ALL__' ? '全部敷料' : next + ' 已建庫';
+      setDictLoadState('ready', '已顯示 ' + shown + ' / ' + total + ' 筆：' + label);
+    }
     focusInventorySearchInput();
     return;
   }
@@ -8052,6 +8060,7 @@ async function setInventoryUnit(unit, options){
   setInventoryUnitSilently(unit);
 
   updateInventorySegmentedButtons();
+
   if(!options.silent){
     resetInventoryAfterSetupChange({ keepSearchOpen:true });
     renderInventoryOperationMode();
@@ -8085,7 +8094,7 @@ function updateInventorySegmentedButtons(){
     let nextHint = '請先選擇作業類型與庫存位置，完成後才會出現搜尋 / 掃描列。';
 
     if(operationType === 'query' && inventoryOperationChoiceMade){
-      nextHint = '敷料查詢預設不限制庫存位置；可在下方用「庫存篩選」只看 5A 或傷中已建庫的敷料。';
+      nextHint = '敷料查詢預設不限制庫存位置；可直接用這裡的庫存位置按鈕篩選，只看 5A 或傷中已建庫的敷料。';
     } else if(inventoryOperationChoiceMade && !inventoryUnitChoiceMade){
       nextHint = '已選擇作業類型，請再選擇庫存位置。';
     } else if(!inventoryOperationChoiceMade && inventoryUnitChoiceMade){
