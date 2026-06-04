@@ -132,7 +132,7 @@ h1{
   background:#ffffff;
   border:1px solid var(--line);
   border-radius:8px;
-  cursor:default;
+  cursor:pointer;
   transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease;
 }
 
@@ -588,17 +588,7 @@ if (window.location.hostname.includes('github.io')) {
       box-shadow:0 -8px 24px rgba(15,23,42,.08);
       backdrop-filter:blur(10px);
     }
-    .appVersionTabs{
-      display:inline-flex;
-      align-items:center;
-      gap:4px;
-      padding:4px;
-      border:1px solid rgba(148,163,184,.45);
-      border-radius:999px;
-      background:rgba(255,255,255,.78);
-      box-shadow:0 8px 18px rgba(15,23,42,.06);
-      max-width:100%;
-    }
+
     .appVersionBadge{
       display:inline-flex;
       align-items:center;
@@ -621,7 +611,7 @@ if (window.location.hostname.includes('github.io')) {
       border-color:transparent;
       box-shadow:0 8px 18px rgba(37,99,235,.20);
     }
-    .appVersionBadgeMode{ font-weight:900; }@media(min-width:1200px){
+    .appVersionBadgeMode{ font-weight:900; }.appVersionText{ font-weight:800; opacity:.9; }@media(min-width:1200px){
       .shell,
       .wrap,
       .container,
@@ -659,12 +649,9 @@ if (window.location.hostname.includes('github.io')) {
   ghFooter.className = 'appVersionFooter';
   ghFooter.dataset.appFooter = '1';
   ghFooter.innerHTML = `
-    <div class="appVersionTabs" aria-label="版本資訊">
-      <span class="appVersionBadge is-active">
-        <span class="appVersionBadgeMode">GitHub 版</span>
-      </span>
-      <span class="appVersionBadge">正式版</span>
-      <span class="appVersionBadge">測試版</span>
+    <div class="appVersionBadge is-active" aria-label="GitHub 版本資訊">
+      <span class="appVersionBadgeMode">GitHub 版</span>
+      <span class="appVersionText">v2.27.20-202606042358</span>
     </div>
   `;
   document.body.appendChild(ghFooter);
