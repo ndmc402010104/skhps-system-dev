@@ -753,6 +753,11 @@ button:hover{
       return;
     }
 
+    const done =
+      typeof pushAppWait === 'function'
+        ? pushAppWait('正在讀取會議清單...')
+        : function(){};
+
     try{
       if(isGithubPage()){
         await loadSignQRMeetingOptionsFromGithubApi();
@@ -762,6 +767,8 @@ button:hover{
     } catch(error){
       console.warn('load sign QR options failed', error);
       select.innerHTML = '<option value="">會議清單讀取失敗</option>';
+    } finally {
+      done();
     }
   }
 
@@ -781,6 +788,13 @@ button:hover{
       shellStyle.textContent =
         ':root{--app-shell-wide-inset:15vw;--app-shell-wide-width:70vw;--app-shell-gutter:24px;}' +
         '.appHeader{padding:0 var(--app-shell-gutter)!important;}' +
+        '.appWaitIndicator{position:fixed;top:12px;left:50%;z-index:1450;display:none;align-items:center;gap:9px;max-width:min(420px,calc(100vw - 32px));padding:9px 14px;border:1px solid #bfdbfe;border-radius:999px;background:rgba(255,255,255,.96);box-shadow:0 8px 24px rgba(15,23,42,.12);color:#1e3a8a;font-size:13px;font-weight:900;transform:translateX(-50%);overflow:hidden;}' +
+        '.appWaitIndicator.is-active{display:flex;}' +
+        '.appWaitIndicator::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:linear-gradient(90deg,transparent,#2563eb,transparent);animation:appWaitSweep 1.05s linear infinite;}' +
+        '.appWaitSpinner{width:15px;height:15px;flex:0 0 auto;border:2px solid #bfdbfe;border-top-color:#2563eb;border-radius:50%;animation:appWaitSpin .72s linear infinite;}' +
+        '.appWaitText{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}' +
+        '@keyframes appWaitSpin{to{transform:rotate(360deg);}}' +
+        '@keyframes appWaitSweep{from{transform:translateX(-100%);}to{transform:translateX(100%);}}' +
         '.appVersionFooter{position:fixed;left:0;right:0;bottom:0;z-index:10000;height:42px;display:flex;align-items:center;justify-content:center;padding:0 16px;box-sizing:border-box;background:rgba(248,251,255,.94);border-top:1px solid rgba(148,163,184,.38);box-shadow:0 -8px 24px rgba(15,23,42,.08);backdrop-filter:blur(10px);}' +
         '.appVersionBadge{display:inline-flex;align-items:center;gap:5px;font-size:11px;line-height:1.1;color:#475569;background:rgba(255,255,255,.72);border:1px solid rgba(148,163,184,.45);border-radius:8px;padding:6px 8px;max-width:100%;}' +
         '.appVersionBadgeMode{font-weight:700;}' +
@@ -809,6 +823,60 @@ button:hover{
           '</div>' +
         '</div>';
       document.body.prepend(ghHeader);
+    }
+
+    if(!document.getElementById('appWaitIndicator')){
+      const waitNode = document.createElement('div');
+      waitNode.id = 'appWaitIndicator';
+      waitNode.className = 'appWaitIndicator';
+      waitNode.setAttribute('role', 'status');
+      waitNode.setAttribute('aria-live', 'polite');
+      waitNode.setAttribute('aria-busy', 'false');
+      waitNode.innerHTML =
+        '<span class="appWaitSpinner" aria-hidden="true"></span>' +
+        '<span id="appWaitText" class="appWaitText">處理中...</span>';
+      document.body.appendChild(waitNode);
+    }
+
+    if(!window.AppWait || typeof window.AppWait.push !== 'function'){
+      const waitStack = [];
+      let waitSeq = 0;
+
+      function renderWait(){
+        const indicator = document.getElementById('appWaitIndicator');
+        const textEl = document.getElementById('appWaitText');
+        if(!indicator || !textEl){
+          return;
+        }
+
+        const active = waitStack.length > 0;
+        const current = active ? waitStack[waitStack.length - 1] : null;
+        indicator.classList.toggle('is-active', active);
+        indicator.setAttribute('aria-busy', active ? 'true' : 'false');
+        textEl.innerText = current && current.message ? current.message : '處理中...';
+      }
+
+      function pushWait(message){
+        const id = ++waitSeq;
+        let closed = false;
+        waitStack.push({ id:id, message:message || '處理中...' });
+        renderWait();
+        return function(){
+          if(closed){
+            return;
+          }
+          closed = true;
+          const index = waitStack.findIndex(function(item){ return item.id === id; });
+          if(index >= 0){
+            waitStack.splice(index, 1);
+          }
+          renderWait();
+        };
+      }
+
+      window.AppWait = { push:pushWait, render:renderWait };
+      window.pushAppWait = pushWait;
+      window.renderAppWaitIndicator = renderWait;
     }
 
     if(!document.querySelector('.appVersionFooter')){

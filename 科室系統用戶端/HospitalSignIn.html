@@ -116,28 +116,43 @@ h2{
 
 .loginBtn{
   min-height:48px;
-  padding:10px 14px;
+  padding:11px 14px;
   border-radius:8px;
-  border:1px solid #dbe4ff;
-  background:#eef2ff;
-  color:#1e293b;
+  border:1px solid #cbd5e1;
+  background:#ffffff;
+  color:#172033;
   font-size:16px;
-  font-weight:700;
+  font-weight:800;
   cursor:pointer;
   line-height:1.25;
+  box-shadow:0 1px 0 rgba(15,23,42,.03);
+  transition:background-color .16s ease,border-color .16s ease,box-shadow .16s ease,color .16s ease,transform .16s ease;
 }
 
 .loginBtn:hover{
-  background:#e3eaff;
+  border-color:#2563eb;
+  background:#eff6ff;
+  color:#1d4ed8;
+  box-shadow:0 8px 18px rgba(37,99,235,.14);
+  transform:translateY(-1px);
+}
+
+.loginBtn:focus-visible{
+  outline:3px solid rgba(37,99,235,.18);
+  outline-offset:2px;
+  border-color:#2563eb;
 }
 
 .extraBtn{
-  background:#ecfdf5;
-  border-color:#bbf7d0;
+  background:#ffffff;
+  border-color:#cbd5e1;
 }
 
 .extraBtn:hover{
-  background:#dcfce7;
+  border-color:#059669;
+  background:#ecfdf5;
+  color:#047857;
+  box-shadow:0 8px 18px rgba(5,150,105,.14);
 }
 
 .manualRow{
@@ -156,6 +171,16 @@ h2{
 
 .manualRow button{
   width:160px;
+  background:#2563eb;
+  border-color:#2563eb;
+  color:#ffffff;
+}
+
+.manualRow button:hover{
+  background:#1d4ed8;
+  border-color:#1d4ed8;
+  color:#ffffff;
+  box-shadow:0 10px 22px rgba(37,99,235,.20);
 }
 
 @media(max-width:640px){
@@ -483,6 +508,11 @@ async function loadHospitalSignInLists(){
     return;
   }
 
+  const done =
+    typeof pushAppWait === 'function'
+      ? pushAppWait('正在讀取登入名單...')
+      : function(){};
+
   try{
     if(isGithubPage()){
       const res = await callAppsScriptApi({ action:'getHospitalSignInLists' });
@@ -496,6 +526,8 @@ async function loadHospitalSignInLists(){
     await loadHospitalSignInListsFromAppsScript();
   } catch(error){
     console.warn('load hospital sign-in lists failed', error);
+  } finally {
+    done();
   }
 }
 
@@ -515,6 +547,13 @@ function installGithubAppShellFallback(){
     shellStyle.textContent =
       ':root{--app-shell-wide-inset:15vw;--app-shell-wide-width:70vw;--app-shell-gutter:24px;}' +
       '.appHeader{padding:0 var(--app-shell-gutter)!important;}' +
+      '.appWaitIndicator{position:fixed;top:12px;left:50%;z-index:1450;display:none;align-items:center;gap:9px;max-width:min(420px,calc(100vw - 32px));padding:9px 14px;border:1px solid #bfdbfe;border-radius:999px;background:rgba(255,255,255,.96);box-shadow:0 8px 24px rgba(15,23,42,.12);color:#1e3a8a;font-size:13px;font-weight:900;transform:translateX(-50%);overflow:hidden;}' +
+      '.appWaitIndicator.is-active{display:flex;}' +
+      '.appWaitIndicator::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:linear-gradient(90deg,transparent,#2563eb,transparent);animation:appWaitSweep 1.05s linear infinite;}' +
+      '.appWaitSpinner{width:15px;height:15px;flex:0 0 auto;border:2px solid #bfdbfe;border-top-color:#2563eb;border-radius:50%;animation:appWaitSpin .72s linear infinite;}' +
+      '.appWaitText{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}' +
+      '@keyframes appWaitSpin{to{transform:rotate(360deg);}}' +
+      '@keyframes appWaitSweep{from{transform:translateX(-100%);}to{transform:translateX(100%);}}' +
       '.appVersionFooter{position:fixed;left:0;right:0;bottom:0;z-index:10000;height:42px;display:flex;align-items:center;justify-content:center;padding:0 16px;box-sizing:border-box;background:rgba(248,251,255,.94);border-top:1px solid rgba(148,163,184,.38);box-shadow:0 -8px 24px rgba(15,23,42,.08);backdrop-filter:blur(10px);}' +
       '.appVersionBadge{display:inline-flex;align-items:center;gap:5px;font-size:11px;line-height:1.1;color:#475569;background:rgba(255,255,255,.72);border:1px solid rgba(148,163,184,.45);border-radius:8px;padding:6px 8px;max-width:100%;}' +
       '.appVersionBadgeMode{font-weight:700;}' +
@@ -543,6 +582,60 @@ function installGithubAppShellFallback(){
         '</div>' +
       '</div>';
     document.body.prepend(ghHeader);
+  }
+
+  if(!document.getElementById('appWaitIndicator')){
+    const waitNode = document.createElement('div');
+    waitNode.id = 'appWaitIndicator';
+    waitNode.className = 'appWaitIndicator';
+    waitNode.setAttribute('role', 'status');
+    waitNode.setAttribute('aria-live', 'polite');
+    waitNode.setAttribute('aria-busy', 'false');
+    waitNode.innerHTML =
+      '<span class="appWaitSpinner" aria-hidden="true"></span>' +
+      '<span id="appWaitText" class="appWaitText">處理中...</span>';
+    document.body.appendChild(waitNode);
+  }
+
+  if(!window.AppWait || typeof window.AppWait.push !== 'function'){
+    const waitStack = [];
+    let waitSeq = 0;
+
+    function renderWait(){
+      const indicator = document.getElementById('appWaitIndicator');
+      const textEl = document.getElementById('appWaitText');
+      if(!indicator || !textEl){
+        return;
+      }
+
+      const active = waitStack.length > 0;
+      const current = active ? waitStack[waitStack.length - 1] : null;
+      indicator.classList.toggle('is-active', active);
+      indicator.setAttribute('aria-busy', active ? 'true' : 'false');
+      textEl.innerText = current && current.message ? current.message : '處理中...';
+    }
+
+    function pushWait(message){
+      const id = ++waitSeq;
+      let closed = false;
+      waitStack.push({ id:id, message:message || '處理中...' });
+      renderWait();
+      return function(){
+        if(closed){
+          return;
+        }
+        closed = true;
+        const index = waitStack.findIndex(function(item){ return item.id === id; });
+        if(index >= 0){
+          waitStack.splice(index, 1);
+        }
+        renderWait();
+      };
+    }
+
+    window.AppWait = { push:pushWait, render:renderWait };
+    window.pushAppWait = pushWait;
+    window.renderAppWaitIndicator = renderWait;
   }
 
   if(!document.querySelector('.appVersionFooter')){
