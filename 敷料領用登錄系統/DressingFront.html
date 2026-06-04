@@ -1,8 +1,8 @@
 ﻿<!DOCTYPE html>
 <!--
 檔案位置：科室系統用戶端/DressingFront.html
-時間戳記：2026-06-05 00:35 UTC+8
-用途：敷料領用/建檔/庫存前端；調整敷料查詢/建檔主清單為查詢總覽：狀態前置、固定顯示 5A/傷中庫存位置摘要，自費價格保留於主列，編輯/刪除與批號明細收進展開明細。
+時間戳記：2026-06-05 01:07 UTC+8
+用途：敷料領用/建檔/庫存前端；修正敷料查詢/建檔主清單為不橫拉的四欄總覽：狀態併入敷料名稱、庫存狀態合併顯示 5A/傷中小格，自費價格保留於主列，操作與批號明細收進展開明細。
 -->
 <html>
 <head>
@@ -1439,13 +1439,12 @@ tr.editing .dictGtinScanBtn{
   margin:8px 0 0;
 }
 
-/* 建檔表：專屬 wrapper，永遠不裁切左側 */
+/* 建檔表：主清單不橫拉。詳情與操作收進展開列。 */
 .dictTableWrap{
   width:100%;
   max-width:100%;
-  overflow-x:auto;
+  overflow-x:hidden;
   overflow-y:visible;
-  -webkit-overflow-scrolling:touch;
   border:1px solid var(--line);
   border-radius:8px;
   background:#fff;
@@ -1453,7 +1452,7 @@ tr.editing .dictGtinScanBtn{
 
 .dictTable{
   width:100%;
-  min-width:1180px;
+  min-width:0;
   border-collapse:collapse;
   table-layout:fixed;
 }
@@ -1508,11 +1507,9 @@ tr.editing select:not(.readonly):focus{
   box-shadow:0 0 0 3px rgba(37,99,235,.15);
 }
 
-.dictTable .col-status{ width:10%; }
-.dictTable .col-name{ width:36%; }
-.dictTable .col-code{ width:14%; }
-.dictTable .col-stock-5a{ width:12%; }
-.dictTable .col-stock-wound{ width:16%; }
+.dictTable .col-name{ width:44%; }
+.dictTable .col-code{ width:15%; }
+.dictTable .col-stock-status{ width:29%; }
 .dictTable .col-category{ width:12%; }
 
 .dictTable .dictCompactCell{
@@ -1534,7 +1531,7 @@ tr.editing select:not(.readonly):focus{
 
 .dictSummaryGrid{
   display:grid;
-  grid-template-columns:10% 36% 14% 12% 16% 12%;
+  grid-template-columns:44% 15% 29% 12%;
   align-items:center;
   min-height:56px;
 }
@@ -1552,6 +1549,16 @@ tr.editing select:not(.readonly):focus{
   white-space:nowrap;
   font-weight:800;
   color:#0f172a;
+}
+
+
+.dict-summary-category{
+  text-align:right;
+  font-variant-numeric:tabular-nums;
+}
+
+.dictTable th.col-category{
+  text-align:right;
 }
 
 .dict-summary-name-size{
@@ -1583,7 +1590,7 @@ tr.editing select:not(.readonly):focus{
 .dictNameSummaryCell{
   display:flex;
   align-items:center;
-  gap:8px;
+  gap:6px;
 }
 
 .dictNameSummaryCell .dictSummaryValue{
@@ -1595,11 +1602,12 @@ tr.editing select:not(.readonly):focus{
   flex:0 0 auto;
 }
 
- .dictSummaryStockStatus{
-  display:grid;
-  grid-template-columns:repeat(2,minmax(0,1fr));
-  gap:6px;
+.dictSummaryStockStatus{
+  display:flex;
+  align-items:center;
+  gap:8px;
   width:100%;
+  min-width:0;
 }
 
 .dictSummaryStockPill{
@@ -1607,9 +1615,11 @@ tr.editing select:not(.readonly):focus{
   grid-template-rows:auto auto;
   align-items:center;
   justify-items:center;
+  flex:0 0 58px;
+  width:58px;
   min-width:0;
-  min-height:36px;
-  padding:4px 6px;
+  min-height:38px;
+  padding:3px 4px;
   border-radius:9px;
   border:1px solid #dbe4ef;
   background:#f8fafc;
@@ -2103,14 +2113,27 @@ tr.editing select:not(.readonly):focus{
   }
 
   .dictSummaryGrid{
-    grid-template-columns:minmax(180px,1fr) minmax(78px,.36fr) minmax(116px,.54fr) minmax(54px,.25fr);
+    grid-template-columns:42% 16% 30% 12%;
   }
 
   .dictSummaryStockStatus{
     gap:4px;
   }
 
+  .dictSummaryNameCell,
+  .dictNameSummaryCell{
+    gap:4px;
+  }
+
+  .dictSummaryStatus{
+    min-height:22px;
+    padding:3px 6px;
+    font-size:11px;
+  }
+
   .dictSummaryStockPill{
+    flex-basis:50px;
+    width:50px;
     min-height:34px;
     padding:3px 4px;
     border-radius:8px;
