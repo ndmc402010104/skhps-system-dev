@@ -7208,11 +7208,15 @@ function updateInventorySearchModeControls(){
   const inventoryControls = document.getElementById('inventorySearchControls');
   const dictControls = document.getElementById('dictSearchControls');
 
+  // 這裡不能只改 hidden，因為 dictSearchControls 原本有 inline display:none；
+  // hidden=false 不會覆蓋 display:none，會造成敷料查詢模式搜尋列整組消失。
   if(inventoryControls){
     inventoryControls.hidden = isDictMode;
+    inventoryControls.style.display = isDictMode ? 'none' : '';
   }
   if(dictControls){
     dictControls.hidden = !isDictMode;
+    dictControls.style.display = isDictMode ? '' : 'none';
   }
 }
 
