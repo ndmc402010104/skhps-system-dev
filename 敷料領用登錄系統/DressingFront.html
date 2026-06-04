@@ -6744,6 +6744,24 @@ function applyInventoryLotExpValues(parsed){
   applyInventoryLotExpInputMode(parsed);
 }
 
+function markInventoryScanAccepted(parsed, raw){
+  parsed = parsed || {};
+  raw = String(raw || parsed.raw || '').trim();
+
+  if(getInventoryOperationType() === 'inbound'){
+    applyInventoryLotExpValues(parsed);
+  }
+
+  if(raw){
+    const input = document.getElementById('inventoryBarcodeInput');
+    if(input){
+      input.value = raw;
+    }
+  }
+
+  setInventoryBusy(true, '已接收掃描內容，正在查詢敷料資料...');
+}
+
 function restoreInventoryMasterDialogAfterScanner(){
   const overlay = document.getElementById('inventoryMasterDialogOverlay');
   if(overlay && inventoryMasterDialogHiddenForScanner){
@@ -9122,6 +9140,8 @@ async function lookupInventoryFromInput(options){
 }
 
 async function handleInventoryBarcodeResult(barcode, parsed){
+  parsed = parsed || parseUDI(barcode);
+  markInventoryScanAccepted(parsed, barcode);
   const input = document.getElementById('inventoryBarcodeInput');
   if(input) input.value = barcode;
   closeDressingScanner();
@@ -9149,6 +9169,8 @@ function triggerInventoryTest(type){
     ? TEST_HYDROCLEAN_CAVITY_BOX_CODE
     : TEST_HYDROCLEAN_CAVITY_SINGLE_CODE;
   pendingInventoryPackageType = type === 'box' ? 'box' : '';
+  const parsed = parseUDI(code);
+  markInventoryScanAccepted(parsed, code);
   const input = document.getElementById('inventoryBarcodeInput');
   if(input) input.value = code;
   lookupInventoryFromInput();
@@ -9684,6 +9706,9 @@ async function loadInventoryList(options){
     inventoryListReady = false;
     inventoryListLoading = false;
     inventoryCache = [];
+    if(inventoryBusy){
+      setInventoryBusy(false, '批號庫存讀取失敗，可重新整理後再查。');
+    }
     tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#dc2626; padding:20px;">讀取失敗：' + escapeHtml(error.message || error) + '</td></tr>';
     setInventoryPanelOpen('inventorySearchPanel', canShowInventorySearchPanel());
     updateInventorySearchLoadingHint();

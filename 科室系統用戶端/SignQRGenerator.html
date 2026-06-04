@@ -265,10 +265,22 @@ button:hover{
 
   function getAppEntryUrl(){
     const value = String(APP_ENTRY_URL || '').trim();
-    if(value.includes('<' + '?=') || !value){
+    if(value && !value.includes('<' + '?=')){
+      return value;
+    }
+
+    if(isGithubPage()){
       return 'https://script.google.com/macros/s/AKfycbwbz8pXfU68j2aFeF_AaDmmG6Vco3JsPSw-PGyYeLu0AF3vCfzaZJQFOjORnwSw8Xp4/exec';
     }
-    return value;
+
+    try{
+      const currentUrl = new URL(window.location.href);
+      currentUrl.search = '';
+      currentUrl.hash = '';
+      return currentUrl.toString();
+    } catch(error){
+      return window.location.href.split('?')[0].split('#')[0];
+    }
   }
 
   function callAppsScriptApi(params){
@@ -343,6 +355,11 @@ button:hover{
     const meeting =
       getSelectedMeeting();
 
+    if(!meeting || !meeting.course || !meeting.date || !meeting.token){
+      alert('請先選擇有效會議。');
+      return;
+    }
+
     const signUrl =
       buildSignQRUrl(
         meeting
@@ -378,12 +395,20 @@ button:hover{
 
   function getSelectedMeeting(){
 
+    const select =
+      document.getElementById('course');
+
+    const selectedValue =
+      select
+        ? String(select.value || '')
+        : '';
+
+    if(!selectedValue){
+      return null;
+    }
+
     const raw =
-      decodeURIComponent(
-        document
-          .getElementById('course')
-          .value
-      );
+      decodeURIComponent(selectedValue);
 
     const parts =
       raw.split('||');
@@ -739,6 +764,10 @@ button:hover{
   }
 
   document.addEventListener('DOMContentLoaded', function(){
+    if(!isGithubPage()){
+      return;
+    }
+
     ensureGithubMeetingOptions();
     installGithubAppShellFallback();
     loadSignQRMeetingOptionsFromApi();
