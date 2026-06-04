@@ -1,8 +1,8 @@
 ﻿<!DOCTYPE html>
 <!--
 檔案位置：科室系統用戶端/DressingFront.html
-時間戳記：2026-06-03 01:51 UTC+8
-用途：敷料領用/建檔/庫存前端；補回 merge 後遺失的 pushAppWait busy/loading helper，避免庫存、主檔讀取、掃描與 JSONP API 呼叫時因 ReferenceError 中斷。
+時間戳記：2026-06-05 00:35 UTC+8
+用途：敷料領用/建檔/庫存前端；調整敷料查詢/建檔主清單為查詢總覽：狀態前置、固定顯示 5A/傷中庫存位置摘要，自費價格保留於主列，編輯/刪除與批號明細收進展開明細。
 -->
 <html>
 <head>
@@ -1508,13 +1508,12 @@ tr.editing select:not(.readonly):focus{
   box-shadow:0 0 0 3px rgba(37,99,235,.15);
 }
 
-.dictTable .col-code{ width:12%; }
-.dictTable .col-name{ width:31%; }
-.dictTable .col-stock-unit{ width:14%; }
-.dictTable .col-stock-qty{ width:11%; }
-.dictTable .col-category{ width:11%; }
-.dictTable .col-status{ width:9%; }
-.dictTable .col-actions{ width:12%; }
+.dictTable .col-status{ width:10%; }
+.dictTable .col-name{ width:36%; }
+.dictTable .col-code{ width:14%; }
+.dictTable .col-stock-5a{ width:12%; }
+.dictTable .col-stock-wound{ width:16%; }
+.dictTable .col-category{ width:12%; }
 
 .dictTable .dictCompactCell{
   padding:0;
@@ -1535,7 +1534,7 @@ tr.editing select:not(.readonly):focus{
 
 .dictSummaryGrid{
   display:grid;
-  grid-template-columns:12% 31% 14% 11% 11% 9% 12%;
+  grid-template-columns:10% 36% 14% 12% 16% 12%;
   align-items:center;
   min-height:56px;
 }
@@ -1579,6 +1578,51 @@ tr.editing select:not(.readonly):focus{
 .dictSummaryStatus.is-paused{
   background:#fee2e2;
   color:#b91c1c;
+}
+
+.dictStatusSummaryCell{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+.dictSummaryStockPill{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:100%;
+  min-height:30px;
+  padding:5px 8px;
+  border-radius:999px;
+  border:1px solid #cbd5e1;
+  background:#f8fafc;
+  color:#64748b;
+  font-size:13px;
+  font-weight:950;
+  line-height:1.2;
+  white-space:nowrap;
+}
+
+.dictSummaryStockPill.is-active{
+  border-color:#86efac;
+  background:#dcfce7;
+  color:#166534;
+}
+
+.dictSummaryStockPill.is-empty{
+  border-color:#e2e8f0;
+  background:#f8fafc;
+  color:#94a3b8;
+}
+
+.dictDetailActions{
+  display:flex;
+  justify-content:flex-end;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-top:12px;
+  padding-top:12px;
+  border-top:1px solid #e2e8f0;
 }
 
 .dictSummaryActions{
@@ -2021,7 +2065,7 @@ tr.editing select:not(.readonly):focus{
   }
 
   .dictSummaryGrid{
-    grid-template-columns:16% 38% 16% 14% 16%;
+    grid-template-columns:22% 42% 18% 18%;
   }
 
   .dictSummaryCell,
@@ -2500,17 +2544,16 @@ function openGithubHashRoute(){
     <table class="dictTable" id="dictTable">
       <thead>
         <tr>
-          <th class="col-code">院內碼</th>
-          <th class="col-name">敷料名稱規格</th>
-          <th class="col-stock-unit">庫存位置</th>
-          <th class="col-stock-qty">庫存數量</th>
-          <th class="col-category">自費價格</th>
           <th class="col-status">狀態</th>
-          <th class="col-actions">操作</th>
+          <th class="col-name">敷料名稱規格</th>
+          <th class="col-code">院內碼</th>
+          <th class="col-stock-5a">5A</th>
+          <th class="col-stock-wound">傷中</th>
+          <th class="col-category">自費價格</th>
         </tr>
       </thead>
       <tbody id="dictTbody">
-        <tr id="dictEmptyRow"><td colspan="7" style="text-align:center; color:#64748b; padding:20px;">尚未讀取敷料主檔</td></tr>
+        <tr id="dictEmptyRow"><td colspan="6" style="text-align:center; color:#64748b; padding:20px;">尚未讀取敷料主檔</td></tr>
       </tbody>
     </table>
   </div>
@@ -3133,14 +3176,14 @@ async function loadDictList(){
       setDictLoadState('ready', `已讀取 ${dressingMasterCache.length} 筆敷料資料，可以掃描或測試`);
     } else {
       tbody.innerHTML =
-        '<tr id="dictEmptyRow"><td colspan="7" style="text-align:center; color:#64748b; padding:20px;">目前主檔無資料；可開啟掃描新增第一筆</td></tr>';
+        '<tr id="dictEmptyRow"><td colspan="6" style="text-align:center; color:#64748b; padding:20px;">目前主檔無資料；可開啟掃描新增第一筆</td></tr>';
 
       setDictLoadState('ready', '主檔目前無資料；可掃描或測試新增第一筆');
     }
   } catch(err){
     dressingMasterCache = [];
     tbody.innerHTML =
-      '<tr><td colspan="7" style="text-align:center; color:#dc2626; padding:20px;">讀取失敗：' +
+      '<tr><td colspan="6" style="text-align:center; color:#dc2626; padding:20px;">讀取失敗：' +
       escapeHtml(err.message || err) +
       '</td></tr>';
 
@@ -3160,31 +3203,27 @@ function createDictRow(item, isNew){
   }
 
   tr.innerHTML = `
-    <td colspan="7" class="dictCompactCell">
+    <td colspan="6" class="dictCompactCell">
       <details class="dictRowDetails"${isNew ? ' open' : ''}>
         <summary class="dictSummaryGrid">
-          <span class="dictSummaryCell">
-            <span class="dictSummaryValue dict-summary-code">-</span>
+          <span class="dictSummaryCell dictStatusSummaryCell">
+            <span class="dragHandle">☰</span>
+            <span class="dictSummaryStatus dict-summary-status">使用中</span>
           </span>
           <span class="dictSummaryCell">
             <span class="dictSummaryValue dict-summary-name-size">-</span>
           </span>
           <span class="dictSummaryCell">
-            <span class="dictSummaryValue dict-summary-stock-unit">-</span>
+            <span class="dictSummaryValue dict-summary-code">-</span>
           </span>
           <span class="dictSummaryCell">
-            <span class="dictSummaryValue dict-summary-stock-qty">-</span>
+            <span class="dictSummaryStockPill dict-summary-stock-5a is-empty">5A 無</span>
+          </span>
+          <span class="dictSummaryCell">
+            <span class="dictSummaryStockPill dict-summary-stock-wound is-empty">傷中 無</span>
           </span>
           <span class="dictSummaryCell">
             <span class="dictSummaryValue dict-summary-category">-</span>
-          </span>
-          <span class="dictSummaryCell">
-            <span class="dictSummaryStatus dict-summary-status">使用中</span>
-          </span>
-          <span class="dictSummaryActions" onclick="event.preventDefault(); event.stopPropagation();">
-            <span class="dragHandle">☰</span>
-            <button type="button" class="dictActionBtn edit-main-btn" onclick="handleDictMainButton(this)">${isNew ? '儲存' : '編輯'}</button>
-            <button type="button" class="dictActionBtn danger delete-main-btn" onclick="deleteDictRow(this)">${isNew ? '不儲存' : '刪除'}</button>
           </span>
         </summary>
         <div class="dictDetailCard">
@@ -3229,6 +3268,10 @@ function createDictRow(item, isNew){
             </div>
           </div>
           <div class="dictLotDetailsHost"></div>
+          <div class="dictDetailActions" onclick="event.stopPropagation();">
+            <button type="button" class="dictActionBtn edit-main-btn" onclick="handleDictMainButton(this)">${isNew ? '儲存' : '編輯'}</button>
+            <button type="button" class="dictActionBtn danger delete-main-btn" onclick="deleteDictRow(this)">${isNew ? '不儲存' : '刪除'}</button>
+          </div>
           <div class="dictStatus ${isNew ? '' : 'saved'}">${isNew ? '新資料，請確認後儲存' : '已建檔'}</div>
           ${isNew && item.scanMeta ? item.scanMeta : ''}
         </div>
@@ -3289,6 +3332,23 @@ function setDictSummaryText(el, value){
   el.classList.toggle('dictSummaryEmpty', text === '-');
 }
 
+function getInventoryDisplayUnitKey(unit){
+  const text = String(unit || '').trim();
+  if(!text){
+    return '未填位置';
+  }
+
+  if(text === '傷中' || text === '傷口照護中心' || text.indexOf('傷口') >= 0){
+    return '傷中';
+  }
+
+  if(text.toUpperCase && text.toUpperCase() === '5A'){
+    return '5A';
+  }
+
+  return text;
+}
+
 function getInventorySummaryForHospitalCode(hospitalCode){
   hospitalCode = String(hospitalCode || '').trim();
   const rows = (Array.isArray(inventoryCache) ? inventoryCache : [])
@@ -3301,7 +3361,7 @@ function getInventorySummaryForHospitalCode(hospitalCode){
   let totalQty = 0;
 
   rows.forEach(function(row){
-    const unit = String(row.stockUnit || '').trim() || '未填位置';
+    const unit = getInventoryDisplayUnitKey(row.stockUnit);
     const qty = Number(row.quantity || 0) || 0;
     totalQty += qty;
     unitTotals[unit] = (unitTotals[unit] || 0) + qty;
@@ -3313,10 +3373,25 @@ function getInventorySummaryForHospitalCode(hospitalCode){
 
   return {
     rows:rows,
+    unitTotals:unitTotals,
     totalQty:totalQty,
     stockUnitText: units.length ? units.join('、') : '無庫存',
     totalQtyText: rows.length ? formatInventoryQty(totalQty) : '0'
   };
+}
+
+function setDictStockPill(el, label, qty){
+  if(!el){
+    return;
+  }
+
+  const value = Number(qty || 0) || 0;
+  const hasStock = value > 0;
+  const text = hasStock ? (label + ' ' + formatInventoryQty(value)) : (label + ' 無');
+  el.innerText = text;
+  el.title = text;
+  el.classList.toggle('is-active', hasStock);
+  el.classList.toggle('is-empty', !hasStock);
 }
 
 function renderDictRowLotDetails(tr, inventorySummary){
@@ -3380,10 +3455,10 @@ function syncDictRowSummary(tr){
   const nameSize = [data.dressingName, data.size].filter(Boolean).join(' ');
   const inventorySummary = getInventorySummaryForHospitalCode(data.hospitalCode);
 
-  setDictSummaryText(tr.querySelector('.dict-summary-code'), data.hospitalCode);
   setDictSummaryText(tr.querySelector('.dict-summary-name-size'), nameSize);
-  setDictSummaryText(tr.querySelector('.dict-summary-stock-unit'), inventorySummary.stockUnitText);
-  setDictSummaryText(tr.querySelector('.dict-summary-stock-qty'), inventorySummary.totalQtyText);
+  setDictSummaryText(tr.querySelector('.dict-summary-code'), data.hospitalCode);
+  setDictStockPill(tr.querySelector('.dict-summary-stock-5a'), '5A', inventorySummary.unitTotals && inventorySummary.unitTotals['5A']);
+  setDictStockPill(tr.querySelector('.dict-summary-stock-wound'), '傷中', inventorySummary.unitTotals && inventorySummary.unitTotals['傷中']);
   setDictSummaryText(tr.querySelector('.dict-summary-category'), data.category);
   renderDictRowLotDetails(tr, inventorySummary);
 
