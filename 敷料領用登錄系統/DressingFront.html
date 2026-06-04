@@ -1,8 +1,8 @@
 ﻿<!DOCTYPE html>
 <!--
 檔案位置：科室系統用戶端/DressingFront.html
-時間戳記：2026-06-05 02:02 UTC+8
-用途：敷料領用/建檔/庫存前端；修正敷料查詢主清單欄位對齊，鎖定欄寬與庫存狀態置中，避免 colspan 展開列造成視覺跑格。
+時間戳記：2026-06-05 02:10 UTC+8
+用途：敷料領用/建檔/庫存前端；修正敷料查詢/建檔搜尋誤接庫存作業搜尋，保留原本 dict 搜尋功能並整合到上方搜尋區；維持表格對齊與庫存狀態語意。
 -->
 <html>
 <head>
@@ -924,6 +924,14 @@ tr.editing .dictGtinScanBtn{
 .inventoryStepPanel.is-loading{
   opacity:1;
   pointer-events:auto;
+}
+
+.searchModeControls{
+  display:block;
+}
+
+.searchModeControls[hidden]{
+  display:none !important;
 }
 
 .inventorySearchLoadingHint{
@@ -2572,25 +2580,47 @@ function openGithubHashRoute(){
   </div>
 
   <div id="inventorySearchPanel" class="inventoryStepPanel">
-    <div class="inventoryGrid">
-      <div class="inventoryField full">
-        <label>搜尋 / 掃描內容</label>
-        <div class="dressingInputGroup">
-          <input id="inventoryBarcodeInput" placeholder="可輸入院內碼、敷料名稱、規格、GTIN，或貼上完整 GS1">
+    <div id="inventorySearchControls" class="searchModeControls">
+      <div class="inventoryGrid">
+        <div class="inventoryField full">
+          <label>搜尋 / 掃描內容</label>
+          <div class="dressingInputGroup">
+            <input id="inventoryBarcodeInput" placeholder="可輸入院內碼、敷料名稱、規格、GTIN，或貼上完整 GS1">
+          </div>
+          <div id="inventorySearchSuggest" class="searchSuggestBox"></div>
+          <div id="inventorySearchLoadingHint" class="inventorySearchLoadingHint">正在同步敷料主檔與批號庫存，完成後才能搜尋或掃描。</div>
         </div>
-        <div id="inventorySearchSuggest" class="searchSuggestBox"></div>
-        <div id="inventorySearchLoadingHint" class="inventorySearchLoadingHint">正在同步敷料主檔與批號庫存，完成後才能搜尋或掃描。</div>
+      </div>
+
+      <div class="dictToolbar" style="margin-top:12px;">
+        <button type="button" class="primary" onclick="startInventoryScanner()">掃描入庫碼 📷</button>
+        <button type="button" onclick="triggerInventoryTest('single')">測試單包碼</button>
+        <button type="button" onclick="triggerInventoryTest('box')">測試盒裝碼</button>
+        <button type="button" onclick="loadInventoryList(getInventoryCurrentListFilter())">重新整理</button>
       </div>
     </div>
 
-    <div class="dictToolbar" style="margin-top:12px;">
-      <button type="button" class="primary" id="dictScanBtn" onclick="startInventoryScanner()" disabled>掃描入庫碼 📷</button>
-      <button type="button" id="testHydrocleanSingleBtn" onclick="triggerInventoryTest('single')">測試單包碼</button>
-      <button type="button" id="testHydrocleanBoxBtn" onclick="triggerInventoryTest('box')">測試盒裝碼</button>
-      <button type="button" onclick="loadInventoryList(getInventoryCurrentListFilter())">重新整理</button>
-      <button type="button" id="reorderBtn" onclick="toggleReorderMode()">更改排序</button>
-      <button type="button" id="saveOrderBtn" class="primary" style="display:none;" onclick="saveDictOrder()">儲存排序</button>
-      <button type="button" id="batchSaveBtn" onclick="batchSaveDict()" style="display:none;">批次儲存</button>
+    <div id="dictSearchControls" class="searchModeControls" style="display:none;">
+      <div class="inventoryGrid">
+        <div class="inventoryField full">
+          <label>搜尋 / 掃描內容</label>
+          <div class="dressingInputGroup">
+            <input id="dictBarcodeInput" placeholder="可輸入院內碼、敷料名稱、規格、GTIN，或貼上完整 GS1">
+            <button type="button" class="primary" onclick="lookupDictFromInput()">查詢</button>
+          </div>
+          <div id="dictSearchSuggest" class="searchSuggestBox"></div>
+        </div>
+      </div>
+
+      <div class="dictToolbar" style="margin-top:12px;">
+        <button type="button" class="primary" id="dictScanBtn" onclick="startDictScanner()" disabled>開啟相機掃描 📷</button>
+        <button type="button" id="testHydrocleanSingleBtn" onclick="triggerHydrocleanCavityTest('single')">測試單包碼</button>
+        <button type="button" id="testHydrocleanBoxBtn" onclick="triggerHydrocleanCavityTest('box')">測試盒裝碼</button>
+        <button type="button" onclick="loadDictList()">重新整理</button>
+        <button type="button" id="reorderBtn" onclick="toggleReorderMode()">更改排序</button>
+        <button type="button" id="saveOrderBtn" class="primary" style="display:none;" onclick="saveDictOrder()">儲存排序</button>
+        <button type="button" id="batchSaveBtn" onclick="batchSaveDict()" style="display:none;">批次儲存</button>
+      </div>
     </div>
   </div>
 
@@ -2723,8 +2753,6 @@ function openGithubHashRoute(){
 
 <div id="dictArea" class="dictArea">
   <div id="dictLoadStatus" class="dictLoadStatus" style="display:none;">尚未讀取敷料主檔</div>
-  <input id="dictBarcodeInput" type="hidden">
-  <div id="dictSearchSuggest" class="searchSuggestBox" style="display:none;"></div>
 
   <div class="dictTableWrap">
     <table class="dictTable" id="dictTable">
@@ -3281,8 +3309,15 @@ async function openDressingDict(){
   document.getElementById('formArea').style.display = 'none';
   document.getElementById('inventoryArea').style.display = 'block';
   document.getElementById('dictArea').style.display = 'block';
+  const typeInput = document.getElementById('inventoryOperationType');
+  if(typeInput){
+    typeInput.value = 'query';
+  }
   setInventoryUnitSilently('__ALL__');
+  inventoryOperationChoiceMade = true;
   inventoryUnitChoiceMade = true;
+  setInventoryPanelOpen('inventorySearchPanel', true);
+  setInventoryPanelOpen('inventoryDetailPanel', false);
   updateDictStockFilterButtons();
   if(!inventoryListReady && !inventoryListLoading){
     loadInventoryList(getInventoryCurrentListFilter());
@@ -3315,7 +3350,7 @@ async function openInventoryDictAjax(){
   updateDictStockFilterButtons();
   clearInventorySearchInput();
   clearInventoryDetailForm();
-  setInventoryPanelOpen('inventorySearchPanel', false);
+  setInventoryPanelOpen('inventorySearchPanel', true);
   setInventoryPanelOpen('inventoryDetailPanel', false);
   updateInventorySegmentedButtons();
   updateInventoryTableVisibility();
@@ -5438,7 +5473,8 @@ async function lookupDictFromInput(){
 
   if(!dictLoaded || !Array.isArray(dressingMasterCache)){
     document.getElementById('formArea').style.display = 'none';
-    document.getElementById('inventoryArea').style.display = 'none';
+    document.getElementById('inventoryArea').style.display = 'block';
+    setInventoryPanelOpen('inventorySearchPanel', true);
     document.getElementById('dictArea').style.display = 'block';
     await loadDictList();
   }
@@ -5473,7 +5509,8 @@ async function triggerHydrocleanCavityTest(type){
 
   if(!dictLoaded || !Array.isArray(dressingMasterCache) || dressingMasterCache.length === 0){
     document.getElementById('formArea').style.display = 'none';
-    document.getElementById('inventoryArea').style.display = 'none';
+    document.getElementById('inventoryArea').style.display = 'block';
+    setInventoryPanelOpen('inventorySearchPanel', true);
     document.getElementById('dictArea').style.display = 'block';
     await loadDictList();
   }
@@ -7166,13 +7203,31 @@ function setInventoryStatus(message){
   if(el) el.innerText = message || '';
 }
 
+function updateInventorySearchModeControls(){
+  const isDictMode = getInventoryOperationType() === 'query';
+  const inventoryControls = document.getElementById('inventorySearchControls');
+  const dictControls = document.getElementById('dictSearchControls');
+
+  if(inventoryControls){
+    inventoryControls.hidden = isDictMode;
+  }
+  if(dictControls){
+    dictControls.hidden = !isDictMode;
+  }
+}
+
+function getActiveSearchInputId(){
+  return getInventoryOperationType() === 'query' ? 'dictBarcodeInput' : 'inventoryBarcodeInput';
+}
+
 function focusInventorySearchInput(){
   if(!canShowInventorySearchPanel()){
     return;
   }
 
+  updateInventorySearchModeControls();
   const panel = document.getElementById('inventorySearchPanel');
-  const input = document.getElementById('inventoryBarcodeInput');
+  const input = document.getElementById(getActiveSearchInputId());
   if(input){
     setTimeout(function(){
       try{
@@ -7234,11 +7289,18 @@ function setInventoryFinalQtyValue(value){
 }
 
 function clearInventorySearchInput(){
-  const input = document.getElementById('inventoryBarcodeInput');
-  if(input){
-    input.value = '';
+  const inventoryInput = document.getElementById('inventoryBarcodeInput');
+  if(inventoryInput){
+    inventoryInput.value = '';
   }
+
+  const dictInput = document.getElementById('dictBarcodeInput');
+  if(dictInput){
+    dictInput.value = '';
+  }
+
   hideSearchSuggestions('inventory');
+  hideSearchSuggestions('dict');
 }
 
 function clearInventorySelectedDressingForSearchInput(){
@@ -7779,7 +7841,7 @@ function canShowInventorySearchPanel(){
 function updateInventorySearchLoadingHint(){
   const hint = document.getElementById('inventorySearchLoadingHint');
   const panel = document.getElementById('inventorySearchPanel');
-  const showLoading = !!inventoryListLoading;
+  const showLoading = !!inventoryListLoading && getInventoryOperationType() !== 'query';
 
   if(hint){
     hint.classList.toggle('is-open', showLoading);
@@ -8236,6 +8298,7 @@ function updateInventorySegmentedButtons(){
       '。' + nextHint;
   }
 
+  updateInventorySearchModeControls();
   updateInventoryTableVisibility();
 }
 
@@ -8287,6 +8350,7 @@ function setInventoryPanelOpen(panelId, isOpen){
     panel.classList.toggle('is-open', !!isOpen);
   }
   if(panelId === 'inventorySearchPanel'){
+    updateInventorySearchModeControls();
     updateInventorySearchLoadingHint();
   }
 }
@@ -10686,9 +10750,13 @@ function bindDressingLiveSearchInput(inputId, context){
     if(event.key === 'Escape'){
       hideSearchSuggestions(context);
     }
-    if(context === 'inventory' && event.key === 'Enter'){
+    if(event.key === 'Enter'){
       event.preventDefault();
-      lookupInventoryFromInput();
+      if(context === 'inventory'){
+        lookupInventoryFromInput();
+      } else {
+        lookupDictFromInput();
+      }
     }
   });
 }
