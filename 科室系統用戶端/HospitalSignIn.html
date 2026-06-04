@@ -220,11 +220,63 @@ function parseTemplateJson(text, fallback){
   }
 }
 
-const staffList =
+let staffList =
   parseTemplateJson('<?!= staffList ?>', []);
 
-const extraList =
+let extraList =
   parseTemplateJson('<?!= extraList ?>', []);
+
+function callAppsScriptApi(params){
+  params = params || {};
+  return new Promise(function(resolve, reject){
+    const callbackName =
+      '__frontApiCallback_' +
+      Date.now() +
+      '_' +
+      Math.random().toString(36).slice(2);
+    const query = new URLSearchParams();
+
+    Object.keys(params).forEach(function(key){
+      const value = params[key];
+      if(value !== undefined && value !== null){
+        query.set(key, typeof value === 'object' ? JSON.stringify(value) : value);
+      }
+    });
+
+    query.set('callback', callbackName);
+
+    const script = document.createElement('script');
+    const timer = setTimeout(function(){
+      cleanup();
+      reject(new Error('API 逾時，請確認 Apps Script 部署權限'));
+    }, 20000);
+
+    window[callbackName] = function(result){
+      cleanup();
+      resolve(result);
+    };
+
+    script.onerror = function(){
+      cleanup();
+      reject(new Error('API 載入失敗，請確認 Apps Script 部署網址'));
+    };
+
+    script.src = getAppEntryUrl() + '?' + query.toString();
+    document.head.appendChild(script);
+
+    function cleanup(){
+      clearTimeout(timer);
+      if(script.parentNode){
+        script.parentNode.removeChild(script);
+      }
+      try{
+        delete window[callbackName];
+      } catch(error){
+        window[callbackName] = undefined;
+      }
+    }
+  });
+}
 
 function goHome(){
 
@@ -277,6 +329,9 @@ function renderStaff(){
 
   const residentBox =
     document.getElementById('residentBox');
+
+  vsBox.innerHTML = '';
+  residentBox.innerHTML = '';
 
   staffList.forEach(function(person){
 
@@ -340,6 +395,8 @@ function renderExtra(){
   const extraBox =
     document.getElementById('extraBox');
 
+  extraBox.innerHTML = '';
+
   extraList.forEach(function(person){
 
     const btn =
@@ -372,6 +429,25 @@ function renderExtra(){
       '<div class="notice">GitHub 版未載入額外帳號清單。</div>';
   }
 
+}
+
+async function loadHospitalSignInListsFromApi(){
+  if(!isGithubPage() || staffList.length > 0 || extraList.length > 0){
+    return;
+  }
+
+  try{
+    const res = await callAppsScriptApi({ action:'getHospitalSignInLists' });
+    if(!res || !res.ok){
+      throw new Error((res && res.message) || '清單讀取失敗');
+    }
+    staffList = Array.isArray(res.staffList) ? res.staffList : [];
+    extraList = Array.isArray(res.extraList) ? res.extraList : [];
+    renderStaff();
+    renderExtra();
+  } catch(error){
+    console.warn('load hospital sign-in lists failed', error);
+  }
 }
 
 function installGithubAppShellFallback(){
@@ -425,6 +501,7 @@ function initPage(){
   installGithubAppShellFallback();
   renderStaff();
   renderExtra();
+  loadHospitalSignInListsFromApi();
 
 }
 

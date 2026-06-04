@@ -271,6 +271,58 @@ button:hover{
     return value;
   }
 
+  function callAppsScriptApi(params){
+    params = params || {};
+    return new Promise(function(resolve, reject){
+      const callbackName =
+        '__frontApiCallback_' +
+        Date.now() +
+        '_' +
+        Math.random().toString(36).slice(2);
+      const query = new URLSearchParams();
+
+      Object.keys(params).forEach(function(key){
+        const value = params[key];
+        if(value !== undefined && value !== null){
+          query.set(key, typeof value === 'object' ? JSON.stringify(value) : value);
+        }
+      });
+
+      query.set('callback', callbackName);
+
+      const script = document.createElement('script');
+      const timer = setTimeout(function(){
+        cleanup();
+        reject(new Error('API 逾時，請確認 Apps Script 部署權限'));
+      }, 20000);
+
+      window[callbackName] = function(result){
+        cleanup();
+        resolve(result);
+      };
+
+      script.onerror = function(){
+        cleanup();
+        reject(new Error('API 載入失敗，請確認 Apps Script 部署網址'));
+      };
+
+      script.src = getAppEntryUrl() + '?' + query.toString();
+      document.head.appendChild(script);
+
+      function cleanup(){
+        clearTimeout(timer);
+        if(script.parentNode){
+          script.parentNode.removeChild(script);
+        }
+        try{
+          delete window[callbackName];
+        } catch(error){
+          window[callbackName] = undefined;
+        }
+      }
+    });
+  }
+
   const QR_KEEPALIVE_REFRESH_MS =
     4 * 60 * 1000;
 
@@ -603,7 +655,32 @@ button:hover{
 
     const today = new Date().toISOString().slice(0, 10);
     select.innerHTML =
-      '<option value="GitHub 測試會議|' + today + '|github-demo">GitHub 測試會議｜' + today + '</option>';
+      '<option value="' +
+      encodeURIComponent('GitHub 測試會議||' + today + '||github-demo') +
+      '">GitHub 測試會議｜' + today + '</option>';
+  }
+
+  async function loadSignQRMeetingOptionsFromApi(){
+    if(!isGithubPage()){
+      return;
+    }
+
+    const select = document.getElementById('course');
+    if(!select){
+      return;
+    }
+
+    try{
+      const res = await callAppsScriptApi({ action:'getSignQRMeetingOptions' });
+      if(!res || !res.ok){
+        throw new Error((res && res.message) || '會議清單讀取失敗');
+      }
+      if(String(res.options || '').trim()){
+        select.innerHTML = res.options;
+      }
+    } catch(error){
+      console.warn('load sign QR options failed', error);
+    }
   }
 
   function installGithubAppShellFallback(){
@@ -655,6 +732,7 @@ button:hover{
   document.addEventListener('DOMContentLoaded', function(){
     ensureGithubMeetingOptions();
     installGithubAppShellFallback();
+    loadSignQRMeetingOptionsFromApi();
   });
 
 </script>

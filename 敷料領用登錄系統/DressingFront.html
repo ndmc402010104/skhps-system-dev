@@ -568,7 +568,7 @@ tr.editing .dictGtinScanBtn{
 
 .inventorySubmitCard{
   display:grid !important;
-  grid-template-columns:repeat(3,minmax(0,1fr));
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr);
   grid-template-rows:auto 1fr;
   align-items:stretch;
   gap:8px;
@@ -592,12 +592,15 @@ tr.editing .dictGtinScanBtn{
 }
 
 #inventoryPrevStepBtn{
+  display:none;
+}
+
+#inventorySubmitBtn{
   grid-column:2;
 }
 
-#inventoryNextStepBtn,
-#inventorySubmitBtn{
-  grid-column:3;
+#inventoryNextStepBtn{
+  display:none;
 }
 
 .inventoryLotSelectActions{
@@ -907,8 +910,8 @@ tr.editing .dictGtinScanBtn{
 }
 
 .inventoryStepPanel.is-loading{
-  opacity:.62;
-  pointer-events:none;
+  opacity:1;
+  pointer-events:auto;
 }
 
 .inventorySearchLoadingHint{
@@ -7163,41 +7166,17 @@ function focusInventoryInboundStepInput(){
 
 function updateInventoryInboundStepControls(){
   const operationType = getInventoryOperationType();
-  const steps = getInventoryInboundSteps();
-  const isInbound = operationType === 'inbound' && steps.length > 0;
-
   const prevBtn = document.getElementById('inventoryPrevStepBtn');
   const nextBtn = document.getElementById('inventoryNextStepBtn');
   const submitBtn = document.getElementById('inventorySubmitBtn');
   const cancelBtn = document.getElementById('inventoryCancelBtn');
 
-  if(!isInbound){
-    if(prevBtn) prevBtn.style.display = 'none';
-    if(nextBtn) nextBtn.style.display = 'none';
-    if(cancelBtn) cancelBtn.style.gridColumn = '1';
-    if(submitBtn){
-      submitBtn.style.display = operationType === 'query' ? 'none' : '';
-      submitBtn.style.gridColumn = '2 / 4';
-    }
-    return;
-  }
-
-  inventoryInboundStepIndex = Math.max(0, Math.min(inventoryInboundStepIndex, steps.length - 1));
-
-  if(prevBtn){
-    prevBtn.style.display = inventoryInboundStepIndex > 0 ? '' : 'none';
-    prevBtn.style.gridColumn = '2';
-  }
-  if(nextBtn){
-    nextBtn.style.display = inventoryInboundStepIndex < steps.length - 1 ? '' : 'none';
-    nextBtn.style.gridColumn = '3';
-  }
+  if(prevBtn) prevBtn.style.display = 'none';
+  if(nextBtn) nextBtn.style.display = 'none';
+  if(cancelBtn) cancelBtn.style.gridColumn = '1';
   if(submitBtn){
-    submitBtn.style.display = inventoryInboundStepIndex === steps.length - 1 ? '' : 'none';
-    submitBtn.style.gridColumn = '3';
-  }
-  if(cancelBtn){
-    cancelBtn.style.gridColumn = '1';
+    submitBtn.style.display = operationType === 'query' ? 'none' : '';
+    submitBtn.style.gridColumn = '2 / 4';
   }
 }
 
@@ -7374,8 +7353,7 @@ function queuePendingInventoryLookup(raw, reason){
     input.value = raw;
   }
 
-  setInventoryStatus('已暫存掃描 / 搜尋內容，等待後端資料完成後自動續查。');
-  showNotice('已暫存剛剛掃到的內容，資料回來後會自動帶入。', 'warning', '資料同步中');
+  setInventoryStatus('正在準備資料，掃描內容已保留，請稍候...');
   return true;
 }
 
@@ -7392,7 +7370,7 @@ async function replayPendingInventoryLookup(){
   }
 
   if(pending.raw){
-    showNotice('正在接續剛剛暫存的掃描內容。', 'success', '繼續查詢');
+    setInventoryStatus('資料已就緒，正在帶入剛剛掃描的內容...');
     await lookupInventoryFromInput({ fromPending:true });
     return true;
   }
@@ -7809,6 +7787,17 @@ function isInventoryStocktakeSpecificLotSelected(){
   return lot !== '' || exp !== '';
 }
 
+function isInventorySpecificLotSelected(){
+  const operationType = getInventoryOperationType();
+  if(operationType !== 'inbound' && operationType !== 'stocktake'){
+    return false;
+  }
+
+  const lot = String(document.getElementById('inventoryLot') ? document.getElementById('inventoryLot').value : '').trim();
+  const exp = String(document.getElementById('inventoryExp') ? document.getElementById('inventoryExp').value : '').trim();
+  return lot !== '' || exp !== '';
+}
+
 function getInventoryCurrentQtyBreakdownForForm(){
   const hospitalCode = String(getInventoryReadOnlyValue('inventoryHospitalCode', 'inventoryHospitalCodeText') || '').trim();
   const stockUnit = getInventoryUnitValue();
@@ -7816,7 +7805,7 @@ function getInventoryCurrentQtyBreakdownForForm(){
   const lot = String(document.getElementById('inventoryLot') ? document.getElementById('inventoryLot').value : '').trim();
   const exp = String(document.getElementById('inventoryExp') ? document.getElementById('inventoryExp').value : '').trim();
 
-  const empty = { batchQty:0, totalQty:0 };
+  const empty = { batchQty:0, totalQty:0, batchRowCount:0, hasSpecificLot:isInventorySpecificLotSelected() };
   if(!hospitalCode){
     return empty;
   }
@@ -7838,11 +7827,12 @@ function getInventoryCurrentQtyBreakdownForForm(){
     const qty = Number(row.quantity || 0) || 0;
     acc.totalQty += qty;
 
-    const matchSpecific = isInventoryStocktakeSpecificLotSelected();
+    const matchSpecific = acc.hasSpecificLot;
     const sameLot = matchSpecific ? String(row.lot || '').trim() === lot : true;
     const sameExp = matchSpecific ? String(row.exp || '').trim() === exp : true;
     if(sameLot && sameExp){
       acc.batchQty += qty;
+      acc.batchRowCount += 1;
     }
 
     return acc;
@@ -7851,7 +7841,7 @@ function getInventoryCurrentQtyBreakdownForForm(){
 
 function getInventoryCurrentQtyForForm(){
   const qty = getInventoryCurrentQtyBreakdownForForm();
-  return getInventoryOperationType() === 'stocktake' ? qty.batchQty : qty.totalQty;
+  return qty.hasSpecificLot ? qty.batchQty : qty.totalQty;
 }
 
 function renderInventoryCurrentQty(){
@@ -7861,13 +7851,15 @@ function renderInventoryCurrentQty(){
   const currentLabel = document.getElementById('inventoryCurrentQtyLabel');
   const totalLabel = document.getElementById('inventoryTotalQtyLabel');
   const qty = getInventoryCurrentQtyBreakdownForForm();
-  const hasCurrentQtyContext = getInventoryOperationType() !== 'stocktake' || isInventoryStocktakeSpecificLotSelected();
+  const operationType = getInventoryOperationType();
+  const hasCurrentQtyContext = operationType !== 'stocktake' || qty.hasSpecificLot;
+  const isNewBatch = qty.hasSpecificLot && qty.batchRowCount === 0;
 
-  const batchDisplay = formatInventoryQty(qty.batchQty) + ' 單位';
+  const batchDisplay = isNewBatch ? '新批號' : formatInventoryQty(qty.batchQty) + ' 單位';
   const totalDisplay = formatInventoryQty(qty.totalQty) + ' 單位';
 
   if(currentLabel){
-    currentLabel.innerText = getInventoryOperationType() === 'stocktake' ? '該批號目前數量' : '系統目前數量';
+    currentLabel.innerText = qty.hasSpecificLot ? '該批號目前數量' : '系統目前數量';
   }
   if(totalLabel){
     totalLabel.innerText = '總庫存數量';
@@ -7886,7 +7878,7 @@ function renderInventoryCurrentQty(){
 
   setInventoryTotalQtyValue(totalDisplay);
 
-  return hasCurrentQtyContext && getInventoryOperationType() === 'stocktake' ? qty.batchQty : qty.totalQty;
+  return hasCurrentQtyContext && qty.hasSpecificLot ? qty.batchQty : qty.totalQty;
 }
 
 function renderInventoryOperationMode(){
@@ -8835,7 +8827,7 @@ async function fillInventoryFormFromLookup(result, parsed){
     renderInventoryGroupedList(getInventoryCurrentListFilter({ hospitalCode:String(item.hospitalCode || '').trim() }));
   }
   clearInventorySearchInput();
-  showNotice('已帶入敷料主檔資料，搜尋欄已清空，可直接進行下一步', 'success', '查詢成功');
+  setInventoryStatus('已帶入敷料資料，請輸入本次數量。');
   centerInventoryMasterInfoCard();
 
   if(getInventoryOperationType() === 'stocktake' && !(parsed.lot || parsed.exp)){
@@ -9883,7 +9875,7 @@ if (window.location.hostname.includes('github.io')) {
   ghFooter.innerHTML = `
     <div style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">
       <span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>
-      <span>v.2.27.12-202606041744</span>
+      <span>v.2.27.12-202606041758</span>
     </div>
   `;
   document.body.appendChild(ghFooter);
@@ -9900,9 +9892,6 @@ function normalizeTextForCompare(value){
 
 </body>
 </html>
-
-
-
 
 
 

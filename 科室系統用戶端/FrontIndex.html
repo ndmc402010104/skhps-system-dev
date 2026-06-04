@@ -450,42 +450,6 @@ function goDressingFront(){
 
 }
 
-function goDressingUse(){
-
-  const env =
-    getCurrentAppEnv();
-
-  window.top.location.href =
-    window.location.hostname.includes('github.io')
-      ? getGithubPageUrl('dressingUse')
-      : buildAppPageUrl(env === 'dev' ? APP_DEV_URL : APP_PROD_URL, 'dressinguse', env);
-
-}
-
-function goDressingInventory(){
-
-  const env =
-    getCurrentAppEnv();
-
-  window.top.location.href =
-    window.location.hostname.includes('github.io')
-      ? getGithubPageUrl('dressingInventory')
-      : buildAppPageUrl(env === 'dev' ? APP_DEV_URL : APP_PROD_URL, 'dressingfront', env) + '#inventory';
-
-}
-
-function goDressingDict(){
-
-  const env =
-    getCurrentAppEnv();
-
-  window.top.location.href =
-    window.location.hostname.includes('github.io')
-      ? getGithubPageUrl('dressingDict')
-      : buildAppPageUrl(env === 'dev' ? APP_DEV_URL : APP_PROD_URL, 'dressingfront', env) + '#dressingDict';
-
-}
-
 function goUiTest(){
 
   goPage(
@@ -564,42 +528,6 @@ onclick="goDressingFront()"
     <span class="entryDesc">開啟敷料領用登錄系統，支援相機掃描條碼功能。</span>
   </span>
   <span class="arrow">↗</span>
-</button>
-
-<button
-class="entryButton dressing"
-onclick="goDressingUse()"
->
-  <span class="entryIcon">領</span>
-  <span>
-    <span class="entryTitle">敷料領用</span>
-    <span class="entryDesc">直接進入病人敷料領用單，支援批號庫存扣庫。</span>
-  </span>
-  <span class="arrow">›</span>
-</button>
-
-<button
-class="entryButton dressing"
-onclick="goDressingInventory()"
->
-  <span class="entryIcon">庫</span>
-  <span>
-    <span class="entryTitle">敷料庫存</span>
-    <span class="entryDesc">進入敷料入庫、盤點與批號庫存查詢。</span>
-  </span>
-  <span class="arrow">›</span>
-</button>
-
-<button
-class="entryButton dressing"
-onclick="goDressingDict()"
->
-  <span class="entryIcon">檔</span>
-  <span>
-    <span class="entryTitle">敷料建檔</span>
-    <span class="entryDesc">維護敷料主檔、GTIN、規格與盒裝數量。</span>
-  </span>
-  <span class="arrow">›</span>
 </button>
 
 <button

@@ -62,6 +62,31 @@ function doGet(e){
   if(
     e &&
     e.parameter &&
+    isFrontendApiAction_(
+      e.parameter.action
+    )
+  ){
+    try{
+      return apiOutput_(
+        handleFrontendApiAction_(e.parameter) ||
+        { ok:false, message:'unknown frontend action' },
+        e.parameter.callback
+      );
+    }
+    catch(error){
+      return apiOutput_(
+        {
+          ok:false,
+          message:error && error.message ? error.message : String(error)
+        },
+        e.parameter.callback
+      );
+    }
+  }
+
+  if(
+    e &&
+    e.parameter &&
     isDressingInventoryAction_(
       e.parameter.action
     )
@@ -285,9 +310,56 @@ function isDressingInventoryAction_(action){
   return [
     'listDressingInventory',
     'addDressingInventoryStock',
+    'updateDressingInventoryLotMetadata',
     'lookupDressingInventoryBarcode',
     'submitDressingUse'
   ].indexOf(action || '') >= 0;
+
+}
+
+function isFrontendApiAction_(action){
+
+  return [
+    'getFrontendBootstrap',
+    'getHospitalSignInLists',
+    'getSignQRMeetingOptions'
+  ].indexOf(action || '') >= 0;
+
+}
+
+function handleFrontendApiAction_(params){
+
+  params = params || {};
+  const action =
+    String(params.action || '').trim();
+
+  if(action === 'getFrontendBootstrap'){
+    return {
+      ok:true,
+      appEntryUrl:getAppEntryUrl(),
+      appProdUrl:APP_ENTRY_URL,
+      appDevUrl:APP_DEV_URL,
+      appEnv:APP_REQUEST_ENV === 'dev' ? 'dev' : 'prod',
+      githubRoutes:getGithubPageRoutes()
+    };
+  }
+
+  if(action === 'getHospitalSignInLists'){
+    return {
+      ok:true,
+      staffList:getDefaultStaffList(),
+      extraList:EXTRA_HOSPITAL_LOGIN
+    };
+  }
+
+  if(action === 'getSignQRMeetingOptions'){
+    return {
+      ok:true,
+      options:getSignQRMeetingOptions()
+    };
+  }
+
+  return null;
 
 }
 
