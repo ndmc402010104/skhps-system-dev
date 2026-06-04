@@ -1441,7 +1441,7 @@ tr.editing .dictGtinScanBtn{
 
 .dictTable{
   width:100%;
-  min-width:1220px;
+  min-width:860px;
   border-collapse:collapse;
   table-layout:fixed;
 }
@@ -1496,15 +1496,104 @@ tr.editing select:not(.readonly):focus{
   box-shadow:0 0 0 3px rgba(37,99,235,.15);
 }
 
-.dictTable .col-code{ width:110px; }
-.dictTable .col-name{ width:220px; }
-.dictTable .col-size{ width:130px; }
-.dictTable .col-single{ width:170px; }
-.dictTable .col-box{ width:170px; }
-.dictTable .col-boxqty{ width:100px; }
-.dictTable .col-category{ width:140px; }
-.dictTable .col-status{ width:120px; }
-.dictTable .col-actions{ width:160px; }
+.dictTable .col-code{ width:15%; }
+.dictTable .col-name{ width:45%; }
+.dictTable .col-category{ width:15%; }
+.dictTable .col-status{ width:12%; }
+.dictTable .col-actions{ width:13%; }
+
+.dictTable .dictCompactCell{
+  padding:0;
+}
+
+.dictRowDetails{
+  display:block;
+}
+
+.dictRowDetails summary{
+  list-style:none;
+  cursor:pointer;
+}
+
+.dictRowDetails summary::-webkit-details-marker{
+  display:none;
+}
+
+.dictSummaryGrid{
+  display:grid;
+  grid-template-columns:15% 45% 15% 12% 13%;
+  align-items:center;
+  min-height:56px;
+}
+
+.dictSummaryCell,
+.dictSummaryActions{
+  padding:10px 12px;
+  min-width:0;
+}
+
+.dictSummaryValue{
+  display:block;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-weight:800;
+  color:#0f172a;
+}
+
+.dictSummaryEmpty{
+  color:#94a3b8;
+}
+
+.dictSummaryStatus{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:26px;
+  padding:4px 10px;
+  border-radius:999px;
+  background:#eef2ff;
+  color:#3730a3;
+  font-size:12px;
+  font-weight:800;
+}
+
+.dictSummaryStatus.is-paused{
+  background:#fee2e2;
+  color:#b91c1c;
+}
+
+.dictSummaryActions{
+  white-space:nowrap;
+}
+
+.dictDetailCard{
+  margin:0 12px 14px;
+  padding:14px;
+  border:1px solid #e2e8f0;
+  border-radius:8px;
+  background:#f8fafc;
+}
+
+.dictDetailGrid{
+  display:grid;
+  grid-template-columns:repeat(3, minmax(0, 1fr));
+  gap:12px;
+}
+
+.dictDetailField{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  min-width:0;
+}
+
+.dictDetailField label,
+.dictDetailField .fieldLabel{
+  font-size:12px;
+  font-weight:800;
+  color:#475569;
+}
 
 .dictStatus{
   font-size:12px;
@@ -1875,7 +1964,25 @@ tr.editing select:not(.readonly):focus{
   }
 
   .dictTable{
-    min-width:980px;
+    min-width:760px;
+  }
+
+  .dictSummaryGrid{
+    grid-template-columns:16% 38% 16% 14% 16%;
+  }
+
+  .dictSummaryCell,
+  .dictSummaryActions{
+    padding:8px;
+  }
+
+  .dictDetailGrid{
+    grid-template-columns:1fr;
+  }
+
+  .dictDetailCard{
+    margin:0 8px 10px;
+    padding:10px;
   }
 
   .inventoryTable{
@@ -2096,7 +2203,7 @@ function openGithubHashRoute(){
 <div class="card">
   <button class="primary" onclick="goDressingUse()">開始領用</button>
   <button type="button" class="primary" onclick="openInventoryArea()" style="margin-left:10px;">敷料庫存 📦</button>
-  <button type="button" class="primary" onclick="openDressingDict()" style="margin-left:10px;">敷料建檔 📷</button>
+  <button type="button" class="primary" onclick="openDressingDict()" style="margin-left:10px;">敷料查詢 / 建檔</button>
 </div>
 
 <div id="formArea">
@@ -2314,7 +2421,7 @@ function openGithubHashRoute(){
 <div id="dictArea" class="dictArea">
   <div class="dictHeader">
     <div>
-      <h2>敷料條碼建檔清單</h2>
+      <h2>敷料查詢 / 建檔</h2>
       <div id="dictLoadStatus" class="dictLoadStatus">尚未讀取敷料主檔</div>
     </div>
     <div class="dictToolbar">
@@ -2343,18 +2450,14 @@ function openGithubHashRoute(){
       <thead>
         <tr>
           <th class="col-code">院內碼</th>
-          <th class="col-name">敷料名稱</th>
-          <th class="col-size">規格描述</th>
-          <th class="col-single">單包GTIN</th>
-          <th class="col-box">包裝GTIN</th>
-          <th class="col-boxqty">一盒數量</th>
+          <th class="col-name">敷料名稱規格</th>
           <th class="col-category">自費價格</th>
           <th class="col-status">狀態</th>
           <th class="col-actions">操作</th>
         </tr>
       </thead>
       <tbody id="dictTbody">
-        <tr id="dictEmptyRow"><td colspan="9" style="text-align:center; color:#64748b; padding:20px;">尚未讀取敷料主檔</td></tr>
+        <tr id="dictEmptyRow"><td colspan="5" style="text-align:center; color:#64748b; padding:20px;">尚未讀取敷料主檔</td></tr>
       </tbody>
     </table>
   </div>
@@ -2865,7 +2968,7 @@ async function confirmLeaveDictWork(targetAction){
   }
 
   return await showConfirmDialog(
-    '目前敷料建檔表格還有未儲存或正在編輯的項目。\n\n若繼續「' +
+    '目前敷料查詢 / 建檔表格還有未儲存或正在編輯的項目。\n\n若繼續「' +
       (targetAction || '離開') +
       '」，這些前端暫存內容可能會消失。\n\n確定要繼續嗎？',
     '尚有未儲存項目'
@@ -2873,7 +2976,7 @@ async function confirmLeaveDictWork(targetAction){
 }
 
 async function openDressingDict(){
-  const ok = await confirmLeaveDictWork('重新開啟敷料建檔');
+  const ok = await confirmLeaveDictWork('重新開啟敷料查詢 / 建檔');
   if(!ok){
     showNotice('已停留在目前畫面，未重新讀取敷料主檔', 'warning', '已取消');
     return;
@@ -2904,7 +3007,7 @@ async function loadDictList(){
 
   const tbody = document.getElementById('dictTbody');
   tbody.innerHTML =
-    '<tr><td colspan="9" style="text-align:center; color:#64748b; padding:20px;">載入中...</td></tr>';
+    '<tr><td colspan="5" style="text-align:center; color:#64748b; padding:20px;">載入中...</td></tr>';
 
   try{
     const res = await listBarcode();
@@ -2924,14 +3027,14 @@ async function loadDictList(){
       setDictLoadState('ready', `已讀取 ${dressingMasterCache.length} 筆敷料資料，可以掃描或測試`);
     } else {
       tbody.innerHTML =
-        '<tr id="dictEmptyRow"><td colspan="9" style="text-align:center; color:#64748b; padding:20px;">目前主檔無資料；可開啟掃描新增第一筆</td></tr>';
+        '<tr id="dictEmptyRow"><td colspan="5" style="text-align:center; color:#64748b; padding:20px;">目前主檔無資料；可開啟掃描新增第一筆</td></tr>';
 
       setDictLoadState('ready', '主檔目前無資料；可掃描或測試新增第一筆');
     }
   } catch(err){
     dressingMasterCache = [];
     tbody.innerHTML =
-      '<tr><td colspan="9" style="text-align:center; color:#dc2626; padding:20px;">讀取失敗：' +
+      '<tr><td colspan="5" style="text-align:center; color:#dc2626; padding:20px;">讀取失敗：' +
       escapeHtml(err.message || err) +
       '</td></tr>';
 
@@ -2951,34 +3054,77 @@ function createDictRow(item, isNew){
   }
 
   tr.innerHTML = `
-    <td><input class="dict-hospital-code" type="text" value="${escapeHtml(item.hospitalCode || '')}" placeholder="院內碼"></td>
-    <td><input class="dict-name" value="${escapeHtml(item.dressingName || '')}" placeholder="敷料名稱"></td>
-    <td><input class="dict-size" value="${escapeHtml(item.size || '')}" placeholder="規格"></td>
-    <td>
-      <div class="dictGtinInputGroup">
-        <input class="dict-single-gtin" type="number" inputmode="numeric" value="${escapeHtml(item.singleGtin || item.gtin || '')}" placeholder="單包GTIN">
-        <button type="button" class="dictGtinScanBtn" title="掃描單包GTIN" onclick="openDictGtinScanner(this)">📷</button>
-      </div>
-    </td>
-    <td>
-      <div class="dictGtinInputGroup">
-        <input class="dict-box-gtin" type="number" inputmode="numeric" value="${escapeHtml(item.boxGtin || '')}" placeholder="盒裝GTIN">
-        <button type="button" class="dictGtinScanBtn" title="掃描盒裝GTIN" onclick="openDictGtinScanner(this)">📷</button>
-      </div>
-    </td>
-    <td><input class="dict-box-qty" type="number" inputmode="numeric" value="${escapeHtml(item.boxQuantity || '')}"></td>
-    <td><input class="dict-category" type="number" inputmode="numeric" value="${escapeHtml(item.category || '')}"></td>
-    <td>${makeStatusSelect(item.status || '使用中')}</td>
-    <td style="white-space:nowrap;">
-      <span class="dragHandle">☰</span>
-      <button type="button" class="dictActionBtn edit-main-btn" onclick="handleDictMainButton(this)">${isNew ? '儲存' : '編輯'}</button>
-      <button type="button" class="dictActionBtn danger delete-main-btn" onclick="deleteDictRow(this)">${isNew ? '不儲存' : '刪除'}</button>
-      <div class="dictStatus ${isNew ? '' : 'saved'}">${isNew ? '新資料，請確認後儲存' : '已建檔'}</div>
-      ${isNew && item.scanMeta ? item.scanMeta : ''}
+    <td colspan="5" class="dictCompactCell">
+      <details class="dictRowDetails"${isNew ? ' open' : ''}>
+        <summary class="dictSummaryGrid">
+          <span class="dictSummaryCell">
+            <span class="dictSummaryValue dict-summary-code">-</span>
+          </span>
+          <span class="dictSummaryCell">
+            <span class="dictSummaryValue dict-summary-name-size">-</span>
+          </span>
+          <span class="dictSummaryCell">
+            <span class="dictSummaryValue dict-summary-category">-</span>
+          </span>
+          <span class="dictSummaryCell">
+            <span class="dictSummaryStatus dict-summary-status">使用中</span>
+          </span>
+          <span class="dictSummaryActions" onclick="event.preventDefault(); event.stopPropagation();">
+            <span class="dragHandle">☰</span>
+            <button type="button" class="dictActionBtn edit-main-btn" onclick="handleDictMainButton(this)">${isNew ? '儲存' : '編輯'}</button>
+            <button type="button" class="dictActionBtn danger delete-main-btn" onclick="deleteDictRow(this)">${isNew ? '不儲存' : '刪除'}</button>
+          </span>
+        </summary>
+        <div class="dictDetailCard">
+          <div class="dictDetailGrid">
+            <div class="dictDetailField">
+              <label>院內碼</label>
+              <input class="dict-hospital-code" type="text" value="${escapeHtml(item.hospitalCode || '')}" placeholder="院內碼">
+            </div>
+            <div class="dictDetailField">
+              <label>敷料名稱</label>
+              <input class="dict-name" value="${escapeHtml(item.dressingName || '')}" placeholder="敷料名稱">
+            </div>
+            <div class="dictDetailField">
+              <label>規格描述</label>
+              <input class="dict-size" value="${escapeHtml(item.size || '')}" placeholder="規格">
+            </div>
+            <div class="dictDetailField">
+              <label>單包GTIN</label>
+              <div class="dictGtinInputGroup">
+                <input class="dict-single-gtin" type="number" inputmode="numeric" value="${escapeHtml(item.singleGtin || item.gtin || '')}" placeholder="單包GTIN">
+                <button type="button" class="dictGtinScanBtn" title="掃描單包GTIN" onclick="openDictGtinScanner(this)">📷</button>
+              </div>
+            </div>
+            <div class="dictDetailField">
+              <label>包裝GTIN</label>
+              <div class="dictGtinInputGroup">
+                <input class="dict-box-gtin" type="number" inputmode="numeric" value="${escapeHtml(item.boxGtin || '')}" placeholder="盒裝GTIN">
+                <button type="button" class="dictGtinScanBtn" title="掃描盒裝GTIN" onclick="openDictGtinScanner(this)">📷</button>
+              </div>
+            </div>
+            <div class="dictDetailField">
+              <label>一盒數量</label>
+              <input class="dict-box-qty" type="number" inputmode="numeric" value="${escapeHtml(item.boxQuantity || '')}">
+            </div>
+            <div class="dictDetailField">
+              <label>自費價格</label>
+              <input class="dict-category" type="number" inputmode="numeric" value="${escapeHtml(item.category || '')}">
+            </div>
+            <div class="dictDetailField">
+              <label>狀態</label>
+              ${makeStatusSelect(item.status || '使用中')}
+            </div>
+          </div>
+          <div class="dictStatus ${isNew ? '' : 'saved'}">${isNew ? '新資料，請確認後儲存' : '已建檔'}</div>
+          ${isNew && item.scanMeta ? item.scanMeta : ''}
+        </div>
+      </details>
     </td>
   `;
 
   bindDictRowDirtyWatch(tr);
+  syncDictRowSummary(tr);
 
   if(isNew){
     tr.dataset.originalData = JSON.stringify({});
@@ -2991,6 +3137,42 @@ function createDictRow(item, isNew){
   }
 
   return tr;
+}
+
+function formatDictSummaryValue(value){
+  const text = String(value || '').trim();
+  return text || '-';
+}
+
+function setDictSummaryText(el, value){
+  if(!el){
+    return;
+  }
+
+  const text = formatDictSummaryValue(value);
+  el.innerText = text;
+  el.title = text === '-' ? '' : text;
+  el.classList.toggle('dictSummaryEmpty', text === '-');
+}
+
+function syncDictRowSummary(tr){
+  if(!tr || tr.id === 'dictEmptyRow'){
+    return;
+  }
+
+  const data = getDictRowData(tr);
+  const nameSize = [data.dressingName, data.size].filter(Boolean).join(' / ');
+
+  setDictSummaryText(tr.querySelector('.dict-summary-code'), data.hospitalCode);
+  setDictSummaryText(tr.querySelector('.dict-summary-name-size'), nameSize);
+  setDictSummaryText(tr.querySelector('.dict-summary-category'), data.category);
+
+  const statusEl = tr.querySelector('.dict-summary-status');
+  if(statusEl){
+    const status = data.status || '使用中';
+    statusEl.innerText = status;
+    statusEl.classList.toggle('is-paused', status === '停用');
+  }
 }
 
 function getRowInputValue(tr, selector){
@@ -3013,6 +3195,7 @@ function getDictRowData(tr){
 function setDictRowSnapshot(tr){
   tr.dataset.originalData = JSON.stringify(getDictRowData(tr));
   tr.dataset.dirty = '0';
+  syncDictRowSummary(tr);
 }
 
 function isDictRowDirty(tr){
@@ -3047,6 +3230,7 @@ function bindDictRowDirtyWatch(tr){
     input.dataset.dirtyWatchBound = '1';
 
     input.addEventListener('input', function(){
+      syncDictRowSummary(tr);
       if(tr.classList.contains('editing')){
         updateDictMainButton(tr);
         syncDictTableModeFromRows();
@@ -3054,6 +3238,7 @@ function bindDictRowDirtyWatch(tr){
     });
 
     input.addEventListener('change', function(){
+      syncDictRowSummary(tr);
       if(tr.classList.contains('editing')){
         updateDictMainButton(tr);
         syncDictTableModeFromRows();
@@ -3193,6 +3378,7 @@ function applyDressingItemToDictRow(tr, item){
   }
 
   tr.dataset.rowKey = item.hospitalCode || single || box || '';
+  syncDictRowSummary(tr);
 }
 
 function mergeSavedItemWithVisibleRows(savedItem, mainTr, duplicateTr){
@@ -3342,6 +3528,8 @@ function restoreDictRowSnapshot(tr){
       input.value = map[selector] || '';
     }
   });
+
+  syncDictRowSummary(tr);
 }
 
 function enterDictEditMode(tr){
@@ -3351,6 +3539,10 @@ function enterDictEditMode(tr){
   }
 
   tr.classList.add('editing');
+  const details = tr.querySelector('.dictRowDetails');
+  if(details){
+    details.open = true;
+  }
   setDictInputsEnabled(tr, true);
   setDictRowSnapshot(tr);
   bindDictRowDirtyWatch(tr);
@@ -3369,6 +3561,7 @@ function leaveDictEditMode(tr){
   delete tr.dataset.isNewRow;
 
   setDictInputsEnabled(tr, false);
+  syncDictRowSummary(tr);
   updateDictMainButton(tr);
   syncDictTableModeFromRows();
 }
@@ -4207,7 +4400,7 @@ function ensureDictEmptyRow(){
   const tbody = document.getElementById('dictTbody');
   if(tbody && tbody.querySelectorAll('tr').length === 0){
     tbody.innerHTML =
-      '<tr id="dictEmptyRow"><td colspan="9" style="text-align:center; color:#64748b; padding:20px;">尚未掃描任何條碼，請點擊上方開啟掃描</td></tr>';
+      '<tr id="dictEmptyRow"><td colspan="5" style="text-align:center; color:#64748b; padding:20px;">尚未掃描任何條碼，請點擊上方開啟掃描</td></tr>';
   }
 
   updateBatchSaveButtonVisibility();
@@ -5879,7 +6072,7 @@ window.addEventListener('beforeunload', function(event){
 async function startUse(){
   const ok = await confirmLeaveDictWork('開始領用');
   if(!ok){
-    showNotice('已停留在敷料建檔畫面，未切換到領用流程', 'warning', '已取消');
+    showNotice('已停留在敷料查詢 / 建檔畫面，未切換到領用流程', 'warning', '已取消');
     return;
   }
 
@@ -9867,18 +10060,6 @@ if (window.location.hostname.includes('github.io')) {
   `;
   document.body.prepend(ghHeader);
 
-  const ghFooter = document.createElement('div');
-  ghFooter.id = 'appPageFooter';
-  ghFooter.className = 'appPageFooter';
-  ghFooter.dataset.appFooter = '1';
-  ghFooter.style.cssText = 'position:relative; margin-top:auto; flex-shrink:0; z-index:10000; height:42px; display:flex; align-items:center; justify-content:center; padding:0 16px; box-sizing:border-box; background:rgba(248,251,255,.94); border-top:1px solid rgba(148,163,184,.38); box-shadow:0 -8px 24px rgba(15,23,42,.08); backdrop-filter:blur(10px);';
-  ghFooter.innerHTML = `
-    <div style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">
-      <span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>
-      <span>v.2.27.12-202606041758</span>
-    </div>
-  `;
-  document.body.appendChild(ghFooter);
 }
 
 function normalizeTextForCompare(value){
@@ -9892,45 +10073,3 @@ function normalizeTextForCompare(value){
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

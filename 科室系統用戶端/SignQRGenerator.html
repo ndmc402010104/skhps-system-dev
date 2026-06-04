@@ -653,11 +653,8 @@ button:hover{
       return;
     }
 
-    const today = new Date().toISOString().slice(0, 10);
     select.innerHTML =
-      '<option value="' +
-      encodeURIComponent('GitHub 測試會議||' + today + '||github-demo') +
-      '">GitHub 測試會議｜' + today + '</option>';
+      '<option value="">正在載入會議清單...</option>';
   }
 
   async function loadSignQRMeetingOptionsFromApi(){
@@ -677,9 +674,12 @@ button:hover{
       }
       if(String(res.options || '').trim()){
         select.innerHTML = res.options;
+      } else {
+        select.innerHTML = '<option value="">目前沒有可用會議</option>';
       }
     } catch(error){
       console.warn('load sign QR options failed', error);
+      select.innerHTML = '<option value="">會議清單讀取失敗</option>';
     }
   }
 
@@ -715,18 +715,6 @@ button:hover{
       document.body.prepend(ghHeader);
     }
 
-    if(!document.getElementById('appPageFooter')){
-      const ghFooter = document.createElement('div');
-      ghFooter.id = 'appPageFooter';
-      ghFooter.dataset.appFooter = '1';
-      ghFooter.style.cssText = 'position:relative; margin-top:auto; flex-shrink:0; z-index:10000; height:42px; display:flex; align-items:center; justify-content:center; padding:0 16px; box-sizing:border-box; background:rgba(248,251,255,.94); border-top:1px solid rgba(148,163,184,.38); box-shadow:0 -8px 24px rgba(15,23,42,.08); backdrop-filter:blur(10px);';
-      ghFooter.innerHTML =
-        '<div style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">' +
-          '<span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>' +
-          '<span>v.2.27.11-202606032203</span>' +
-        '</div>';
-      document.body.appendChild(ghFooter);
-    }
   }
 
   document.addEventListener('DOMContentLoaded', function(){
