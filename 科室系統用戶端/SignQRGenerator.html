@@ -661,10 +661,6 @@ button:hover{
   }
 
   function ensureGithubMeetingOptions(){
-    if(!isGithubPage()){
-      return;
-    }
-
     const select = document.getElementById('course');
     if(!select){
       return;
@@ -683,12 +679,16 @@ button:hover{
   }
 
   async function loadSignQRMeetingOptionsFromApi(){
-    if(!isGithubPage()){
+    const select = document.getElementById('course');
+    if(!select){
       return;
     }
 
-    const select = document.getElementById('course');
-    if(!select){
+    const hasUsableOption = Array.from(select.options).some(function(option){
+      return String(option.value || option.textContent || '').indexOf('<?') < 0;
+    });
+
+    if(hasUsableOption){
       return;
     }
 
