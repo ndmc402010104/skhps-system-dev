@@ -3,6 +3,8 @@
 
 <head>
 
+
+<script src="https://ndmc402010104.github.io/plastic-surgery-department-system/%E5%85%B1%E7%94%A8%E8%A8%AD%E5%AE%9A%E6%AA%94/favicon.js"></script>
 <base target="_top">
 
 <meta charset="UTF-8">
@@ -556,6 +558,32 @@ onclick="goUiTest()"
 
 <script>
 // 如果是 GitHub Pages，因為 GAS 的標籤無法執行，我們手動加上專屬的 Footer 與 Header 標籤
+
+function getGithubAppVersionUrl(env, page){
+  var base = '';
+  if(typeof APP_DEV_URL !== 'undefined' && env === 'dev'){
+    base = APP_DEV_URL;
+  }
+  if(!base && typeof APP_PROD_URL !== 'undefined'){
+    base = APP_PROD_URL;
+  }
+  if(!base && typeof APP_ENTRY_URL !== 'undefined'){
+    base = APP_ENTRY_URL;
+  }
+  if(!base && typeof getAppEntryUrl === 'function'){
+    base = getAppEntryUrl();
+  }
+  if(!base || String(base).indexOf('<' + '?') >= 0){
+    base = 'https://script.google.com/macros/s/AKfycbwbz8pXfU68j2aFeF_AaDmmG6Vco3JsPSw-PGyYeLu0AF3vCfzaZJQFOjORnwSw8Xp4/exec';
+  }
+  var params = [];
+  if(page){
+    params.push('page=' + encodeURIComponent(page));
+  }
+  params.push('appEnv=' + encodeURIComponent(env));
+  return String(base) + (String(base).indexOf('?') >= 0 ? '&' : '?') + params.join('&');
+}
+
 if (window.location.hostname.includes('github.io')) {
   const ghShellStyle = document.createElement('style');
   ghShellStyle.textContent = `
@@ -573,7 +601,7 @@ if (window.location.hostname.includes('github.io')) {
       right:0;
       bottom:0;
       z-index:10000;
-      height:42px;
+      height:46px;
       display:flex;
       align-items:center;
       justify-content:center;
@@ -584,20 +612,50 @@ if (window.location.hostname.includes('github.io')) {
       box-shadow:0 -8px 24px rgba(15,23,42,.08);
       backdrop-filter:blur(10px);
     }
+    .appVersionTabs{
+      display:inline-flex;
+      align-items:center;
+      gap:4px;
+      padding:4px;
+      border:1px solid rgba(148,163,184,.45);
+      border-radius:999px;
+      background:rgba(255,255,255,.78);
+      box-shadow:0 8px 18px rgba(15,23,42,.06);
+      max-width:100%;
+    }
     .appVersionBadge{
       display:inline-flex;
       align-items:center;
       gap:5px;
+      min-height:28px;
+      padding:6px 10px;
+      border:1px solid transparent;
+      border-radius:999px;
+      background:transparent;
+      color:#64748b;
       font-size:11px;
+      font-weight:800;
       line-height:1.1;
-      color:#475569;
-      background:rgba(255,255,255,.72);
-      border:1px solid rgba(148,163,184,.45);
-      border-radius:8px;
-      padding:6px 8px;
-      max-width:100%;
+      text-decoration:none;
+      white-space:nowrap;
+      cursor:pointer;
+      transition:color .16s ease,border-color .16s ease,background-color .16s ease,box-shadow .16s ease,transform .16s ease;
     }
-    .appVersionBadgeMode{ font-weight:700; }
+    .appVersionBadge:hover{
+      color:#1d4ed8;
+      background:#ffffff;
+      border-color:rgba(37,99,235,.25);
+      box-shadow:0 6px 14px rgba(37,99,235,.12);
+      transform:translateY(-1px);
+    }
+    .appVersionBadge.is-active{
+      color:#ffffff;
+      background:linear-gradient(135deg,#2563eb,#0f766e);
+      border-color:transparent;
+      box-shadow:0 8px 18px rgba(37,99,235,.20);
+    }
+    .appVersionBadgeMode{ font-weight:900; }
+    .appVersionBadgeVersion{ font-weight:800; opacity:.86; }
     @media(min-width:1200px){
       .shell,
       .wrap,
@@ -636,8 +694,13 @@ if (window.location.hostname.includes('github.io')) {
   ghFooter.className = 'appVersionFooter';
   ghFooter.dataset.appFooter = '1';
   ghFooter.innerHTML = `
-    <div class="appVersionBadge">
-      <span class="appVersionBadgeMode">前端頁面</span>
+    <div class="appVersionTabs" role="tablist" aria-label="版本切換">
+      <a class="appVersionBadge is-active" href="${window.location.href}" target="_top" role="tab" aria-selected="true" title="目前為 GitHub Pages 前端版">
+        <span class="appVersionBadgeMode">GitHub 版</span>
+        <span class="appVersionBadgeVersion">frontend</span>
+      </a>
+      <a class="appVersionBadge" href="${getGithubAppVersionUrl('prod', '')}" target="_top" role="tab" title="切換到 Apps Script 正式版">正式版</a>
+      <a class="appVersionBadge" href="${getGithubAppVersionUrl('dev', '')}" target="_top" role="tab" title="切換到 Apps Script 測試版">測試版</a>
     </div>
   `;
   document.body.appendChild(ghFooter);
