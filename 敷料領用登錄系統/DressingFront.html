@@ -1968,10 +1968,15 @@ tr.editing select:not(.readonly):focus{
 let APP_ENTRY_URL = '<?= appEntryUrl ?>';
 let APP_PROD_URL = '<?= appProdUrl ?>';
 const GITHUB_PAGE_MAP = {
-  home: '敷料領用登錄系統/DressingFront.html',
+  home: '科室系統用戶端/FrontIndex.html',
+  frontIndex: '科室系統用戶端/FrontIndex.html',
+  signQR: '科室系統用戶端/SignQRGenerator.html',
+  hospitalSignIn: '科室系統用戶端/HospitalSignIn.html',
   dressingFront: '敷料領用登錄系統/DressingFront.html',
+  dressingInventory: '敷料領用登錄系統/DressingFront.html#inventory',
   dressingUse: '敷料領用登錄系統/DressingUse.html',
-  dressingDict: '敷料領用登錄系統/敷料建檔/DressingDict.html'
+  dressingDict: '敷料領用登錄系統/DressingFront.html#dressingDict',
+  uiTest: '共用設定檔/UI設定/99_文件/skh-ui-test-page.html'
 };
 
 const GITHUB_PAGES_BASE_URL =
@@ -2043,6 +2048,23 @@ function goHome(){
 
 function goDressingUse(){
   window.top.location.href = getGithubPageUrl('dressingUse');
+}
+
+function openGithubHashRoute(){
+  const route = String(window.location.hash || '').replace(/^#/, '').trim();
+  if(route === 'inventory'){
+    openInventoryArea();
+    return true;
+  }
+  if(route === 'dressingDict'){
+    openDressingDict();
+    return true;
+  }
+  if(route === 'dressingUse'){
+    goDressingUse();
+    return true;
+  }
+  return false;
 }
 </script>
 </head>
@@ -6278,6 +6300,7 @@ let inventoryOperationChoiceMade = false;
 let inventoryUnitChoiceMade = false;
 let inventoryInboundRedirectAutoCreateRaw = '';
 let inventoryInboundStepIndex = 0;
+let pendingInventoryLookup = null;
 
 function openInventoryArea(){
   document.getElementById('formArea').style.display = 'none';
@@ -6293,6 +6316,7 @@ function openInventoryArea(){
   setInventoryPanelOpen('inventoryDetailPanel', false);
   updateInventoryTableVisibility();
   updateInventorySearchLoadingHint();
+  syncInventoryControlDisabledState();
   loadInventoryList(getInventoryCurrentListFilter());
 }
 
@@ -6505,6 +6529,23 @@ function hideInventoryMasterDialogForScanner(){
     inventoryMasterDialogHiddenForScanner = true;
     overlay.style.display = 'none';
   }
+}
+
+function applyInventoryLotExpValues(parsed){
+  parsed = parsed || {};
+  const lotInput = document.getElementById('inventoryLot');
+  const expInput = document.getElementById('inventoryExp');
+  const lot = String(parsed.lot || '').trim();
+  const exp = String(parsed.exp || '').trim();
+
+  if(lotInput && lot){
+    lotInput.value = lot;
+  }
+  if(expInput && exp){
+    expInput.value = exp;
+  }
+
+  applyInventoryLotExpInputMode(parsed);
 }
 
 function restoreInventoryMasterDialogAfterScanner(){
@@ -6876,7 +6917,7 @@ function canShowInventoryTable(){
 }
 
 function canShowInventorySearchPanel(){
-  return inventoryListReady && !inventoryListLoading && canInventorySetupAllowSearch();
+  return canInventorySetupAllowSearch();
 }
 
 function updateInventorySearchLoadingHint(){
@@ -6887,7 +6928,7 @@ function updateInventorySearchLoadingHint(){
   if(hint){
     hint.classList.toggle('is-open', showLoading);
     hint.innerText = showLoading
-      ? '正在同步敷料主檔與批號庫存，完成後才能搜尋或掃描。'
+      ? '正在同步敷料主檔與批號庫存；可先掃描或輸入，系統會暫存並在資料回來後自動續查。'
       : '';
   }
 
@@ -6929,6 +6970,11 @@ function syncInventoryControlDisabledState(){
 
     if(isDataGateClosed && el.closest('.inventorySetupPanel')){
       el.disabled = false;
+      return;
+    }
+
+    if(isDataGateClosed && el.closest('#inventorySearchPanel')){
+      el.disabled = !!isActionBusy;
       return;
     }
 
@@ -7294,9 +7340,9 @@ function updateInventorySegmentedButtons(){
     } else if(!inventoryOperationChoiceMade && inventoryUnitChoiceMade){
       nextHint = '已選擇庫存位置，請再選擇作業類型。';
     } else if(inventoryOperationChoiceMade && inventoryUnitChoiceMade && inventoryListLoading){
-      nextHint = '正在同步敷料主檔與批號庫存，完成後才會開放搜尋 / 掃描列。';
+      nextHint = '正在同步敷料主檔與批號庫存；可先搜尋 / 掃描，系統會暫存後續查。';
     } else if(inventoryOperationChoiceMade && inventoryUnitChoiceMade && !inventoryListReady && setupAllowsSearch){
-      nextHint = '庫存清單尚未讀取完成，先不要搜尋或掃描，避免用空資料誤判。';
+      nextHint = '庫存清單尚未讀取完成；可先輸入或掃描，或按重新整理再查。';
     } else if(inventoryOperationChoiceMade && inventoryUnitChoiceMade && !searchReady){
       nextHint = '入庫與盤點需要指定 5A 或傷口照護中心，不能使用不限制單位。';
     } else if(searchReady){
@@ -7309,6 +7355,49 @@ function updateInventorySegmentedButtons(){
   }
 
   updateInventoryTableVisibility();
+}
+
+function queuePendingInventoryLookup(raw, reason){
+  raw = String(raw || '').trim();
+  if(!raw){
+    return false;
+  }
+
+  pendingInventoryLookup = {
+    raw: raw,
+    reason: reason || 'data_loading',
+    queuedAt: Date.now()
+  };
+
+  const input = document.getElementById('inventoryBarcodeInput');
+  if(input){
+    input.value = raw;
+  }
+
+  setInventoryStatus('已暫存掃描 / 搜尋內容，等待後端資料完成後自動續查。');
+  showNotice('已暫存剛剛掃到的內容，資料回來後會自動帶入。', 'warning', '資料同步中');
+  return true;
+}
+
+async function replayPendingInventoryLookup(){
+  if(!pendingInventoryLookup || inventoryListLoading || !inventoryListReady){
+    return false;
+  }
+
+  const pending = pendingInventoryLookup;
+  pendingInventoryLookup = null;
+  const input = document.getElementById('inventoryBarcodeInput');
+  if(input){
+    input.value = pending.raw || '';
+  }
+
+  if(pending.raw){
+    showNotice('正在接續剛剛暫存的掃描內容。', 'success', '繼續查詢');
+    await lookupInventoryFromInput({ fromPending:true });
+    return true;
+  }
+
+  return false;
 }
 
 function setInventoryPanelOpen(panelId, isOpen){
@@ -7660,7 +7749,7 @@ async function offerSwitchMissingStocktakeInventoryToInbound(item, parsed, packa
   updateInventorySegmentedButtons();
   setInventoryPanelOpen('inventorySearchPanel', canShowInventorySearchPanel());
   setInventoryPanelOpen('inventoryDetailPanel', true);
-  applyInventoryLotExpInputMode(parsed);
+  applyInventoryLotExpValues(parsed);
   renderInventoryOperationMode();
   renderInventoryQuantityHint();
   showNotice('已切換為入庫，並保留剛剛掃到的批號與到期日。', 'success', '已切換入庫');
@@ -8756,9 +8845,12 @@ async function fillInventoryFormFromLookup(result, parsed){
   await promptInventoryInboundQuantitiesAfterLookup(item, parsed, packageType);
 }
 
-async function lookupInventoryFromInput(){
+async function lookupInventoryFromInput(options){
+  options = options || {};
   if(!inventoryListReady || inventoryListLoading){
-    showNotice('庫存與敷料主檔尚未讀取完成，請等表格載入完成後再搜尋或掃描。', 'warning', '尚未載入完成');
+    const pendingInput = document.getElementById('inventoryBarcodeInput');
+    const pendingRaw = String(pendingInput ? pendingInput.value : '').trim();
+    queuePendingInventoryLookup(pendingRaw, inventoryListLoading ? 'data_loading' : 'data_not_ready');
     return;
   }
 
@@ -8848,15 +8940,14 @@ async function handleInventoryBarcodeResult(barcode, parsed){
   const input = document.getElementById('inventoryBarcodeInput');
   if(input) input.value = barcode;
   closeDressingScanner();
+  if(!inventoryListReady || inventoryListLoading){
+    queuePendingInventoryLookup(barcode, 'scan_before_data_ready');
+    return;
+  }
   await lookupInventoryFromInput();
 }
 
 function startInventoryScanner(){
-  if(!inventoryListReady || inventoryListLoading){
-    showNotice('庫存與敷料主檔尚未讀取完成，請等表格載入完成後再掃描。', 'warning', '尚未載入完成');
-    return;
-  }
-
   if(inventoryBusy || inventoryScannerBusy){
     return;
   }
@@ -8869,11 +8960,6 @@ function startInventoryScanner(){
 }
 
 function triggerInventoryTest(type){
-  if(!inventoryListReady || inventoryListLoading){
-    showNotice('庫存與敷料主檔尚未讀取完成，請等表格載入完成後再測試。', 'warning', '尚未載入完成');
-    return;
-  }
-
   const code = type === 'box'
     ? TEST_HYDROCLEAN_CAVITY_BOX_CODE
     : TEST_HYDROCLEAN_CAVITY_SINGLE_CODE;
@@ -8951,11 +9037,21 @@ async function submitInventoryOperationFromForm(){
       showNotice('這個批號目前沒有庫存紀錄，盤點不應新增批號；請改走入庫。', 'warning', '請改入庫');
       const ok = await showConfirmDialog('目前選到的批號在這個庫存位置沒有庫存紀錄。\n\n要切換到入庫並保留目前敷料、批號與到期日嗎？', '目前沒有庫存，建議入庫');
       if(ok){
+        const preservedLot = lot;
+        const preservedExp = exp;
         const typeInput = document.getElementById('inventoryOperationType');
         if(typeInput) typeInput.value = 'inbound';
         inventoryOperationChoiceMade = true;
         updateInventorySegmentedButtons();
-        applyInventoryLotExpInputMode((inventoryLookupState && inventoryLookupState.parsed) || {});
+        const parsedForSwitch = Object.assign(
+          {},
+          (inventoryLookupState && inventoryLookupState.parsed) || {},
+          { lot: preservedLot, exp: preservedExp }
+        );
+        if(inventoryLookupState){
+          inventoryLookupState.parsed = parsedForSwitch;
+        }
+        applyInventoryLotExpValues(parsedForSwitch);
         renderInventoryOperationMode();
         renderInventoryQuantityHint();
         showNotice('已切換為入庫，請輸入本次入庫數量。', 'success', '已切換入庫');
@@ -9363,9 +9459,11 @@ async function loadInventoryList(options){
   if(!tbody) return;
   inventoryListReady = false;
   inventoryListLoading = true;
-  setInventoryPanelOpen('inventorySearchPanel', false);
+  setInventoryPanelOpen('inventorySearchPanel', canShowInventorySearchPanel());
   setInventoryPanelOpen('inventoryDetailPanel', false);
-  clearInventorySearchInput();
+  if(!pendingInventoryLookup){
+    clearInventorySearchInput();
+  }
   updateInventorySearchLoadingHint();
   updateInventorySegmentedButtons();
   syncInventoryControlDisabledState();
@@ -9396,17 +9494,18 @@ async function loadInventoryList(options){
     setInventoryPanelOpen('inventorySearchPanel', canShowInventorySearchPanel());
     syncInventoryControlDisabledState();
     setInventoryStatus('已讀取批號庫存' + (Array.isArray(dressingMasterCache) && dressingMasterCache.length ? '，並已連結敷料主檔' : '；敷料主檔尚未連結'));
-    if(canShowInventorySearchPanel()) focusInventorySearchInput();
+    if(!(await replayPendingInventoryLookup()) && canShowInventorySearchPanel()) focusInventorySearchInput();
   } catch(error){
     inventoryListReady = false;
     inventoryListLoading = false;
     inventoryCache = [];
     tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#dc2626; padding:20px;">讀取失敗：' + escapeHtml(error.message || error) + '</td></tr>';
-    setInventoryPanelOpen('inventorySearchPanel', false);
+    setInventoryPanelOpen('inventorySearchPanel', canShowInventorySearchPanel());
     updateInventorySearchLoadingHint();
     updateInventorySegmentedButtons();
     syncInventoryControlDisabledState();
-    setInventoryStatus('批號庫存讀取失敗');
+    setInventoryStatus('批號庫存讀取失敗；可按重新整理重試，搜尋 / 掃描內容會先暫存。');
+    showNotice('批號庫存讀取失敗，可重新整理；目前頁面仍可切換模式與暫存掃描。', 'error', '讀取失敗');
   }
 }
 
@@ -9709,6 +9808,11 @@ function initDressingFrontLiveSearch(){
 initDressingFrontLiveSearch();
 bindInventoryOperationDirtyWatch();
 
+if(isGithubPage()){
+  setTimeout(openGithubHashRoute, 0);
+  window.addEventListener('hashchange', openGithubHashRoute);
+}
+
 document.addEventListener('click', function(e){
   if(e.target.classList.contains('deleteRow')){
     const tbody = e.target.closest('tbody');
@@ -9779,7 +9883,7 @@ if (window.location.hostname.includes('github.io')) {
   ghFooter.innerHTML = `
     <div style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">
       <span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>
-      <span>v.2.27.11-202606032203</span>
+      <span>v.2.27.12-202606041744</span>
     </div>
   `;
   document.body.appendChild(ghFooter);
@@ -9796,6 +9900,7 @@ function normalizeTextForCompare(value){
 
 </body>
 </html>
+
 
 
 

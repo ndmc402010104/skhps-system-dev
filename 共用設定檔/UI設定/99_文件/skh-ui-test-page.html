@@ -39,8 +39,29 @@
 <title>SKH CSS 測試頁</title>
 
 <script>
+const GITHUB_PAGE_MAP = {
+  home:'科室系統用戶端/FrontIndex.html',
+  frontIndex:'科室系統用戶端/FrontIndex.html'
+};
+
+function isGithubPage(){
+  return window.location.hostname.includes('github.io');
+}
+
+function getGithubRepoBasePath(){
+  const parts = window.location.pathname.split('/').filter(Boolean);
+  return parts.length ? '/' + parts[0] + '/' : '/';
+}
+
+function getGithubPageUrl(pageKey){
+  const path = GITHUB_PAGE_MAP[pageKey] || GITHUB_PAGE_MAP.home;
+  return window.location.origin + getGithubRepoBasePath() + path;
+}
+
 function goHome(){
-  window.top.location.href = '<?= APP_ENTRY_URL ?>';
+  window.top.location.href = isGithubPage()
+    ? getGithubPageUrl('home')
+    : '<?= APP_ENTRY_URL ?>';
 }
 </script>
 

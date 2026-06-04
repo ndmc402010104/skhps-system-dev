@@ -45,11 +45,16 @@ var APP_SCRIPT_PAGE_ROUTES = [
 ];
 
 var GITHUB_PAGE_ROUTES = {
-  home:'敷料領用登錄系統/DressingFront.html',
+  home:'科室系統用戶端/FrontIndex.html',
   frontIndex:'科室系統用戶端/FrontIndex.html',
+  signMeeting:'科室系統用戶端/SignMeeting.html',
+  signQR:'科室系統用戶端/SignQRGenerator.html',
+  hospitalSignIn:'科室系統用戶端/HospitalSignIn.html',
   dressingFront:'敷料領用登錄系統/DressingFront.html',
+  dressingInventory:'敷料領用登錄系統/DressingFront.html#inventory',
   dressingUse:'敷料領用登錄系統/DressingUse.html',
-  dressingDict:'敷料領用登錄系統/敷料建檔/DressingDict.html'
+  dressingDict:'敷料領用登錄系統/DressingFront.html#dressingDict',
+  uiTest:'共用設定檔/UI設定/99_文件/skh-ui-test-page.html'
 };
 
 function doGet(e){

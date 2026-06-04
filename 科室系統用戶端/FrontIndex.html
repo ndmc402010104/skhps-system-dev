@@ -238,8 +238,14 @@ const APP_ENV =
 
 const GITHUB_PAGE_MAP = {
   home: '',
+  frontIndex: '科室系統用戶端/FrontIndex.html',
+  signQR: '科室系統用戶端/SignQRGenerator.html',
+  hospitalSignIn: '科室系統用戶端/HospitalSignIn.html',
   dressingFront: '敷料領用登錄系統/DressingFront.html',
-  dressingUse: '敷料領用登錄系統/DressingUse.html'
+  dressingInventory: '敷料領用登錄系統/DressingFront.html#inventory',
+  dressingUse: '敷料領用登錄系統/DressingUse.html',
+  dressingDict: '敷料領用登錄系統/DressingFront.html#dressingDict',
+  uiTest: '共用設定檔/UI設定/99_文件/skh-ui-test-page.html'
 };
 
 const GITHUB_PAGES_BASE_URL =
@@ -354,6 +360,27 @@ function buildAppPageUrl(baseUrl, page, env){
 
 function goPage(page){
 
+  if(window.location.hostname.includes('github.io')){
+    const githubRouteKeyByAppPage = {
+      signqr:'signQR',
+      hospitalsignin:'hospitalSignIn',
+      dressingfront:'dressingFront',
+      dressinguse:'dressingUse',
+      dressingDict:'dressingDict',
+      uitest:'uiTest'
+    };
+
+    const githubKey =
+      githubRouteKeyByAppPage[page] ||
+      githubRouteKeyByAppPage[String(page || '').toLowerCase()];
+
+    if(githubKey){
+      window.top.location.href =
+        getGithubPageUrl(githubKey);
+      return;
+    }
+  }
+
   const env =
     getCurrentAppEnv();
 
@@ -369,6 +396,12 @@ function goPage(page){
 
 
 function goHome(){
+
+  if(window.location.hostname.includes('github.io')){
+    window.top.location.href =
+      getGithubPageUrl('frontIndex');
+    return;
+  }
 
   const env =
     getCurrentAppEnv();
@@ -401,6 +434,12 @@ function goHospitalSignIn(){
 
 function goDressingFront(){
 
+  if(window.location.hostname.includes('github.io')){
+    window.top.location.href =
+      getGithubPageUrl('dressingFront');
+    return;
+  }
+
   const env =
     getCurrentAppEnv();
 
@@ -408,6 +447,42 @@ function goDressingFront(){
     env === 'dev'
       ? buildAppPageUrl(APP_DEV_URL, 'dressingfront', 'dev')
       : getGithubPageUrl('dressingFront');
+
+}
+
+function goDressingUse(){
+
+  const env =
+    getCurrentAppEnv();
+
+  window.top.location.href =
+    window.location.hostname.includes('github.io')
+      ? getGithubPageUrl('dressingUse')
+      : buildAppPageUrl(env === 'dev' ? APP_DEV_URL : APP_PROD_URL, 'dressinguse', env);
+
+}
+
+function goDressingInventory(){
+
+  const env =
+    getCurrentAppEnv();
+
+  window.top.location.href =
+    window.location.hostname.includes('github.io')
+      ? getGithubPageUrl('dressingInventory')
+      : buildAppPageUrl(env === 'dev' ? APP_DEV_URL : APP_PROD_URL, 'dressingfront', env) + '#inventory';
+
+}
+
+function goDressingDict(){
+
+  const env =
+    getCurrentAppEnv();
+
+  window.top.location.href =
+    window.location.hostname.includes('github.io')
+      ? getGithubPageUrl('dressingDict')
+      : buildAppPageUrl(env === 'dev' ? APP_DEV_URL : APP_PROD_URL, 'dressingfront', env) + '#dressingDict';
 
 }
 
@@ -492,13 +567,49 @@ onclick="goDressingFront()"
 </button>
 
 <button
+class="entryButton dressing"
+onclick="goDressingUse()"
+>
+  <span class="entryIcon">領</span>
+  <span>
+    <span class="entryTitle">敷料領用</span>
+    <span class="entryDesc">直接進入病人敷料領用單，支援批號庫存扣庫。</span>
+  </span>
+  <span class="arrow">›</span>
+</button>
+
+<button
+class="entryButton dressing"
+onclick="goDressingInventory()"
+>
+  <span class="entryIcon">庫</span>
+  <span>
+    <span class="entryTitle">敷料庫存</span>
+    <span class="entryDesc">進入敷料入庫、盤點與批號庫存查詢。</span>
+  </span>
+  <span class="arrow">›</span>
+</button>
+
+<button
+class="entryButton dressing"
+onclick="goDressingDict()"
+>
+  <span class="entryIcon">檔</span>
+  <span>
+    <span class="entryTitle">敷料建檔</span>
+    <span class="entryDesc">維護敷料主檔、GTIN、規格與盒裝數量。</span>
+  </span>
+  <span class="arrow">›</span>
+</button>
+
+<button
 class="entryButton github"
 onclick="goUiTest()"
-style="display: none;">
+>
   <span class="entryIcon">UI</span>
   <span>
     <span class="entryTitle">SKH UI 測試中心</span>
-    <span class="entryDesc">在 Apps Script 測試 Button、Alert、Table、Form、Modal、Loading 等共用樣式元件。</span>
+    <span class="entryDesc">測試 Button、Alert、Table、Form、Modal、Loading 等共用樣式元件。</span>
   </span>
   <span class="arrow">›</span>
 </button>
@@ -523,7 +634,7 @@ if (window.location.hostname.includes('github.io')) {
   ghHeader.className = 'appHeader';
   ghHeader.style.cssText = 'position:fixed; top:0; left:0; right:0; z-index:20; display:flex; justify-content:space-between; align-items:center; gap:18px; height:76px; margin:0; padding:0 15vw; box-sizing:border-box; border-bottom:1px solid #dbe4ef; background:rgba(248,251,255,.92); backdrop-filter:blur(10px); box-shadow:0 8px 24px rgba(15,23,42,.06);';
   ghHeader.innerHTML = `
-    <div class="brand" onclick="window.top.location.href=APP_ENTRY_URL" style="display:flex; align-items:center; gap:14px; cursor:pointer;">
+    <div class="brand" onclick="goHome()" style="display:flex; align-items:center; gap:14px; cursor:pointer;">
       <div class="brandMark" style="width:46px; height:46px; display:grid; place-items:center; border-radius:14px; color:#ffffff; font-size:22px; font-weight:800; background:linear-gradient(135deg,#2563eb,#0f766e); box-shadow:0 12px 24px rgba(37,99,235,.2);">S</div>
       <div class="brandText" style="display:grid; gap:2px;">
         <span class="brandName" style="font-size:18px; font-weight:800;">新光整形外科科室系統</span>

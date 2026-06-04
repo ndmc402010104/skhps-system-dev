@@ -524,9 +524,15 @@
 let APP_ENTRY_URL = '<?= appEntryUrl ?>';
 let APP_PROD_URL = '<?= appProdUrl ?>';
 const GITHUB_PAGE_MAP = {
-  home: '敷料領用登錄系統/DressingFront.html',
+  home: '科室系統用戶端/FrontIndex.html',
+  frontIndex: '科室系統用戶端/FrontIndex.html',
+  signQR: '科室系統用戶端/SignQRGenerator.html',
+  hospitalSignIn: '科室系統用戶端/HospitalSignIn.html',
   dressingFront: '敷料領用登錄系統/DressingFront.html',
-  dressingUse: '敷料領用登錄系統/DressingUse.html'
+  dressingInventory: '敷料領用登錄系統/DressingFront.html#inventory',
+  dressingUse: '敷料領用登錄系統/DressingUse.html',
+  dressingDict: '敷料領用登錄系統/DressingFront.html#dressingDict',
+  uiTest: '共用設定檔/UI設定/99_文件/skh-ui-test-page.html'
 };
 const GITHUB_PAGES_BASE_URL = 'https://ndmc402010104.github.io/plastic-surgery-department-system/';
 if (APP_ENTRY_URL.includes('<' + '?=') || APP_ENTRY_URL.trim() === '') APP_ENTRY_URL = 'https://script.google.com/macros/s/AKfycbwbz8pXfU68j2aFeF_AaDmmG6Vco3JsPSw-PGyYeLu0AF3vCfzaZJQFOjORnwSw8Xp4/exec';
@@ -697,6 +703,11 @@ function isMakeupUseTimeOpen(){
 }
 
 function setBusy(b,msg){ document.getElementById('waitIndicator').classList.toggle('active',!!b); document.getElementById('waitText').innerText=msg||'處理中...'; document.querySelectorAll('button,input,select,textarea').forEach(el=>{ if(el.closest('#dialogOverlay'))return; el.disabled=!!b; }); if(!b)renderControls(); }
+function setUseInitLoading(b,msg){
+  document.getElementById('waitIndicator').classList.toggle('active',!!b);
+  document.getElementById('waitText').innerText=msg||'正在讀取資料...';
+  renderControls();
+}
 function showNotice(message,type,title){ const stack=document.getElementById('noticeStack'); stack.innerHTML=''; const card=document.createElement('div'); card.className='noticeCard '+(type||'success'); card.innerHTML='<button type="button" class="noticeClose">×</button>'+(title?'<div class="noticeTitle">'+escapeHtml(title)+'</div>':'')+(message?'<div class="noticeMessage">'+escapeHtml(message)+'</div>':''); stack.appendChild(card); card.querySelector('.noticeClose').onclick=()=>card.remove(); setTimeout(()=>{card.style.opacity='0';card.style.transition='all .2s ease';setTimeout(()=>card.remove(),220);},3600); }
 function openDialog(o){ return new Promise(resolve=>{ const overlay=document.getElementById('dialogOverlay'), title=document.getElementById('dialogTitle'), msg=document.getElementById('dialogMessage'), ok=document.getElementById('dialogOkBtn'), cancel=document.getElementById('dialogCancelBtn'); title.innerText=o.title||'確認'; msg.innerText=o.message||''; ok.innerText=o.okText||'確定'; cancel.innerText=o.cancelText||'取消'; cancel.style.display=o.cancel===false?'none':'inline-block'; overlay.style.display='flex'; function cleanup(v){ overlay.style.display='none'; ok.onclick=null; cancel.onclick=null; resolve(v); } ok.onclick=()=>cleanup(true); cancel.onclick=()=>cleanup(false); }); }
 function setHisStatus(s){ document.getElementById('hisStatus').value=s; document.querySelectorAll('[data-his-status]').forEach(btn=>btn.classList.toggle('active',btn.dataset.hisStatus===s)); updateSummary(); }
@@ -838,7 +849,7 @@ async function submitDressingUse(payload){
 }
 function parseGs1Barcode(raw){ const text=String(raw||'').trim(), result={raw:text,gtin:'',lot:'',exp:'',mfg:''}; if(!text)return result; const pairs=text.replace(/\u001d/g,'').match(/\((\d{2})\)([^()]*)/g); if(pairs){ pairs.forEach(part=>{ const m=part.match(/^\((\d{2})\)(.*)$/); if(!m)return; if(m[1]==='01')result.gtin=normalizeDigits(m[2]).slice(0,14); if(m[1]==='10')result.lot=m[2].trim(); if(m[1]==='17')result.exp=parseGs1Date(m[2]); if(m[1]==='11')result.mfg=parseGs1Date(m[2]); }); return result; } const d=normalizeDigits(text); result.gtin=d.length>=14?d.slice(0,14):d; return result; }
 function parseGs1Date(value){ const d=normalizeDigits(value).slice(0,6); if(d.length!==6)return ''; const yy=Number(d.slice(0,2)), yyyy=yy>=70?1900+yy:2000+yy; return yyyy+'-'+d.slice(2,4)+'-'+d.slice(4,6); }
-async function initializeUsePage(){ setBusy(true,'正在讀取敷料主檔與批號庫存...'); dataReady=false; document.getElementById('loadStatus').innerText='讀取中，搜尋與掃描暫停開放...'; try{ const b=await listBarcode(); if(!b||!b.ok)throw new Error((b&&b.message)||'敷料主檔讀取失敗'); const inv=await listDressingInventory(); if(!inv||!inv.ok)throw new Error((inv&&inv.message)||'批號庫存讀取失敗'); dressingMasterCache=b.data||[]; inventoryCache=inv.data||[]; dataReady=true; document.getElementById('loadStatus').innerText='已讀取敷料主檔 '+dressingMasterCache.length+' 筆；批號庫存 '+inventoryCache.length+' 筆。可開始建立領用單。'; if(document.getElementById('useTbody').querySelector('.useRowsEmpty'))addUseRow(); showNotice('已完成讀取，可以開始領用','success','讀取完成'); }catch(e){ dataReady=false; document.getElementById('loadStatus').innerText='讀取失敗：'+(e.message||String(e)); showNotice(e.message||String(e),'error','讀取失敗'); }finally{ setBusy(false); } }
+async function initializeUsePage(){ setUseInitLoading(true,'正在讀取敷料主檔與批號庫存...'); dataReady=false; document.getElementById('loadStatus').innerText='正在讀取敷料主檔與批號庫存；基本資料欄位仍可先填寫。'; try{ const b=await listBarcode(); if(!b||!b.ok)throw new Error((b&&b.message)||'敷料主檔讀取失敗'); const inv=await listDressingInventory(); if(!inv||!inv.ok)throw new Error((inv&&inv.message)||'批號庫存讀取失敗'); dressingMasterCache=b.data||[]; inventoryCache=inv.data||[]; dataReady=true; document.getElementById('loadStatus').innerText='已讀取敷料主檔 '+dressingMasterCache.length+' 筆；批號庫存 '+inventoryCache.length+' 筆。可開始建立領用單。'; if(document.getElementById('useTbody').querySelector('.useRowsEmpty'))addUseRow(); showNotice('已完成讀取，可以開始領用','success','讀取完成'); }catch(e){ dataReady=false; document.getElementById('loadStatus').innerText='讀取失敗：'+(e.message||String(e))+'。可先填基本資料，或按「重新整理資料」重試。'; showNotice(e.message||String(e),'error','讀取失敗'); }finally{ setUseInitLoading(false); } }
 function getDressingDisplayName(item){ return [item.dressingName||'',item.size||''].filter(Boolean).join(' '); }
 function getMasterByHospitalCode(code){ code=normalizeText(code); return dressingMasterCache.find(item=>normalizeText(item.hospitalCode)===code)||null; }
 function getUnitsPerBoxFromMaster(item){
@@ -1406,7 +1417,54 @@ function useTestBoxCode(){
 function startUseScanner(){ if(!dataReady){ showNotice('請先讀取資料','warning','尚未讀取'); return; } if(getUseRows().length===0)addUseRow(); const last=Array.from(document.querySelectorAll('#useTbody [data-row-id]')).pop(); activeScanRowId=last?last.dataset.rowId:''; document.getElementById('scannerOverlay').style.display='block'; if(scanner){try{scanner.clear();}catch(e){} scanner=null;} scanner=new Html5Qrcode('scannerReader'); scanner.start({facingMode:'environment'},{fps:10,qrbox:{width:260,height:260}},decoded=>handleScannedCode(decoded),()=>{}).catch(e=>{ showNotice(e.message||String(e),'error','相機開啟失敗'); closeUseScanner(); }); }
 async function closeUseScanner(){ document.getElementById('scannerOverlay').style.display='none'; if(scanner){ try{await scanner.stop();}catch(e){} try{await scanner.clear();}catch(e){} scanner=null; } }
 async function handleScannedCode(decoded){ await closeUseScanner(); if(!dataReady){ showNotice('請先讀取資料','warning','尚未讀取'); return; } let rowId=activeScanRowId, tr=getRow(rowId); if(!tr||tr.dataset.hospitalCode){ addUseRow({raw:decoded}); return; } tr.querySelector('.rowSearchInput').value=decoded; selectByRawCode(rowId,decoded); }
+function installGithubAppShellFallback(){
+  if(!window.location.hostname.includes('github.io')){
+    return;
+  }
+
+  document.body.style.padding = '0';
+  document.body.style.display = 'flex';
+  document.body.style.flexDirection = 'column';
+  document.body.style.minHeight = '100vh';
+
+  const mainShell = document.querySelector('.shell');
+  if(mainShell){
+    mainShell.style.flex = '1';
+    mainShell.style.padding = '24px';
+    mainShell.style.boxSizing = 'border-box';
+  }
+
+  if(!document.querySelector('.appHeader')){
+    const ghHeader = document.createElement('header');
+    ghHeader.className = 'appHeader';
+    ghHeader.style.cssText = 'position:relative; flex-shrink:0; z-index:20; display:flex; justify-content:space-between; align-items:center; gap:18px; height:76px; margin:0; padding:0 15vw; box-sizing:border-box; border-bottom:1px solid #dbe4ef; background:rgba(248,251,255,.92); backdrop-filter:blur(10px); box-shadow:0 8px 24px rgba(15,23,42,.06);';
+    ghHeader.innerHTML =
+      '<div class="brand" onclick="goHome()" style="display:flex; align-items:center; gap:14px; cursor:pointer;">' +
+        '<div class="brandMark" style="width:46px; height:46px; display:grid; place-items:center; border-radius:14px; color:#ffffff; font-size:22px; font-weight:800; background:linear-gradient(135deg,#2563eb,#0f766e); box-shadow:0 12px 24px rgba(37,99,235,.2);">S</div>' +
+        '<div class="brandText" style="display:grid; gap:2px;">' +
+          '<span class="brandName" style="font-size:18px; font-weight:800;">新光整形外科科室系統</span>' +
+          '<span class="brandSub" style="color:#64748b; font-size:13px;">敷料領用</span>' +
+        '</div>' +
+      '</div>';
+    document.body.prepend(ghHeader);
+  }
+
+  if(!document.getElementById('appPageFooter')){
+    const ghFooter = document.createElement('div');
+    ghFooter.id = 'appPageFooter';
+    ghFooter.className = 'appPageFooter';
+    ghFooter.dataset.appFooter = '1';
+    ghFooter.style.cssText = 'position:relative; margin-top:auto; flex-shrink:0; z-index:10000; height:42px; display:flex; align-items:center; justify-content:center; padding:0 16px; box-sizing:border-box; background:rgba(248,251,255,.94); border-top:1px solid rgba(148,163,184,.38); box-shadow:0 -8px 24px rgba(15,23,42,.08); backdrop-filter:blur(10px);';
+    ghFooter.innerHTML =
+      '<div style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">' +
+        '<span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>' +
+        '<span>v.2.27.11-202606032203</span>' +
+      '</div>';
+    document.body.appendChild(ghFooter);
+  }
+}
 document.addEventListener('DOMContentLoaded', function(){
+  installGithubAppShellFallback();
   setupStaffDatalists();
 
   const useTimeInput = document.getElementById('useTime');

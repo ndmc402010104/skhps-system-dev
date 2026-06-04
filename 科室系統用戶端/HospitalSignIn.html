@@ -146,6 +146,17 @@ h2{
   width:160px;
 }
 
+.notice{
+  padding:14px;
+  border:1px dashed #cbd5e1;
+  border-radius:8px;
+  background:#f8fafc;
+  color:#64748b;
+  font-size:14px;
+  font-weight:700;
+  line-height:1.6;
+}
+
 @media(max-width:640px){
   body{
     padding:104px 16px 72px;
@@ -165,20 +176,62 @@ h2{
 const APP_ENTRY_URL =
   '<?= appEntryUrl ?>';
 
+const GITHUB_PAGE_MAP = {
+  home:'科室系統用戶端/FrontIndex.html',
+  frontIndex:'科室系統用戶端/FrontIndex.html',
+  signQR:'科室系統用戶端/SignQRGenerator.html',
+  hospitalSignIn:'科室系統用戶端/HospitalSignIn.html',
+  dressingFront:'敷料領用登錄系統/DressingFront.html',
+  dressingUse:'敷料領用登錄系統/DressingUse.html',
+  dressingDict:'敷料領用登錄系統/DressingFront.html#dressingDict'
+};
+
+function isGithubPage(){
+  return window.location.hostname.includes('github.io');
+}
+
+function getGithubRepoBasePath(){
+  const parts = window.location.pathname.split('/').filter(Boolean);
+  return parts.length ? '/' + parts[0] + '/' : '/';
+}
+
+function getGithubPageUrl(pageKey){
+  const path = GITHUB_PAGE_MAP[pageKey] || GITHUB_PAGE_MAP.home;
+  return window.location.origin + getGithubRepoBasePath() + path;
+}
+
+function getAppEntryUrl(){
+  const value = String(APP_ENTRY_URL || '').trim();
+  if(value.includes('<' + '?=') || !value){
+    return 'https://script.google.com/macros/s/AKfycbwbz8pXfU68j2aFeF_AaDmmG6Vco3JsPSw-PGyYeLu0AF3vCfzaZJQFOjORnwSw8Xp4/exec';
+  }
+  return value;
+}
+
+function parseTemplateJson(text, fallback){
+  text = String(text || '').trim();
+  if(!text || text.indexOf('<?') >= 0){
+    return fallback || [];
+  }
+  try{
+    return JSON.parse(text);
+  } catch(error){
+    return fallback || [];
+  }
+}
+
 const staffList =
-  JSON.parse(
-    '<?!= staffList ?>'
-  );
+  parseTemplateJson('<?!= staffList ?>', []);
 
 const extraList =
-  JSON.parse(
-    '<?!= extraList ?>'
-  );
+  parseTemplateJson('<?!= extraList ?>', []);
 
 function goHome(){
 
   window.top.location.href =
-    APP_ENTRY_URL;
+    isGithubPage()
+      ? getGithubPageUrl('home')
+      : getAppEntryUrl();
 
 }
 
@@ -273,6 +326,13 @@ function renderStaff(){
 
   });
 
+  if(staffList.length === 0){
+    vsBox.innerHTML =
+      '<div class="notice">GitHub 版未載入 Apps Script 人員清單；仍可使用下方手動輸入員工編號。</div>';
+    residentBox.innerHTML =
+      '<div class="notice">請回正式版取得完整人員按鈕。</div>';
+  }
+
 }
 
 function renderExtra(){
@@ -307,10 +367,62 @@ function renderExtra(){
 
   });
 
+  if(extraList.length === 0){
+    extraBox.innerHTML =
+      '<div class="notice">GitHub 版未載入額外帳號清單。</div>';
+  }
+
+}
+
+function installGithubAppShellFallback(){
+  if(!isGithubPage()){
+    return;
+  }
+
+  document.body.style.padding = '0';
+  document.body.style.display = 'flex';
+  document.body.style.flexDirection = 'column';
+  document.body.style.minHeight = '100vh';
+
+  const mainShell = document.querySelector('.shell');
+  if(mainShell){
+    mainShell.style.flex = '1';
+    mainShell.style.padding = '24px';
+    mainShell.style.boxSizing = 'border-box';
+  }
+
+  if(!document.querySelector('.appHeader')){
+    const ghHeader = document.createElement('header');
+    ghHeader.className = 'appHeader';
+    ghHeader.style.cssText = 'position:relative; flex-shrink:0; z-index:20; display:flex; justify-content:space-between; align-items:center; gap:18px; height:76px; margin:0; padding:0 15vw; box-sizing:border-box; border-bottom:1px solid #dbe4ef; background:rgba(248,251,255,.92); backdrop-filter:blur(10px); box-shadow:0 8px 24px rgba(15,23,42,.06);';
+    ghHeader.innerHTML =
+      '<div class="brand" onclick="goHome()" style="display:flex; align-items:center; gap:14px; cursor:pointer;">' +
+        '<div class="brandMark" style="width:46px; height:46px; display:grid; place-items:center; border-radius:14px; color:#ffffff; font-size:22px; font-weight:800; background:linear-gradient(135deg,#2563eb,#0f766e); box-shadow:0 12px 24px rgba(37,99,235,.2);">S</div>' +
+        '<div class="brandText" style="display:grid; gap:2px;">' +
+          '<span class="brandName" style="font-size:18px; font-weight:800;">新光整形外科科室系統</span>' +
+          '<span class="brandSub" style="color:#64748b; font-size:13px;">院內系統快速登入</span>' +
+        '</div>' +
+      '</div>';
+    document.body.prepend(ghHeader);
+  }
+
+  if(!document.getElementById('appPageFooter')){
+    const ghFooter = document.createElement('div');
+    ghFooter.id = 'appPageFooter';
+    ghFooter.dataset.appFooter = '1';
+    ghFooter.style.cssText = 'position:relative; margin-top:auto; flex-shrink:0; z-index:10000; height:42px; display:flex; align-items:center; justify-content:center; padding:0 16px; box-sizing:border-box; background:rgba(248,251,255,.94); border-top:1px solid rgba(148,163,184,.38); box-shadow:0 -8px 24px rgba(15,23,42,.08); backdrop-filter:blur(10px);';
+    ghFooter.innerHTML =
+      '<div style="display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.1; color:#475569; background:rgba(255,255,255,.72); border:1px solid rgba(148,163,184,.45); border-radius:8px; padding:6px 8px;">' +
+        '<span style="font-weight:700; color:#1d4ed8;">GitHub 版</span>' +
+        '<span>v.2.27.11-202606032203</span>' +
+      '</div>';
+    document.body.appendChild(ghFooter);
+  }
 }
 
 function initPage(){
 
+  installGithubAppShellFallback();
   renderStaff();
   renderExtra();
 
