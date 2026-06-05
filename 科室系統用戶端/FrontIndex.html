@@ -255,6 +255,9 @@ const GITHUB_PAGES_BASE_URL =
 
 
 function getGithubRepoBasePath(){
+  if(!window.location.hostname.includes('github.io')){
+    return '/';
+  }
 
   const parts =
     window.location.pathname.split('/').filter(Boolean);
@@ -285,7 +288,11 @@ function getGithubPageUrl(pageKey){
 
 function getCurrentAppEnv(){
 
-  if((window.location.hostname.includes('github.io') || window.location.hostname === 'dev-skhps.jonaminz.com' || window.location.hostname === 'skhps.jonaminz.com')){
+  if(window.location.hostname === 'dev-skhps.jonaminz.com'){
+    return 'dev';
+  }
+
+  if(window.location.hostname === 'skhps.jonaminz.com' || window.location.hostname.includes('github.io')){
     return 'prod';
   }
 

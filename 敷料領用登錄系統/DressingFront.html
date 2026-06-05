@@ -2415,6 +2415,10 @@ function isGithubPage(){
 }
 
 function getGithubRepoBasePath(){
+  if(!window.location.hostname.includes('github.io')){
+    return '/';
+  }
+
   const parts = window.location.pathname.split('/').filter(Boolean);
   return parts.length ? '/' + parts[0] + '/' : '/';
 }

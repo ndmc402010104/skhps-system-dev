@@ -541,6 +541,10 @@ if (APP_ENTRY_URL.includes('<' + '?=') || APP_ENTRY_URL.trim() === '') APP_ENTRY
 if (APP_PROD_URL.includes('<' + '?=') || APP_PROD_URL.trim() === '') APP_PROD_URL = 'https://script.google.com/macros/s/AKfycbwbz8pXfU68j2aFeF_AaDmmG6Vco3JsPSw-PGyYeLu0AF3vCfzaZJQFOjORnwSw8Xp4/exec';
 function isGithubPage(){ return (window.location.hostname.includes('github.io') || window.location.hostname === 'dev-skhps.jonaminz.com' || window.location.hostname === 'skhps.jonaminz.com'); }
 function getGithubRepoBasePath(){
+  if(!window.location.hostname.includes('github.io')){
+    return '/';
+  }
+
   const parts = window.location.pathname.split('/').filter(Boolean);
   return parts.length ? '/' + parts[0] + '/' : '/';
 }
