@@ -468,6 +468,9 @@ function Invoke-GitPush {
   try {
     Write-Host ""
     if ($ForceWithLease) {
+      $destinationBranch = Get-GitRefSpecDestinationBranch -RefSpec $RefSpec
+      Update-GitRemoteTrackingBranch -RemoteName $RemoteName -BranchName $destinationBranch
+
       Write-Host "推送 $SiteName：git push --force-with-lease $RemoteName $RefSpec" -ForegroundColor Cyan
       git push --force-with-lease $RemoteName $RefSpec
     }
@@ -484,6 +487,46 @@ function Invoke-GitPush {
   }
   finally {
     Pop-Location
+  }
+}
+
+function Get-GitRefSpecDestinationBranch {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$RefSpec
+  )
+
+  if ($RefSpec -notmatch ':') {
+    return ''
+  }
+
+  $destinationRef = (($RefSpec -split ':', 2)[1]).Trim()
+
+  if ([string]::IsNullOrWhiteSpace($destinationRef)) {
+    return ''
+  }
+
+  return ($destinationRef -replace '^refs/heads/', '')
+}
+
+function Update-GitRemoteTrackingBranch {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$RemoteName,
+
+    [Parameter(Mandatory = $true)]
+    [string]$BranchName
+  )
+
+  if ([string]::IsNullOrWhiteSpace($BranchName)) {
+    return
+  }
+
+  Write-Host "更新 $RemoteName/$BranchName 遠端追蹤資訊，避免 force-with-lease stale info..." -ForegroundColor DarkGray
+  git fetch $RemoteName "+refs/heads/$($BranchName):refs/remotes/$($RemoteName)/$($BranchName)"
+
+  if ($LASTEXITCODE -ne 0) {
+    throw "無法更新 $RemoteName/$BranchName 遠端追蹤資訊。"
   }
 }
 
