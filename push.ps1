@@ -578,6 +578,35 @@ function Confirm-GitRemoteRefMatchesHead {
   }
 }
 
+function Confirm-GitRefCname {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$Ref,
+
+    [Parameter(Mandatory = $true)]
+    [string]$ExpectedCname,
+
+    [Parameter(Mandatory = $true)]
+    [string]$Label
+  )
+
+  $actualCname =
+    (& git show "$($Ref):CNAME" 2>$null) |
+    Select-Object -First 1
+
+  if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($actualCname)) {
+    throw "$Label CNAME 檢查失敗：commit $Ref 找不到 CNAME。"
+  }
+
+  $actualCname = $actualCname.Trim()
+
+  if ($actualCname -ne $ExpectedCname) {
+    throw "$Label CNAME 錯誤：目前是 '$actualCname'，應該是 '$ExpectedCname'。已停止推送。"
+  }
+
+  Write-Host "$Label CNAME 確認：$actualCname" -ForegroundColor Green
+}
+
 
 function Invoke-BackupWipToOrigin {
   param(
@@ -626,6 +655,70 @@ function Confirm-ProdPushOrExit {
 
   if ($confirm -ne 'PROD') {
     throw "未輸入 PROD，已取消正式版推送。"
+  }
+}
+
+function Move-DevOnlyWorkToLocalBranch {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$OriginalBranch
+  )
+
+  if ($OriginalBranch -ne 'master' -and $OriginalBranch -ne 'main') {
+    return $false
+  }
+
+  Write-Host ""
+  Write-Host "測試版推送不直接寫在 $OriginalBranch；從 dev 遠端切到 dev-current-local 暫存分支。" -ForegroundColor Yellow
+  git fetch dev '+refs/heads/dev-current:refs/remotes/dev/dev-current' '+refs/heads/main:refs/remotes/dev/main'
+
+  if ($LASTEXITCODE -ne 0) {
+    throw "無法更新 dev 遠端追蹤分支，已停止避免污染正式版分支。"
+  }
+
+  git rev-parse --verify 'dev/main' 2>$null | Out-Null
+  $hasDevMain = $LASTEXITCODE -eq 0
+
+  git rev-parse --verify 'dev/dev-current' 2>$null | Out-Null
+  $hasDevCurrent = $LASTEXITCODE -eq 0
+
+  $devBaseRef = if ($hasDevMain) {
+    'dev/main'
+  }
+  elseif ($hasDevCurrent) {
+    'dev/dev-current'
+  }
+  else {
+    throw "找不到 dev/main 或 dev/dev-current，無法建立測試版暫存分支。"
+  }
+
+  git switch -C dev-current-local $devBaseRef
+
+  if ($LASTEXITCODE -ne 0) {
+    throw "無法切換到 dev-current-local，已停止避免污染正式版分支。"
+  }
+
+  return $true
+}
+
+function Restore-OriginalBranchAfterDevOnlyWork {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$OriginalBranch,
+
+    [bool]$ShouldRestore = $false
+  )
+
+  if (-not $ShouldRestore) {
+    return
+  }
+
+  Write-Host ""
+  Write-Host "測試版推送完成，切回 $OriginalBranch。" -ForegroundColor Yellow
+  git switch $OriginalBranch
+
+  if ($LASTEXITCODE -ne 0) {
+    throw "測試版已推送，但無法自動切回 $OriginalBranch。請手動執行：git switch $OriginalBranch"
   }
 }
 
@@ -1024,6 +1117,12 @@ $needsAnyGit = $Action -in @('dev-all','all','release')
 $pendingGitPushes = @()
 $devPushSha = $null
 $prodPushSha = $null
+$originalBranch = Get-GitCurrentBranch
+$restoreOriginalBranchAfterDevOnly = $false
+
+if ($needsDevSkhps -and -not $needsSkhps) {
+  $restoreOriginalBranchAfterDevOnly = Move-DevOnlyWorkToLocalBranch -OriginalBranch $originalBranch
+}
 
 # skhps 正式版若不是舊 deploy 參數，互動詢問是否一併部署正式 Apps Script API。
 if ($needsSkhps -and -not $legacyDeployRequested -and -not $DeployProdAppScript) {
@@ -1093,6 +1192,7 @@ if ($needsDevSkhps) {
     BranchName = 'dev-current'
     Label = 'dev-skhps dev-current'
     ExpectedSha = $devPushSha
+    ExpectedCname = 'dev-skhps.jonaminz.com'
     Footer = $null
   }
 
@@ -1107,6 +1207,7 @@ if ($needsDevSkhps) {
     BranchName = 'main'
     Label = 'dev-skhps main'
     ExpectedSha = $devPushSha
+    ExpectedCname = 'dev-skhps.jonaminz.com'
     Footer = 'dev-skhps 建議在 GitHub Pages 設定為 Branch: dev-current / (root)；目前腳本也同步 main 以相容現有設定。'
   }
 
@@ -1125,6 +1226,7 @@ if ($needsBackupWip) {
     BranchName = 'wip-current'
     Label = '換電腦用備份'
     ExpectedSha = $devPushSha
+    ExpectedCname = $null
     Footer = "換電腦時可執行：`ngit fetch origin`ngit checkout -B wip-current origin/wip-current"
   }
 
@@ -1177,6 +1279,7 @@ if ($needsSkhps) {
     BranchName = 'master'
     Label = '正式版 master'
     ExpectedSha = $prodPushSha
+    ExpectedCname = 'skhps.jonaminz.com'
     Footer = $null
   }
 
@@ -1200,6 +1303,13 @@ if ($pendingGitPushes.Count -gt 0) {
 
     if ($pendingPush.Description) {
       Write-Host $pendingPush.Description -ForegroundColor Yellow
+    }
+
+    if ($pendingPush.ExpectedCname) {
+      Confirm-GitRefCname `
+        -Ref $pendingPush.ExpectedSha `
+        -ExpectedCname $pendingPush.ExpectedCname `
+        -Label $pendingPush.Label
     }
 
     if ($pendingPush.ForceWithLease) {
@@ -1229,6 +1339,10 @@ if ($pendingGitPushes.Count -gt 0) {
     }
   }
 }
+
+Restore-OriginalBranchAfterDevOnlyWork `
+  -OriginalBranch $originalBranch `
+  -ShouldRestore $restoreOriginalBranchAfterDevOnly
 
 if ($Action -eq 'commit-only') {
   Write-Host ""

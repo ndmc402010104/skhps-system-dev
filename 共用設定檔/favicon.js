@@ -54,6 +54,7 @@
       hostname.indexOf("github.io") >= 0
       ? "https://ndmc402010104.github.io/plastic-surgery-department-system/%E5%85%B1%E7%94%A8%E8%A8%AD%E5%AE%9A%E6%AA%94/EnvironmentFooter.js"
       : "/%E5%85%B1%E7%94%A8%E8%A8%AD%E5%AE%9A%E6%AA%94/EnvironmentFooter.js";
+    footerScript.src += "?v=" + Date.now();
     footerScript.defer = true;
     footerScript.setAttribute("data-skh-environment-footer", "1");
 

@@ -1476,17 +1476,16 @@ function installGithubAppShellFallback(){
     document.body.prepend(ghHeader);
   }
 
-  if(!document.querySelector('.appVersionFooter')){
-    const ghFooter = document.createElement('div');
-    ghFooter.className = 'appVersionFooter';
-    ghFooter.dataset.appFooter = '1';
-    ghFooter.innerHTML = `
-    <div class="appVersionBadge is-active" aria-label="環境版本資訊">
-      <span class="appVersionBadgeMode">測試版</span>
-      <span class="appVersionText">v2.27.20-202606042358</span>
-    </div>
-  `;
-    document.body.appendChild(ghFooter);
+  if(!document.querySelector('script[data-skh-environment-footer-fallback]')){
+    const footerScript = document.createElement('script');
+    footerScript.src = window.location.hostname.includes('github.io')
+      ? 'https://ndmc402010104.github.io/plastic-surgery-department-system/%E5%85%B1%E7%94%A8%E8%A8%AD%E5%AE%9A%E6%AA%94/EnvironmentFooter.js'
+      : '/%E5%85%B1%E7%94%A8%E8%A8%AD%E5%AE%9A%E6%AA%94/EnvironmentFooter.js';
+    footerScript.src += '?v=' + Date.now();
+    footerScript.defer = true;
+    footerScript.setAttribute('data-skh-environment-footer', '1');
+    footerScript.setAttribute('data-skh-environment-footer-fallback', '1');
+    document.head.appendChild(footerScript);
   }
 }
 document.addEventListener('DOMContentLoaded', function(){
