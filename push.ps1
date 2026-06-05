@@ -546,6 +546,25 @@ function Invoke-UpdateDressingFrontForConfig {
   }
 }
 
+function Update-CnameForEnv {
+  param(
+    [Parameter(Mandatory = $true)]
+    [ValidateSet('dev','prod')]
+    [string]$DefaultEnv
+  )
+
+  $cnamePath = Join-Path $rootPath 'CNAME'
+  $cname = if ($DefaultEnv -eq 'prod') {
+    'skhps.jonaminz.com'
+  }
+  else {
+    'dev-skhps.jonaminz.com'
+  }
+
+  Set-Content -Path $cnamePath -Value $cname -Encoding ascii -NoNewline
+  Write-Host "CNAME synced for env=$DefaultEnv：$cname" -ForegroundColor Green
+}
+
 function Update-EnvironmentVersionConstants {
   param(
     [Parameter(Mandatory = $true)]
@@ -629,6 +648,8 @@ function Invoke-SyncVersionForEnv {
     -UpdateGasDevVersion $UpdateGasDevVersion `
     -UpdateWebDevVersion $UpdateWebDevVersion `
     -UpdateWebProdVersion $UpdateWebProdVersion
+
+  Update-CnameForEnv -DefaultEnv $DefaultEnv
 
   $gasDevVersionForReadme = if ($UpdateGasDevVersion) { $appConfig.Version } else { $null }
   $webDevVersionForReadme = if ($UpdateWebDevVersion) { $appConfig.Version } else { $null }
