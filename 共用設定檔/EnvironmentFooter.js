@@ -19,14 +19,14 @@
       key:'gasDev',
       label:'app script測試版',
       url:'https://script.google.com/macros/s/AKfycbwySlDY2aAbYpy5OSi85vHz1pk5g1FQfopcaCfVneE/dev',
-      version:'v2.37.0-202606051611',
+      version:'v2.37.0-202606051617',
       type:'gas'
     },
     webDev:{
       key:'webDev',
       label:'測試版',
       url:'https://dev-skhps.jonaminz.com',
-      version:'v2.37.0-202606051611',
+      version:'v2.37.0-202606051617',
       type:'web'
     },
     webProd:{
@@ -381,5 +381,6 @@
     renderEnvironmentFooter();
   }
 })(typeof window !== 'undefined' ? window : this);
+
 
 
