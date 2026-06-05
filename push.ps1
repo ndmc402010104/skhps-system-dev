@@ -469,6 +469,50 @@ function Invoke-GitPush {
   }
 }
 
+function Confirm-GitRemoteRefMatchesHead {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$RemoteName,
+
+    [Parameter(Mandatory = $true)]
+    [string]$BranchName,
+
+    [Parameter(Mandatory = $true)]
+    [string]$Label
+  )
+
+  Push-Location -LiteralPath $rootPath
+
+  try {
+    $headSha = (git rev-parse HEAD).Trim()
+
+    if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($headSha)) {
+      throw "無法讀取本機 HEAD。"
+    }
+
+    $remoteLine = git ls-remote $RemoteName "refs/heads/$BranchName"
+
+    if ($LASTEXITCODE -ne 0) {
+      throw "無法讀取遠端 $RemoteName/$BranchName。"
+    }
+
+    if ([string]::IsNullOrWhiteSpace($remoteLine)) {
+      throw "找不到遠端分支 $RemoteName/$BranchName。"
+    }
+
+    $remoteSha = (($remoteLine -split '\s+')[0]).Trim()
+
+    if ($remoteSha -ne $headSha) {
+      throw "$Label 驗證失敗：遠端 $($remoteSha.Substring(0, 7))，本機 $($headSha.Substring(0, 7))。"
+    }
+
+    Write-Host "$Label 已驗證：$RemoteName/$BranchName = HEAD $($headSha.Substring(0, 7))" -ForegroundColor Green
+  }
+  finally {
+    Pop-Location
+  }
+}
+
 
 function Invoke-BackupWipToOrigin {
   Write-Host ""
@@ -483,6 +527,11 @@ function Invoke-BackupWipToOrigin {
     -SiteName 'origin/wip-current 工作進度備份' `
     -SiteUrl 'GitHub origin/wip-current' `
     -ForceWithLease
+
+  Confirm-GitRemoteRefMatchesHead `
+    -RemoteName 'origin' `
+    -BranchName 'wip-current' `
+    -Label '換電腦用備份'
 
   Write-Host ""
   Write-Host "換電腦時可執行：" -ForegroundColor Green
@@ -977,6 +1026,16 @@ if ($needsDevSkhps) {
     -SiteUrl 'https://dev-skhps.jonaminz.com' `
     -ForceWithLease
 
+  Confirm-GitRemoteRefMatchesHead `
+    -RemoteName 'dev' `
+    -BranchName 'dev-current' `
+    -Label 'dev-skhps dev-current'
+
+  Confirm-GitRemoteRefMatchesHead `
+    -RemoteName 'dev' `
+    -BranchName 'main' `
+    -Label 'dev-skhps main'
+
   Write-Host "dev-skhps 建議在 GitHub Pages 設定為 Branch: dev-current / (root)；目前腳本也同步 main 以相容現有設定。" -ForegroundColor Yellow
 }
 
@@ -1028,6 +1087,11 @@ if ($needsSkhps) {
     -RefSpec 'master:master' `
     -SiteName 'skhps' `
     -SiteUrl 'https://skhps.jonaminz.com'
+
+  Confirm-GitRemoteRefMatchesHead `
+    -RemoteName 'origin' `
+    -BranchName 'master' `
+    -Label '正式版 master'
 }
 
 if ($Action -eq 'commit-only') {
