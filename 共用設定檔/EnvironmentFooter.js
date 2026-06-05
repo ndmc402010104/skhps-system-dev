@@ -40,7 +40,7 @@ EnvironmentFooter.js
         key:'webProd',
         label:'正式版',
         url:'https://skhps.jonaminz.com',
-        version:'v2.36.0-202606051525',
+        version:'v2.37.0-202606051528',
         type:'web'
       }
     };
@@ -345,6 +345,7 @@ EnvironmentFooter.js
     renderEnvironmentFooter();
   }
 })(typeof window !== 'undefined' ? window : this);
+
 
 
 
