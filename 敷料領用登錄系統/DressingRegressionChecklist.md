@@ -213,3 +213,44 @@
 4. backend router / action registry 不影響既有 action。
 5. 既有 CSS 測試頁仍可用。
 
+# GitHub Pages version manifest 與 footer 版本顯示 regression checklist
+
+時間戳記：2026-06-06 03:44 UTC+8
+
+## A. version.json
+1. repo 根目錄存在 `version.json`。
+2. `version.json` 是合法 JSON。
+3. 根層 `updatedAt` 代表 manifest 最近更新時間。
+4. `dev.updatedAt` 只由測試版發布流程更新。
+5. `prod.updatedAt` 只由正式版發布流程更新。
+6. `gasDev` 第一階段不由 GitHub Pages manifest 驅動。
+
+## B. footer 顯示
+1. 正式版 footer 顯示本頁版本與測試版最新版。
+2. 測試版 footer 顯示本頁版本與正式版最新版。
+3. Apps Script 測試版 footer 不讀 `version.json`，只顯示本頁版本。
+4. `version.json` 使用 cache busting。
+5. `version.json` 讀取失敗時不阻塞頁面功能。
+6. `version.json` JSON 格式錯誤時不白屏。
+7. footer 掛點 `data-skh-version-footer` 每頁一致。
+8. footer 右下角比例、字級、RWD 不跑版。
+
+## C. push / release manifest
+1. `push.ps1` 測試版流程會更新 `dev.version`。
+2. `push.ps1` 測試版流程不會誤改 `prod.version`。
+3. `push.ps1` 會將 `version.json` 納入 commit。
+4. `push.ps1` 原本 README / commit message 問答流程不被破壞。
+5. `push.ps1` 正式版流程會更新 `prod.version`。
+6. `push.ps1` 正式版流程不會誤改 `dev.version`。
+7. `push.ps1` 原本 PROD 安全確認不被破壞。
+8. 若未來新增 `release.ps1`，需呼叫同一個 `scripts/Update-VersionManifest.ps1 -Env prod` helper。
+
+## D. 不影響主要功能
+1. 不影響 QR code cursor pointer。
+2. 不影響 jonaminz 測試版頁面連結。
+3. 不影響 DressingUse 領用流程。
+4. 不影響 DressingFront 查詢 / 建檔流程。
+5. 不影響 Admin / QR / 其他頁面既有主要功能。
+6. 不影響 `google.script.run`。
+7. 不影響 GitHub Pages fetch Apps Script Web App API。
+

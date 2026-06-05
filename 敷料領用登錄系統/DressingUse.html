@@ -521,6 +521,152 @@
   }
 }
 
+/* Dressing RWD polish */
+@media(max-width:1180px){
+  .formGrid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+
+  .field.span2{
+    grid-column:span 2;
+  }
+
+  .useRowCard{
+    gap:10px;
+  }
+}
+
+@media(max-width:760px){
+  body{
+    padding-left:max(8px,env(safe-area-inset-left));
+    padding-right:max(8px,env(safe-area-inset-right));
+  }
+
+  .pageMap{
+    flex-wrap:wrap;
+    margin-bottom:14px;
+  }
+
+  .pageHero{
+    margin-bottom:16px;
+  }
+
+  .pageLead{
+    font-size:14px;
+    line-height:1.6;
+  }
+
+  .card{
+    border-radius:10px;
+  }
+
+  .formGrid,
+  .field.span2{
+    grid-template-columns:1fr;
+    grid-column:auto;
+  }
+
+  .sectionHeader h2{
+    line-height:1.35;
+  }
+
+  .toolbar,
+  .actionBar{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    width:100%;
+  }
+
+  .toolbar button,
+  .actionBar button,
+  .dataToolbar button{
+    width:100%;
+    min-width:0;
+    min-height:42px;
+    white-space:normal;
+    line-height:1.25;
+  }
+
+  .dataToolbar{
+    padding:10px;
+  }
+
+  .hisStatusGroup,
+  .unitGroup,
+  .useCategoryGroup{
+    grid-template-columns:1fr;
+  }
+
+  .suggestBox{
+    position:fixed;
+    top:auto;
+    left:10px;
+    right:10px;
+    bottom:58px;
+    max-height:min(54vh,360px);
+    z-index:1600;
+  }
+
+  .suggestMain{
+    white-space:normal;
+  }
+
+  .useSummarySentence{
+    padding:12px;
+    font-size:17px;
+  }
+
+  .summaryItemsOnly{
+    padding:10px;
+  }
+}
+
+@media(max-width:480px){
+  body{
+    padding-top:82px;
+    padding-bottom:68px;
+  }
+
+  h1{
+    font-size:24px;
+  }
+
+  .toolbar,
+  .sectionHeader .toolbar,
+  .actionBar,
+  .dialogActions{
+    grid-template-columns:1fr;
+  }
+
+  .useRowCard,
+  .useRowPanel{
+    border-radius:10px;
+  }
+
+  .useRowCard{
+    padding:8px;
+  }
+
+  .useRowPanel{
+    padding:9px;
+  }
+
+  .lotStockMeta{
+    min-height:58px;
+    font-size:22px;
+  }
+
+  .qtyMiniCard input{
+    font-size:16px;
+  }
+
+  .noticeWrap{
+    top:8px;
+    left:8px;
+    right:8px;
+  }
+}
+
 </style>
 <script>
 let APP_ENTRY_URL = '<?= appEntryUrl ?>';

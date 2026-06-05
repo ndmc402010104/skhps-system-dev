@@ -1,6 +1,6 @@
 ﻿# 檔案位置：專案根目錄/push.ps1
-# 時間戳記：2026-06-05 15:48 UTC+8
-# 用途：累加式四段部署腳本；1 只跑 Apps Script，2=1+測試版前端，3=1+2+本地確認，PROD=1+2+3+正式版；主選單輸入 PROD 即確認正式上線；README 後集中輸入測試版 commit，正式版 commit 使用預設值不再詢問。
+# 時間戳記：2026-06-06 03:44 UTC+8
+# 用途：累加式四段部署腳本；1 只跑 Apps Script，2=1+測試版前端，3=1+2+本地確認，PROD=1+2+3+正式版；主選單輸入 PROD 即確認正式上線；README 後集中輸入測試版 commit，正式版 commit 使用預設值不再詢問；GitHub Pages 發布會同步 version.json。
 # 階段：1=push app script，2=1+2 push dev-skhps，3=1+2+3 本地確認不部署正式版，PROD=1+2+3+正式版 deploy skhps。
 
 param(
@@ -896,6 +896,52 @@ function Invoke-SyncVersionForEnv {
   return $appConfig
 }
 
+function Update-VersionManifestForPublish {
+  param(
+    [Parameter(Mandatory = $true)]
+    [ValidateSet('dev', 'prod')]
+    [string]$Env,
+
+    [Parameter(Mandatory = $true)]
+    [object]$Version
+  )
+
+  $helperPath = Join-Path $rootPath 'scripts\Update-VersionManifest.ps1'
+
+  if (-not (Test-Path -LiteralPath $helperPath)) {
+    throw "找不到 version manifest helper：$helperPath"
+  }
+
+  $versionItems = @($Version)
+  $versionText = [string]$versionItems[0]
+
+  if ([string]::IsNullOrWhiteSpace($versionText)) {
+    throw '更新 version.json 失敗：Version 是空值'
+  }
+
+  Write-Host "DEBUG version manifest helperPath = [$helperPath]" -ForegroundColor Cyan
+  Write-Host "DEBUG version manifest env        = [$Env]" -ForegroundColor Cyan
+  Write-Host "DEBUG version manifest version    = [$versionText]" -ForegroundColor Cyan
+  Write-Host "DEBUG version manifest count      = [$($versionItems.Count)]" -ForegroundColor Cyan
+
+  $psExe = (Get-Command pwsh -ErrorAction SilentlyContinue).Source
+
+  if ([string]::IsNullOrWhiteSpace($psExe)) {
+    $psExe = (Get-Command powershell -ErrorAction Stop).Source
+  }
+
+  & $psExe `
+    -NoProfile `
+    -ExecutionPolicy Bypass `
+    -File $helperPath `
+    -Env $Env `
+    -Version $versionText
+
+  if ($LASTEXITCODE -ne 0) {
+    throw "更新 version.json 失敗：$Env v$versionText"
+  }
+}
+
 function Invoke-DevAppScript {
   param(
     [Parameter(Mandatory = $true)]
@@ -1233,6 +1279,10 @@ if ($needsDevSkhps) {
     "Update dev-skhps"
   }
 
+  if ($devConfig) {
+    Update-VersionManifestForPublish -Env 'dev' -Version $devConfig.Version
+  }
+
   Invoke-GitCommitIfNeeded -DefaultMessage $defaultMsg -CommitMessage $devCommitMessage | Out-Null
   $devPushSha = Get-GitHeadSha
 
@@ -1332,6 +1382,8 @@ if ($needsSkhps) {
   else {
     Write-Host "略過正式 Apps Script API deployment；只 deploy skhps 前端。若真的要部署後端，請用 -DeployProdAppScript。" -ForegroundColor Yellow
   }
+
+  Update-VersionManifestForPublish -Env 'prod' -Version $prodConfig.Version
 
   Invoke-GitCommitIfNeeded -DefaultMessage "Release skhps v$($prodConfig.Version)" -NoPrompt -AllowSkip $false | Out-Null
   $prodPushSha = Get-GitHeadSha

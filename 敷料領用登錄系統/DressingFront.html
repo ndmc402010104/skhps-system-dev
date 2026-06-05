@@ -1539,14 +1539,37 @@ tr.editing select:not(.readonly):focus{
   min-width:0;
 }
 
+.dictSortNameBtn{
+  display:inline-flex;
+  align-items:center;
+  min-height:32px;
+  padding:0;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  color:#0f172a;
+  font:inherit;
+  font-weight:950;
+  line-height:1.2;
+  white-space:nowrap;
+  cursor:pointer;
+}
+
+.dictSortNameBtn:hover,
+.dictSortNameBtn:focus-visible{
+  color:#1d4ed8;
+  outline:none;
+}
+
 .dictSortArrows{
   display:inline-flex;
   flex-direction:column;
   gap:2px;
   flex:0 0 auto;
+  pointer-events:none;
 }
 
-.dictSortArrowBtn{
+.dictSortArrow{
   width:18px;
   height:16px;
   min-height:0;
@@ -1561,10 +1584,12 @@ tr.editing select:not(.readonly):focus{
   display:inline-flex;
   align-items:center;
   justify-content:center;
+  cursor:default;
+  user-select:none;
 }
 
-.dictSortArrowBtn.active,
-.dictSortArrowBtn.primary{
+.dictSortArrow.active,
+.dictSortArrow.primary{
   border-color:#2563eb;
   background:#2563eb;
   color:#ffffff;
@@ -2382,6 +2407,240 @@ tr.editing select:not(.readonly):focus{
     grid-template-columns:1fr;
   }
 }
+
+/* Dressing RWD polish */
+@media(max-width:1180px){
+  .inventorySetupGrid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    column-gap:14px;
+  }
+
+  .inventoryRefreshField{
+    grid-column:auto;
+    justify-self:stretch;
+  }
+
+  .inventoryRefreshField button{
+    width:100%;
+  }
+
+  #inventoryDetailPanel .inventoryDetailSections{
+    grid-template-columns:1fr;
+  }
+
+  .inventorySectionBodyMaster,
+  .inventorySectionBodyLot,
+  .inventorySectionBodyStock,
+  .inventorySectionBodyAction{
+    grid-template-columns:1fr;
+  }
+
+  .inventoryActionColumn{
+    grid-template-rows:auto;
+  }
+}
+
+@media(max-width:820px){
+  body{
+    padding-left:max(8px,env(safe-area-inset-left));
+    padding-right:max(8px,env(safe-area-inset-right));
+  }
+
+  .pageHero{
+    margin-bottom:16px;
+  }
+
+  .pageLead{
+    font-size:14px;
+    line-height:1.6;
+  }
+
+  .card{
+    display:grid;
+    grid-template-columns:1fr;
+    padding:12px;
+  }
+
+  .card > button,
+  .actions button{
+    width:100%;
+    min-width:0;
+    min-height:42px;
+    white-space:normal;
+    line-height:1.25;
+  }
+
+  .actions{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    width:100%;
+  }
+
+  .inventorySetupGrid,
+  .inventoryGrid{
+    grid-template-columns:1fr;
+  }
+
+  .segmentedGroup{
+    grid-template-columns:1fr;
+  }
+
+  .dictHeader{
+    gap:10px;
+  }
+
+  .dictToolbar{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    width:100%;
+  }
+
+  .dictToolbar button{
+    width:100%;
+    min-width:0 !important;
+    white-space:normal;
+    line-height:1.25;
+  }
+
+  .inventorySectionHeader,
+  .inventoryNameHeader{
+    align-items:stretch;
+    flex-direction:column;
+  }
+
+  .inventoryInlineAction{
+    width:100%;
+  }
+
+  .inventorySubmitCard{
+    grid-template-columns:1fr;
+  }
+
+  #inventoryCancelBtn,
+  #inventoryPrevStepBtn,
+  #inventoryNextStepBtn,
+  #inventorySubmitBtn{
+    grid-column:1;
+  }
+
+  .searchSuggestBox{
+    position:fixed;
+    left:10px;
+    right:10px;
+    bottom:58px;
+    max-height:min(54vh,360px);
+    z-index:1600;
+  }
+
+  .searchSuggestMain,
+  .dictSummaryValue{
+    white-space:normal;
+  }
+
+  .dictTableWrap{
+    overflow-x:auto;
+  }
+
+  .dictTable{
+    --dict-code-w:84px;
+    --dict-stock-w:120px;
+    --dict-price-w:72px;
+  }
+
+  .dictSummaryGrid{
+    grid-template-columns:minmax(0,1fr) var(--dict-code-w);
+  }
+
+  .dictSummaryGrid .dict-summary-stock-status-cell,
+  .dictSummaryGrid .dictSummaryCell:nth-child(4){
+    display:none;
+  }
+
+  .dictSummaryCell{
+    min-height:54px;
+  }
+
+  .dictNameSummaryCell{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+
+  .dictSummaryStatus{
+    align-self:flex-start;
+  }
+
+  .dictDetailGrid{
+    grid-template-columns:1fr;
+  }
+}
+
+@media(max-width:520px){
+  body{
+    padding-top:82px;
+    padding-bottom:68px;
+  }
+
+  h1{
+    font-size:24px;
+  }
+
+  .pageMap{
+    gap:6px;
+    font-size:12px;
+  }
+
+  .dictToolbar,
+  .actions,
+  .appDialogActions,
+  .inventoryLotSelectActions{
+    grid-template-columns:1fr;
+  }
+
+  .inventoryLotSelectActions select,
+  .inventoryLotSelectActions button{
+    grid-column:1;
+    width:100%;
+  }
+
+  .inventorySetupPanel,
+  #inventoryDetailPanel,
+  .inventorySectionBody,
+  .dictDetailCard{
+    padding:10px;
+  }
+
+  .inventoryArea,
+  .dictArea{
+    margin-top:18px;
+    padding-top:18px;
+  }
+
+  .inventorySectionCard,
+  .appDialog,
+  .scannerBox{
+    border-radius:10px;
+  }
+
+  .readonlyValue{
+    overflow-wrap:anywhere;
+  }
+
+  .dictTable{
+    --dict-code-w:76px;
+  }
+
+  .dictSummaryCell{
+    padding:8px;
+  }
+
+  .dictSummaryStatus{
+    font-size:10px;
+  }
+
+  .scannerOverlay{
+    padding:8px;
+  }
+}
 </style>
 
 <script>
@@ -2770,10 +3029,10 @@ function openGithubHashRoute(){
         <tr>
           <th class="col-name">
             <span class="dictSortableHeader">
-              <span>敷料名稱</span>
-              <span class="dictSortArrows" aria-label="敷料名稱排序">
-                <button type="button" id="sortDictNameAscBtn" class="dictSortArrowBtn" title="敷料名稱 A 到 Z" onclick="event.stopPropagation(); setDictNameSortMode('asc')">▲</button>
-                <button type="button" id="sortDictNameDescBtn" class="dictSortArrowBtn" title="敷料名稱 Z 到 A" onclick="event.stopPropagation(); setDictNameSortMode('desc')">▼</button>
+              <button type="button" id="dictSortNameBtn" class="dictSortNameBtn" aria-label="依敷料名稱排序">敷料名稱</button>
+              <span class="dictSortArrows" aria-hidden="true">
+                <span id="sortDictNameAscBtn" class="dictSortArrow" title="敷料名稱 A 到 Z">▲</span>
+                <span id="sortDictNameDescBtn" class="dictSortArrow" title="敷料名稱 Z 到 A">▼</span>
               </span>
             </span>
           </th>
@@ -3435,11 +3694,9 @@ function updateDictNameSortButtons(){
   const descBtn = document.getElementById('sortDictNameDescBtn');
   if(ascBtn){
     ascBtn.classList.toggle('active', dictNameSortMode === 'asc');
-    ascBtn.setAttribute('aria-pressed', dictNameSortMode === 'asc' ? 'true' : 'false');
   }
   if(descBtn){
     descBtn.classList.toggle('active', dictNameSortMode === 'desc');
-    descBtn.setAttribute('aria-pressed', dictNameSortMode === 'desc' ? 'true' : 'false');
   }
 }
 
@@ -3455,6 +3712,23 @@ function setDictNameSortMode(mode){
   if(saveOrderBtn) saveOrderBtn.style.display = 'none';
   renderDictListFromCache();
   updateDictNameSortButtons();
+}
+
+function toggleDictNameSortMode(){
+  setDictNameSortMode(dictNameSortMode === 'asc' ? 'desc' : 'asc');
+}
+
+function bindDictNameSortHeader(){
+  const button = document.getElementById('dictSortNameBtn');
+  if(!button || button.dataset.sortBound === '1'){
+    return;
+  }
+
+  button.dataset.sortBound = '1';
+  button.addEventListener('click', function(event){
+    event.preventDefault();
+    toggleDictNameSortMode();
+  });
 }
 
 function getFilteredDressingMasterCache(){
@@ -10770,6 +11044,7 @@ function bindDressingLiveSearchInput(inputId, context){
 }
 
 function initDressingFrontLiveSearch(){
+  bindDictNameSortHeader();
   bindDressingLiveSearchInput('inventoryBarcodeInput', 'inventory');
   bindDressingLiveSearchInput('dictBarcodeInput', 'dict');
 

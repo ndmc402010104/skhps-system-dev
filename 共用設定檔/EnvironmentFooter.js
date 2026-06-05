@@ -1,7 +1,7 @@
 ﻿/*
 檔案位置：共用設定檔/EnvironmentFooter.js
-時間戳記：2026-06-06 03:23 UTC+8
-用途：全站三段式環境頁尾；提供三段式環境切換與集中 API URL 設定。
+時間戳記：2026-06-06 03:44 UTC+8
+用途：全站三段式環境頁尾；提供三段式環境切換、集中 API URL 設定與 GitHub Pages 跨環境版本摘要。
 */
 
 (function(global){
@@ -20,7 +20,7 @@
       label:'app script測試版',
       url:'https://script.google.com/macros/s/AKfycbwySlDY2aAbYpy5OSi85vHz1pk5g1FQfopcaCfVneE/dev',
       apiUrl:'https://script.google.com/macros/s/AKfycbwySlDY2aAbYpy5OSi85vHz1pk5g1FQfopcaCfVneE/dev',
-      version:'v2.37.0-202606060339',
+      version:'v2.37.0-202606060419',
       type:'gas'
     },
     webDev:{
@@ -28,7 +28,7 @@
       label:'測試版',
       url:'https://dev-skhps.jonaminz.com',
       apiUrl:'https://script.google.com/macros/s/AKfycbwySlDY2aAbYpy5OSi85vHz1pk5g1FQfopcaCfVneE/dev',
-      version:'v2.37.0-202606060339',
+      version:'v2.37.0-202606060419',
       type:'web'
     },
     webProd:{
@@ -76,8 +76,12 @@
     var href = String(location.href || '').toLowerCase();
 
     // 先看實際網址，不先相信 runtime.currentEnv，避免 Config 被部署時寫死造成環境誤判。
-    if(hostname.indexOf('script.google.com') >= 0 || href.indexOf('/macros/s/') >= 0){
+    if(hostname.indexOf('script.google.com') >= 0 && (href.indexOf('/dev') >= 0 || /[?&]appEnv=dev(?:&|#|$)/.test(location.search || ''))){
       return 'gasDev';
+    }
+
+    if(hostname.indexOf('script.google.com') >= 0 || href.indexOf('/macros/s/') >= 0){
+      return 'gasExec';
     }
 
     if(hostname === 'dev-skhps.jonaminz.com' || hostname.indexOf('dev-skhps.jonaminz.com') >= 0){
@@ -320,6 +324,151 @@
     }
   }
 
+  function normalizeRuntimeEnv(env){
+    env = String(env || '').trim();
+    if(env === 'webDev'){
+      return 'dev';
+    }
+    if(env === 'webProd'){
+      return 'prod';
+    }
+    return env || 'unknown';
+  }
+
+  function getCurrentRuntimeInfo(){
+    var currentEnv = detectCurrentEnv();
+    var runtimeEnv =
+      runtime.env ||
+      runtime.currentEnv ||
+      global.SKH_ENV ||
+      '';
+    var env = normalizeRuntimeEnv(
+      currentEnv === 'webDev'
+        ? 'dev'
+        : (
+          currentEnv === 'webProd'
+            ? 'prod'
+            : (
+              currentEnv === 'gasDev'
+                ? 'gasDev'
+                : (
+                  currentEnv === 'gasExec'
+                    ? 'gasExec'
+                    : runtimeEnv
+                )
+            )
+        )
+    );
+    var mode =
+      runtime.mode ||
+      global.SKH_MODE ||
+      (
+        currentEnv === 'gasDev' || currentEnv === 'gasExec'
+          ? 'gas'
+          : 'github'
+      );
+    var envKey =
+      currentEnv === 'webDev'
+        ? 'webDev'
+        : (
+          currentEnv === 'webProd'
+            ? 'webProd'
+            : (
+              currentEnv === 'gasExec'
+                ? 'gasExec'
+                : 'gasDev'
+            )
+        );
+    var pageVersion =
+      runtime.version ||
+      global.APP_VERSION ||
+      global.VERSION ||
+      global.BUILD_VERSION ||
+      (
+        environments[envKey] && environments[envKey].version
+          ? environments[envKey].version
+          : 'unknown'
+      );
+
+    return {
+      mode:mode,
+      env:env,
+      version:normalizeVersion(pageVersion)
+    };
+  }
+
+  function loadVersionManifest(){
+    return fetch('/version.json?t=' + Date.now(), { cache:'no-store' }).then(function(res){
+      if(!res.ok){
+        throw new Error('version.json load failed: ' + res.status);
+      }
+      return res.json();
+    });
+  }
+
+  function renderVersionFooter(){
+    var footer = document.querySelector('[data-skh-version-footer]');
+    if(!footer){
+      return;
+    }
+
+    var info = getCurrentRuntimeInfo();
+    var mode = info.mode;
+    var env = info.env;
+    var pageVersion = info.version;
+
+    if(env === 'gasExec'){
+      footer.textContent = 'Apps Script /exec 入口｜本頁 ' + pageVersion + '｜請改用 app script測試版 /dev';
+      return;
+    }
+
+    if(mode === 'gas' || env === 'gasDev'){
+      footer.textContent = 'Apps Script 測試版｜本頁 ' + pageVersion;
+      return;
+    }
+
+    loadVersionManifest().then(function(manifest){
+      if(env === 'prod'){
+        footer.textContent =
+          '正式版｜本頁 ' +
+          pageVersion +
+          '｜測試版最新版 ' +
+          normalizeVersion(manifest && manifest.dev && manifest.dev.version ? manifest.dev.version : 'unknown');
+        return;
+      }
+
+      if(env === 'dev'){
+        footer.textContent =
+          '測試版｜本頁 ' +
+          pageVersion +
+          '｜正式版最新版 ' +
+          normalizeVersion(manifest && manifest.prod && manifest.prod.version ? manifest.prod.version : 'unknown');
+        return;
+      }
+
+      footer.textContent = '目前環境 ' + env + '｜本頁 ' + pageVersion;
+    }).catch(function(error){
+      if(global.console && typeof global.console.warn === 'function'){
+        global.console.warn('[version-footer] version manifest load failed', error);
+      }
+      footer.textContent = '目前環境 ' + env + '｜本頁 ' + pageVersion + '｜版本資訊讀取失敗';
+    });
+  }
+
+  var envNavigation = {
+    detectCurrentEnv:detectCurrentEnv,
+    buildTargetUrl:function(key){
+      return buildTargetUrl(environments[key] || {});
+    },
+    navigateToKey:function(key, event){
+      if(event && typeof event.preventDefault === 'function'){
+        event.preventDefault();
+      }
+      navigateTop(this.buildTargetUrl(key));
+      return false;
+    }
+  };
+
   function renderEnvironmentFooter(options){
     options = options || {};
     ensureStyle();
@@ -354,8 +503,7 @@
         item.target = '_top';
         item.rel = 'noopener';
         item.addEventListener('click', function(event){
-          event.preventDefault();
-          navigateTop(targetUrl);
+          envNavigation.navigateToKey(key, event);
         });
       }
 
@@ -378,6 +526,10 @@
 
   global.SKH_ENVIRONMENTS = environments;
   global.SKH_RUNTIME = runtime;
+  global.SKH_ENV_NAVIGATION = envNavigation;
+  global.getCurrentRuntimeInfo = global.getCurrentRuntimeInfo || getCurrentRuntimeInfo;
+  global.loadVersionManifest = global.loadVersionManifest || loadVersionManifest;
+  global.renderVersionFooter = global.renderVersionFooter || renderVersionFooter;
   global.renderEnvironmentFooter = renderEnvironmentFooter;
 
   if(document.readyState === 'loading'){
@@ -389,6 +541,12 @@
     renderEnvironmentFooter();
   }
 })(typeof window !== 'undefined' ? window : this);
+
+
+
+
+
+
 
 
 

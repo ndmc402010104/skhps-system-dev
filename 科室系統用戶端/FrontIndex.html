@@ -252,6 +252,34 @@ const GITHUB_PAGE_MAP = {
   hisConnect: 'HisConnect/HisConnectPage.html'
 };
 
+function redirectExecToDevAppScriptIfNeeded(){
+  if(
+    window.location.hostname.indexOf('script.google.com') < 0 ||
+    window.location.pathname.indexOf('/exec') < 0 ||
+    APP_ENV !== 'dev' ||
+    !APP_DEV_URL ||
+    APP_DEV_URL.indexOf('<' + '?=') >= 0
+  ){
+    return;
+  }
+
+  const target =
+    buildAppPageUrl(APP_DEV_URL, '', 'dev');
+
+  if(window.location.href === target){
+    return;
+  }
+
+  try{
+    window.top.location.href =
+      target;
+  }
+  catch(error){
+    window.location.href =
+      target;
+  }
+}
+
 function getGithubRepoBasePath(){
   if(!window.location.hostname.includes('github.io')){
     return '/';
@@ -466,6 +494,8 @@ function goUiTest(){
   );
 
 }
+
+redirectExecToDevAppScriptIfNeeded();
 
 function goHisConnect(){
 
