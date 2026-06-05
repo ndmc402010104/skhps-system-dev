@@ -88,11 +88,11 @@ Frontend Route / Domain
 [ ] QR code cursor pointer 修正仍存在，可點擊 QR code hover 顯示 pointer
 
 Footer / Version Bar
-[ ] footer/version bar 在桌機寬度下左右比例一致
-[ ] footer/version bar 右側行事曆來源文字不貼邊、不溢出
+[ ] footer/version bar 版本資訊永遠置中
+[ ] footer/version bar 行事曆來源固定在右下角且不貼邊、不溢出
+[ ] footer/version bar 行事曆來源字級與版本資訊一致
 [ ] 三個版本資訊 segment 寬度比例一致，不因第一段 active 狀態異常撐大
-[ ] footer/version bar 在 768px 以下可正常換行
-[ ] footer/version bar 手機版不水平溢出
+[ ] footer/version bar 在 768px 以下仍可閱讀且不水平溢出
 [ ] footer/version bar 不影響 route/link
 [ ] footer/version bar 不影響 QR code cursor pointer
 [ ] footer/version bar 不影響 QR code 產生
