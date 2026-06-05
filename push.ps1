@@ -1018,7 +1018,3 @@ Write-Host ""
 Write-Host "==========================" -ForegroundColor Cyan
 Write-Host "完成" -ForegroundColor Green
 Write-Host "==========================" -ForegroundColor Cyan
-Write-Host "[1] push app script                         : Apps Script 後端功能測試"
-Write-Host "[2] 加上 push dev-skhps.jonaminz.com 分支 + commit : https://dev-skhps.jonaminz.com"
-Write-Host "[3] 加上換電腦用備份 origin/wip-current       : 不更新正式版"
-Write-Host "[4] 加上 push master + PROD                 : https://skhps.jonaminz.com"
