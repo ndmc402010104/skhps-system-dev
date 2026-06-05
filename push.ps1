@@ -1,6 +1,6 @@
 ﻿# 檔案位置：專案根目錄/push.ps1
 # 時間戳記：2026-06-05 09:55 UTC+8
-# 用途：累加式四段部署腳本；1=push app script，2=加上 dev-skhps + commit，3=加上換電腦用備份，4=加上正式版 master + PROD。
+# 用途：累加式四段部署腳本；1=push app script，2=加上 dev-skhps 分支部署 + commit，3=加上換電腦用備份，4=加上正式版 master + PROD。
 
 param(
   [ValidateSet('ask','commit-only','backup-wip','dev-app','dev-skhps','dev-app-backup','dev-all','release','skhps','all','push','push-github','deploy')]
@@ -792,8 +792,8 @@ if ($Action -eq 'ask') {
   Write-Host "累加式部署目標：" -ForegroundColor Cyan
   Write-Host "[1] push app script"
   Write-Host "    = clasp push；只更新 app script測試版，測 Apps Script 後端"
-  Write-Host "[2] 加上 push dev-skhps.jonaminz.com + commit"
-  Write-Host "    = 1 + git commit + git push --force-with-lease dev HEAD:main"
+  Write-Host "[2] 加上 push dev-skhps.jonaminz.com 分支 + commit"
+  Write-Host "    = 1 + git commit + git push --force-with-lease dev HEAD:dev-current"
   Write-Host "[3] 加上換電腦用備份 origin/wip-current"
   Write-Host "    = 1 + 2 + git push --force-with-lease origin HEAD:wip-current，不更新正式版"
   Write-Host "[4] 加上 push master + PROD"
@@ -938,16 +938,18 @@ if ($needsDevApp) {
 if ($needsDevSkhps) {
   Write-Host ""
   Write-Host "==========================" -ForegroundColor Cyan
-  Write-Host "[2] 加上 push dev-skhps.jonaminz.com + commit" -ForegroundColor Cyan
+  Write-Host "[2] 加上 push dev-skhps.jonaminz.com 分支 + commit" -ForegroundColor Cyan
   Write-Host "=========================="
-  Write-Host "測試版允許目前 HEAD 推到 dev repo main，避免中文/臨時分支名稱造成 refspec 錯誤。"
+  Write-Host "測試版允許目前 HEAD 推到 dev repo 的 dev-current 分支，避免測試內容被推到 master/main；dev-skhps 請固定由 dev-current 分支發布。"
 
   Invoke-GitPush `
     -RemoteName 'dev' `
-    -RefSpec 'HEAD:main' `
+    -RefSpec 'HEAD:dev-current' `
     -SiteName 'dev-skhps' `
     -SiteUrl 'https://dev-skhps.jonaminz.com' `
     -ForceWithLease
+
+  Write-Host "dev-skhps 應在 GitHub Pages 設定為 Branch: dev-current / (root)。如果仍設為 main，網站會繼續吃舊分支。" -ForegroundColor Yellow
 }
 
 if ($needsBackupWip) {
@@ -1010,6 +1012,6 @@ Write-Host "==========================" -ForegroundColor Cyan
 Write-Host "完成" -ForegroundColor Green
 Write-Host "==========================" -ForegroundColor Cyan
 Write-Host "[1] push app script                         : Apps Script 後端功能測試"
-Write-Host "[2] 加上 push dev-skhps.jonaminz.com + commit : https://dev-skhps.jonaminz.com"
+Write-Host "[2] 加上 push dev-skhps.jonaminz.com 分支 + commit : https://dev-skhps.jonaminz.com"
 Write-Host "[3] 加上換電腦用備份 origin/wip-current       : 不更新正式版"
 Write-Host "[4] 加上 push master + PROD                 : https://skhps.jonaminz.com"
