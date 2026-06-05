@@ -1,6 +1,6 @@
 ﻿# 檔案位置：專案根目錄/push.ps1
-# 時間戳記：2026-06-05 09:12 UTC+8
-# 用途：三段式部署腳本；選單 1→8 依風險由低到高排序，支援工作進度備份、dev-app script、dev-skhps、skhps 分流。
+# 時間戳記：2026-06-05 09:55 UTC+8
+# 用途：累加式四段部署腳本；1=push app script，2=加上 dev-skhps + commit，3=加上換電腦用備份，4=加上正式版 master + PROD。
 
 param(
   [ValidateSet('ask','commit-only','backup-wip','dev-app','dev-skhps','dev-app-backup','dev-all','release','skhps','all','push','push-github','deploy')]
@@ -473,7 +473,7 @@ function Invoke-GitPush {
 function Invoke-BackupWipToOrigin {
   Write-Host ""
   Write-Host "==========================" -ForegroundColor Cyan
-  Write-Host "[2] 備份目前工作進度（換電腦用）" -ForegroundColor Cyan
+  Write-Host "[3] 換電腦用備份 origin/wip-current" -ForegroundColor Cyan
   Write-Host "=========================="
   Write-Host "備份目前 HEAD 到 origin/wip-current；不更新任何網站。" -ForegroundColor Yellow
 
@@ -781,7 +781,7 @@ switch ($Action) {
     $Action = 'dev-all'
   }
   'deploy' {
-    $Action = 'skhps'
+    $Action = 'release'
     $legacyDeployRequested = $true
     $DeployProdAppScript = $true
   }
@@ -789,57 +789,46 @@ switch ($Action) {
 
 if ($Action -eq 'ask') {
   Write-Host ""
-  Write-Host "三段式部署目標（1→8 依影響範圍/風險由低到高）：" -ForegroundColor Cyan
-  Write-Host "[1] 只 commit，不部署"
-  Write-Host "[2] 備份目前工作進度（換電腦用）到 origin/wip-current，不更新任何網站"
-  Write-Host "[3] dev-app script  = Apps Script 後端功能測試 / clasp push"
-  Write-Host "[4] dev-skhps       = 測試版前端 https://dev-skhps.jonaminz.com / git push --force-with-lease dev HEAD:main"
-  Write-Host "[5] 3 + 2           = dev-app script + 備份目前工作進度（換電腦用）"
-  Write-Host "[6] 3 + 4 + 2       = dev-app script + dev-skhps + 備份目前工作進度（換電腦用，日常最常用）"
-  Write-Host "[7] 4 + 8           = 先 dev-skhps，再 skhps；正式仍需 master + PROD"
-  Write-Host "[8] skhps           = 正式版 https://skhps.jonaminz.com / git push origin master:master，需要 PROD"
+  Write-Host "累加式部署目標：" -ForegroundColor Cyan
+  Write-Host "[1] push app script"
+  Write-Host "    = clasp push；只更新 app script測試版，測 Apps Script 後端"
+  Write-Host "[2] 加上 push dev-skhps.jonaminz.com + commit"
+  Write-Host "    = 1 + git commit + git push --force-with-lease dev HEAD:main"
+  Write-Host "[3] 加上換電腦用備份 origin/wip-current"
+  Write-Host "    = 1 + 2 + git push --force-with-lease origin HEAD:wip-current，不更新正式版"
+  Write-Host "[4] 加上 push master + PROD"
+  Write-Host "    = 1 + 2 + 正式版 skhps.jonaminz.com；只允許 master，需輸入 PROD"
   Write-Host "[0] 取消"
 
   $Action = Read-MenuChoice `
     -Message "請選擇 [1]" `
     -Choices @{
-      '1' = 'commit-only'
-      'commit-only' = 'commit-only'
-      'commit' = 'commit-only'
-
-      '2' = 'backup-wip'
-      'backup' = 'backup-wip'
-      'backup-wip' = 'backup-wip'
-      'wip' = 'backup-wip'
-
-      '3' = 'dev-app'
+      '1' = 'dev-app'
       'dev-app' = 'dev-app'
       'app' = 'dev-app'
+      'gas' = 'dev-app'
 
-      '4' = 'dev-skhps'
-      'dev-skhps' = 'dev-skhps'
-      'dev' = 'dev-skhps'
-
-      '5' = 'dev-app-backup'
-      'dev-app-backup' = 'dev-app-backup'
-      'app-backup' = 'dev-app-backup'
-
-      '6' = 'dev-all'
+      '2' = 'dev-all'
       'dev-all' = 'dev-all'
-      'daily' = 'dev-all'
+      'dev-skhps' = 'dev-all'
+      'dev' = 'dev-all'
+      'test' = 'dev-all'
 
-      '7' = 'release'
+      '3' = 'all'
+      'backup' = 'all'
+      'wip' = 'all'
+      'switch' = 'all'
+      'daily' = 'all'
+
+      '4' = 'release'
       'release' = 'release'
-      'candidate' = 'release'
-
-      '8' = 'skhps'
-      'skhps' = 'skhps'
-      'prod' = 'skhps'
+      'prod' = 'release'
+      'skhps' = 'release'
 
       '0' = 'cancel'
       'cancel' = 'cancel'
     } `
-    -Default 'commit-only'
+    -Default 'dev-app'
 }
 
 if ($Action -eq 'cancel') {
@@ -885,11 +874,11 @@ $sourceVersion = Get-CurrentAppVersion -RootPath $rootPath
 $version = New-AppVersion -RootPath $rootPath -Bump $Bump
 $readmePath = Join-Path $rootPath 'README.md'
 
-$needsDevApp = $Action -in @('dev-app','dev-app-backup','dev-all')
-$needsDevSkhps = $Action -in @('dev-skhps','dev-all','release')
-$needsSkhps = $Action -in @('skhps','release')
-$needsBackupWip = $Action -in @('backup-wip','dev-app-backup','dev-all')
-$needsAnyGit = $Action -in @('commit-only','backup-wip','dev-app','dev-skhps','dev-app-backup','dev-all','release','skhps')
+$needsDevApp = $Action -in @('dev-app','dev-all','all','release')
+$needsDevSkhps = $Action -in @('dev-all','all','release')
+$needsSkhps = $Action -in @('release')
+$needsBackupWip = $Action -in @('all')
+$needsAnyGit = $Action -in @('dev-all','all','release')
 
 # skhps 正式版若不是舊 deploy 參數，互動詢問是否一併部署正式 Apps Script API。
 if ($needsSkhps -and -not $legacyDeployRequested -and -not $DeployProdAppScript) {
@@ -949,7 +938,7 @@ if ($needsDevApp) {
 if ($needsDevSkhps) {
   Write-Host ""
   Write-Host "==========================" -ForegroundColor Cyan
-  Write-Host "[2] dev-skhps" -ForegroundColor Cyan
+  Write-Host "[2] 加上 push dev-skhps.jonaminz.com + commit" -ForegroundColor Cyan
   Write-Host "=========================="
   Write-Host "測試版允許目前 HEAD 推到 dev repo main，避免中文/臨時分支名稱造成 refspec 錯誤。"
 
@@ -1001,7 +990,7 @@ if ($needsSkhps) {
 
   Write-Host ""
   Write-Host "==========================" -ForegroundColor Cyan
-  Write-Host "[3] skhps" -ForegroundColor Cyan
+  Write-Host "[4] 加上 push master + PROD" -ForegroundColor Cyan
   Write-Host "=========================="
 
   Invoke-GitPush `
@@ -1020,7 +1009,7 @@ Write-Host ""
 Write-Host "==========================" -ForegroundColor Cyan
 Write-Host "完成" -ForegroundColor Green
 Write-Host "==========================" -ForegroundColor Cyan
-Write-Host "origin/wip-current : 工作進度備份（換電腦用），不更新網站"
-Write-Host "dev-app script     : Apps Script 後端功能測試"
-Write-Host "dev-skhps          : https://dev-skhps.jonaminz.com"
-Write-Host "skhps              : https://skhps.jonaminz.com"
+Write-Host "[1] push app script                         : Apps Script 後端功能測試"
+Write-Host "[2] 加上 push dev-skhps.jonaminz.com + commit : https://dev-skhps.jonaminz.com"
+Write-Host "[3] 加上換電腦用備份 origin/wip-current       : 不更新正式版"
+Write-Host "[4] 加上 push master + PROD                 : https://skhps.jonaminz.com"

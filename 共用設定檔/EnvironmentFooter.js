@@ -26,14 +26,14 @@ EnvironmentFooter.js
         key:'gasDev',
         label:'app script測試版',
         url:'https://script.google.com/macros/s/AKfycbwySlDY2aAbYpy5OSi85vHz1pk5g1FQfopcaCfVneE/dev',
-        version:'v2.29.0-202606050854',
+        version:'v2.29.1-202606050900',
         type:'gas'
       },
       webDev:{
         key:'webDev',
         label:'測試版',
         url:'https://dev-skhps.jonaminz.com',
-        version:'v2.29.0-202606050829',
+        version:'v2.29.1-202606050900',
         type:'web'
       },
       webProd:{
@@ -56,13 +56,14 @@ EnvironmentFooter.js
     style.id = 'skhEnvironmentFooterStyle';
     style.textContent =
       '.appVersionFooter{position:fixed;left:0;right:0;bottom:0;z-index:10000;min-height:42px;display:flex;align-items:center;justify-content:center;padding:6px 12px;box-sizing:border-box;background:rgba(248,251,255,.94);border-top:1px solid rgba(148,163,184,.38);box-shadow:0 -8px 24px rgba(15,23,42,.08);backdrop-filter:blur(10px);}' +
-      '.appVersionSegment{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;width:min(760px,100%);padding:3px;border:1px solid rgba(148,163,184,.38);border-radius:999px;background:rgba(226,232,240,.65);}' +
-      '.appVersionBadge{display:flex;align-items:center;justify-content:center;gap:5px;min-width:0;min-height:28px;padding:5px 10px;border:1px solid transparent;border-radius:999px;background:transparent;color:#475569;font-size:11px;font-weight:800;line-height:1.1;text-decoration:none;white-space:nowrap;cursor:pointer;transition:color .16s ease,border-color .16s ease,background-color .16s ease,box-shadow .16s ease;}' +
+      '.appVersionSegment{display:grid;grid-template-columns:minmax(260px,1.35fr) minmax(210px,1fr) minmax(220px,1fr);gap:4px;width:min(1120px,calc(100vw - 24px));padding:3px;border:1px solid rgba(148,163,184,.38);border-radius:999px;background:rgba(226,232,240,.65);}' +
+      '.appVersionBadge{display:flex;align-items:center;justify-content:center;flex-wrap:nowrap;gap:7px;min-width:0;min-height:28px;padding:5px 12px;border:1px solid transparent;border-radius:999px;background:transparent;color:#475569;font-size:11px;font-weight:800;line-height:1.1;text-decoration:none;white-space:nowrap;cursor:pointer;transition:color .16s ease,border-color .16s ease,background-color .16s ease,box-shadow .16s ease;}' +
       '.appVersionBadge:hover{color:#1d4ed8;background:rgba(255,255,255,.78);border-color:rgba(37,99,235,.25);}' +
       '.appVersionBadge.is-active{color:#ffffff;background:linear-gradient(135deg,#2563eb,#0f766e);border-color:transparent;box-shadow:0 8px 18px rgba(37,99,235,.20);cursor:default;}' +
-      '.appVersionBadgeMode{font-weight:900;overflow:hidden;text-overflow:ellipsis;}' +
-      '.appVersionText{font-weight:800;opacity:.9;overflow:hidden;text-overflow:ellipsis;}' +
-      '@media(max-width:600px){.appVersionFooter{min-height:38px;padding:4px 6px}.appVersionSegment{gap:2px;padding:2px}.appVersionBadge{min-height:28px;padding:4px 5px;font-size:9px;gap:3px}.appVersionBadgeMode,.appVersionText{max-width:100%}}';
+      '.appVersionBadgeMode{flex:0 0 auto;font-weight:900;overflow:hidden;text-overflow:ellipsis;}' +
+      '.appVersionText{flex:0 1 auto;font-weight:800;opacity:.9;overflow:hidden;text-overflow:ellipsis;}' +
+      '@media(max-width:820px){.appVersionSegment{grid-template-columns:minmax(0,1.32fr) minmax(0,1fr) minmax(0,1fr);width:calc(100vw - 12px)}.appVersionBadge{font-size:10px;padding:5px 7px;gap:4px}}' +
+      '@media(max-width:600px){.appVersionFooter{min-height:38px;padding:4px 4px}.appVersionSegment{gap:2px;padding:2px;width:calc(100vw - 8px)}.appVersionBadge{min-height:28px;padding:4px 4px;font-size:8.5px;gap:3px}.appVersionBadgeMode,.appVersionText{max-width:100%}}';
     document.head.appendChild(style);
   }
 
@@ -254,5 +255,6 @@ EnvironmentFooter.js
     renderEnvironmentFooter();
   }
 })(typeof window !== 'undefined' ? window : this);
+
 
 
