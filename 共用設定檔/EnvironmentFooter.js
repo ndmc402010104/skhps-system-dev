@@ -26,14 +26,14 @@ EnvironmentFooter.js
         key:'gasDev',
         label:'app script測試版',
         url:'https://script.google.com/macros/s/AKfycbwySlDY2aAbYpy5OSi85vHz1pk5g1FQfopcaCfVneE/dev',
-        version:'v2.36.0-202606051523',
+        version:'v2.36.0-202606051525',
         type:'gas'
       },
       webDev:{
         key:'webDev',
         label:'測試版',
         url:'https://dev-skhps.jonaminz.com',
-        version:'v2.36.0-202606051523',
+        version:'v2.36.0-202606051525',
         type:'web'
       },
       webProd:{
@@ -345,6 +345,7 @@ EnvironmentFooter.js
     renderEnvironmentFooter();
   }
 })(typeof window !== 'undefined' ? window : this);
+
 
 
 

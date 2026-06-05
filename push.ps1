@@ -1,6 +1,6 @@
 ﻿# 檔案位置：專案根目錄/push.ps1
-# 時間戳記：2026-06-05 15:21 UTC+8
-# 用途：累加式四段部署腳本；1 只跑 Apps Script，2=1+測試版前端，3=1+2+本地/備份，4=1+2+3+正式版。
+# 時間戳記：2026-06-05 15:32 UTC+8
+# 用途：累加式四段部署腳本；1 只跑 Apps Script，2=1+測試版前端，3=1+2+本地確認，4=1+2+3+正式版；啟動時先清除已失效 Git worktree metadata，避免 Git 反覆詢問 retry。
 # 階段：1=push app script，2=1+2 push dev-skhps，3=1+2+3 本地確認不部署正式版，4=1+2+3+4 deploy skhps。
 
 param(
@@ -19,7 +19,10 @@ param(
   [switch]$NoGitHubPrompt,
 
   # 非互動模式需要直接部署正式 Apps Script API 時才使用。
-  [switch]$DeployProdAppScript
+  [switch]$DeployProdAppScript,
+
+  # 若真的需要保留 Git worktree metadata，才加這個參數；本專案部署流程預設不使用 worktree。
+  [switch]$SkipWorktreeMetadataRepair
 )
 
 chcp 65001 | Out-Null
@@ -33,6 +36,126 @@ $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'clasp-tools.ps1')
 
 $rootPath = $PSScriptRoot
+
+
+# 讓 Git 在腳本流程中不要跳出互動式 retry prompt；真正錯誤直接失敗，避免卡住一直問 y/n。
+$env:GIT_TERMINAL_PROMPT = '0'
+
+function Remove-GitMetadataDirectoryNoPrompt {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$Path
+  )
+
+  if (-not (Test-Path -LiteralPath $Path)) {
+    return $true
+  }
+
+  Write-Host "清除 Git worktree metadata：$Path" -ForegroundColor Yellow
+
+  # 若路徑內有雲端 placeholder / reparse point，先要求保留本機，再移除常見防刪屬性。
+  try {
+    & attrib +P -U $Path /S /D 2>$null | Out-Null
+  }
+  catch {
+    # attrib 在非雲端路徑可能沒有作用，忽略。
+  }
+
+  Start-Sleep -Milliseconds 300
+
+  try {
+    & attrib -R -S -H $Path /S /D 2>$null | Out-Null
+  }
+  catch {
+    # 忽略，下一步用 rmdir 實際刪除。
+  }
+
+  # 先刪 reparse point 標記，避免 Git/PowerShell 把它當一般目錄遞迴刪除時卡住。
+  try {
+    $items = @(Get-ChildItem -LiteralPath $Path -Force -Recurse -ErrorAction SilentlyContinue)
+    foreach ($item in $items) {
+      if (($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) {
+        & fsutil reparsepoint delete $item.FullName 2>$null | Out-Null
+      }
+    }
+
+    $self = Get-Item -LiteralPath $Path -Force -ErrorAction SilentlyContinue
+    if ($self -and (($self.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0)) {
+      & fsutil reparsepoint delete $self.FullName 2>$null | Out-Null
+    }
+  }
+  catch {
+    # 沒權限或非 reparse point 時忽略，交給 rmdir。
+  }
+
+  & cmd.exe /c "rmdir /s /q `"$Path`"" 2>$null
+
+  if (Test-Path -LiteralPath $Path) {
+    Write-Host "仍無法清除：$Path" -ForegroundColor Red
+    return $false
+  }
+
+  return $true
+}
+
+function Repair-GitWorktreeMetadata {
+  if ($SkipWorktreeMetadataRepair) {
+    return
+  }
+
+  $worktreesRoot = Join-Path $rootPath '.git\worktrees'
+
+  if (-not (Test-Path -LiteralPath $worktreesRoot)) {
+    return
+  }
+
+  Write-Host ""
+  Write-Host "偵測到 .git\worktrees；本部署腳本不使用 Git worktree，先清理失效 metadata，避免 Git 反覆詢問 retry。" -ForegroundColor Yellow
+
+  $activeCount = 0
+  $failedCount = 0
+  $entries = @(Get-ChildItem -LiteralPath $worktreesRoot -Force -Directory -ErrorAction SilentlyContinue)
+
+  foreach ($entry in $entries) {
+    $gitdirFile = Join-Path $entry.FullName 'gitdir'
+    $looksActive = $false
+
+    if (Test-Path -LiteralPath $gitdirFile) {
+      try {
+        $gitdirTarget = (Get-Content -LiteralPath $gitdirFile -Raw -ErrorAction Stop).Trim()
+        if (-not [string]::IsNullOrWhiteSpace($gitdirTarget) -and (Test-Path -LiteralPath $gitdirTarget)) {
+          $looksActive = $true
+        }
+      }
+      catch {
+        $looksActive = $false
+      }
+    }
+
+    if ($looksActive) {
+      $activeCount++
+      Write-Host "保留疑似仍有效的 worktree metadata：$($entry.Name)" -ForegroundColor DarkYellow
+      continue
+    }
+
+    if (-not (Remove-GitMetadataDirectoryNoPrompt -Path $entry.FullName)) {
+      $failedCount++
+    }
+  }
+
+  if ($activeCount -eq 0) {
+    $remaining = @(Get-ChildItem -LiteralPath $worktreesRoot -Force -ErrorAction SilentlyContinue)
+    if ($remaining.Count -eq 0) {
+      if (-not (Remove-GitMetadataDirectoryNoPrompt -Path $worktreesRoot)) {
+        $failedCount++
+      }
+    }
+  }
+
+  if ($failedCount -gt 0) {
+    throw "仍有 Git worktree metadata 無法清除。為避免 Git 跳出 y/n retry prompt，已停止；請先用系統管理員 PowerShell 清除 .git\worktrees 後再重跑。"
+  }
+}
 
 function Test-CommandExists {
   param(
@@ -806,6 +929,7 @@ function Invoke-ProdAppScriptDeploy {
   Write-Host "Apps Script prod deploy completed with $description at version $versionNumber" -ForegroundColor Green
 }
 
+Repair-GitWorktreeMetadata
 Save-AllOpenFiles
 Show-GitSnapshot
 
