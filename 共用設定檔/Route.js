@@ -629,7 +629,7 @@ function getVersionBadgeHtml(options){
       'https://skhps.jonaminz.com',
       SKH_WEB_PROD_VERSION,
       currentEnv,
-      'return confirm("即將前往正式版 skhps.jonaminz.com");'
+      ''
     ),
     '</div>',
     calendarSourceHtml,

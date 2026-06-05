@@ -215,14 +215,6 @@ EnvironmentFooter.js
       if(!isActive){
         item.href = buildTargetUrl(env);
         item.target = '_top';
-
-        item.addEventListener('click', function(event){
-          if(key === 'webProd' && currentEnv !== 'webProd'){
-            if(!global.confirm('即將前往正式版 skhps.jonaminz.com')){
-              event.preventDefault();
-            }
-          }
-        });
       }
 
       item.innerHTML =
