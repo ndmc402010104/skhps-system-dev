@@ -1,7 +1,7 @@
 ﻿# 檔案位置：專案根目錄/push.ps1
-# 時間戳記：2026-06-05 15:18 UTC+8
+# 時間戳記：2026-06-05 15:21 UTC+8
 # 用途：累加式四段部署腳本；1 只跑 Apps Script，2=1+測試版前端，3=1+2+本地/備份，4=1+2+3+正式版。
-# 階段：1=push app script，2=1+dev-skhps，3=1+2+本地/可選備份，4=1+2+3+正式版 skhps + PROD。
+# 階段：1=push app script，2=1+2 push dev-skhps，3=1+2+3 本地確認不部署正式版，4=1+2+3+4 deploy skhps。
 
 param(
   [ValidateSet('ask','commit-only','backup-wip','dev-app','dev-skhps','dev-app-backup','dev-all','release','skhps','all','push','push-github','deploy')]
@@ -899,7 +899,6 @@ switch ($Action) {
   'deploy' {
     $Action = 'release'
     $legacyDeployRequested = $true
-    $DeployProdAppScript = $true
   }
 }
 
@@ -910,10 +909,10 @@ if ($Action -eq 'ask') {
   Write-Host "    = 儲存 + 同步 dev Apps Script + clasp push；不 git commit、不 git push"
   Write-Host "[2] 加上 push dev-skhps.jonaminz.com"
   Write-Host "    = 1 + git commit + git push --force-with-lease dev HEAD:$devSkhpsDeployBranch"
-  Write-Host "[3] 加上本地儲存 / commit / 可選備份"
-  Write-Host "    = 1 + 2 + 可選 origin/wip-current；不 deploy skhps"
-  Write-Host "[4] 加上 deploy skhps 正式版"
-  Write-Host "    = 1 + 2 + 3 + 只允許 master + PROD + prod sync + git push origin master"
+  Write-Host "[3] 本地確認，不部署 skhps 正式版"
+  Write-Host "    = 1 + 2 + 確認本地已 commit；不推 origin/master、不 deploy skhps、不問備份"
+  Write-Host "[4] deploy skhps 正式版"
+  Write-Host "    = 1 + 2 + 3 + 4；最後才檢查 master + PROD，推 origin/master；不問 Apps Script API"
   Write-Host "[0] 取消"
 
   $Action = Read-MenuChoice `
@@ -933,6 +932,8 @@ if ($Action -eq 'ask') {
       '3' = 'backup-wip'
       'backup' = 'backup-wip'
       'backup-wip' = 'backup-wip'
+      'local' = 'backup-wip'
+      'save' = 'backup-wip'
       'wip' = 'backup-wip'
       'switch' = 'backup-wip'
       'daily' = 'backup-wip'
@@ -958,25 +959,14 @@ if ($Action -eq 'cancel') {
 # 累加式語意：
 # 1 = dev-app
 # 2 = 1 + dev-skhps
-# 3 = 1 + 2 + local/backup
-# 4 = 1 + 2 + 3 + release
+# 3 = 1 + 2 + local checkpoint，不 deploy 正式版
+# 4 = 1 + 2 + 3 + 4 release
 $needsDevApp = $Action -in @('dev-app','dev-skhps','backup-wip','release')
 $needsDevSkhps = $Action -in @('dev-skhps','backup-wip','release')
 $needsBackupWip = $Action -in @('backup-wip','release')
 $needsSkhps = $Action -eq 'release'
 $needsLocalCommitOnly = $Action -eq 'commit-only'
 $needsAnyGit = $needsDevSkhps -or $needsBackupWip -or $needsSkhps -or $needsLocalCommitOnly
-
-# 正式版先擋在 master 與 PROD，避免先改檔後才發現不能上線。
-if ($needsSkhps) {
-  Confirm-ProdPushOrExit
-}
-
-# skhps 正式版若不是舊 deploy 參數，互動詢問是否一併部署正式 Apps Script API。
-if ($needsSkhps -and -not $legacyDeployRequested -and -not $DeployProdAppScript) {
-  Write-Host ""
-  $DeployProdAppScript = Read-YesNo -Message "這次 skhps 正式上線要同時部署正式 Apps Script API 嗎？通常只有後端 API 有改才需要" -Default $false
-}
 
 if ($Bump -eq 'ask') {
   Write-Host ""
@@ -1087,39 +1077,18 @@ if ($needsDevSkhps) {
 }
 
 if ($needsBackupWip) {
-  $backupSha = if ($devPushSha) { $devPushSha } else { Get-GitHeadSha }
-
-  if (-not $NoGitHubPrompt) {
-    Write-Host ""
-    $doBackup = Read-YesNo -Message "[3] 要備份到 origin/wip-current 嗎？不會 deploy skhps" -Default $false
-
-    if ($doBackup) {
-      Write-Host ""
-      Write-Host "==========================" -ForegroundColor Cyan
-      Write-Host "[3] 備份 origin/wip-current" -ForegroundColor Cyan
-      Write-Host "==========================" -ForegroundColor Cyan
-
-      Invoke-GitPush `
-        -RemoteName 'origin' `
-        -RefSpec "$($backupSha):wip-current" `
-        -SiteName 'origin/wip-current 工作進度備份' `
-        -SiteUrl 'GitHub origin/wip-current' `
-        -ForceWithLease
-
-      Confirm-GitRemoteRefMatchesHead `
-        -RemoteName 'origin' `
-        -BranchName 'wip-current' `
-        -Label '換電腦用備份' `
-        -ExpectedSha $backupSha
-    }
-  }
-
   Write-Host ""
+  Write-Host "==========================" -ForegroundColor Cyan
+  Write-Host "[3] 本地確認，不部署 skhps 正式版" -ForegroundColor Cyan
+  Write-Host "==========================" -ForegroundColor Cyan
+  Write-Host "已完成 [1] dev-app 與 [2] dev-skhps；目前 HEAD 已 commit。" -ForegroundColor Green
+  Write-Host "本階段不推 origin/master、不 deploy skhps、不建立 worktree、不問備份。" -ForegroundColor Yellow
+
   if ($needsSkhps) {
-    Write-Host "[3] 已完成 1+2+3，接著執行正式版 [4]。" -ForegroundColor Green
+    Write-Host "接著執行 [4] deploy skhps 正式版。" -ForegroundColor Green
   }
   else {
-    Write-Host "已完成 1+2+3；未 deploy skhps。" -ForegroundColor Green
+    Write-Host "到此停止：未 deploy skhps 正式版。" -ForegroundColor Green
   }
 }
 
@@ -1149,6 +1118,8 @@ if ($needsLocalCommitOnly) {
 }
 
 if ($needsSkhps) {
+  Confirm-ProdPushOrExit
+
   $prodConfig = Invoke-SyncVersionForEnv `
     -DefaultEnv 'prod' `
     -Version $version `
@@ -1179,7 +1150,7 @@ if ($needsSkhps) {
     Invoke-ProdAppScriptDeploy -Config $prodConfig
   }
   else {
-    Write-Host "略過正式 Apps Script API deployment，只推送 skhps 前端。" -ForegroundColor Yellow
+    Write-Host "略過正式 Apps Script API deployment；只 deploy skhps 前端。若真的要部署後端，請用 -DeployProdAppScript。" -ForegroundColor Yellow
   }
 
   Invoke-GitCommitIfNeeded -DefaultMessage "Release skhps v$($prodConfig.Version)" | Out-Null
