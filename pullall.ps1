@@ -99,6 +99,34 @@ function Get-OriginDefaultRef {
   throw '無法判斷 origin 預設分支，請確認 GitHub 是 master 還是 main。'
 }
 
+function Get-RefSha {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$RefName
+  )
+
+  $sha = (git rev-parse --verify $RefName 2>$null).Trim()
+
+  if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($sha)) {
+    return ''
+  }
+
+  return $sha
+}
+
+function Test-RefIsAncestor {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$AncestorRef,
+
+    [Parameter(Mandatory = $true)]
+    [string]$DescendantRef
+  )
+
+  git merge-base --is-ancestor $AncestorRef $DescendantRef 2>$null
+  return $LASTEXITCODE -eq 0
+}
+
 function Reset-ToRef {
   param(
     [Parameter(Mandatory = $true)]
@@ -160,10 +188,25 @@ $selectedMode = $Mode
 
 if ($selectedMode -eq 'auto') {
   if (Test-RemoteRefExists -RefName 'origin/wip-current') {
+    $originDefaultRef = Get-OriginDefaultRef
+    $wipSha = Get-RefSha -RefName 'origin/wip-current'
+    $defaultSha = Get-RefSha -RefName $originDefaultRef
+    $wipDiffersFromDefault = (
+      -not [string]::IsNullOrWhiteSpace($wipSha) -and
+      -not [string]::IsNullOrWhiteSpace($defaultSha) -and
+      $wipSha -ne $defaultSha
+    )
+
     if ([string]::IsNullOrWhiteSpace($currentBranch)) {
       $selectedMode = 'wip'
     }
     elseif ($currentBranch -eq 'wip-current') {
+      $selectedMode = 'wip'
+    }
+    elseif ($wipDiffersFromDefault -and (Test-RefIsAncestor -AncestorRef $originDefaultRef -DescendantRef 'origin/wip-current')) {
+      Write-Host ''
+      Write-Host "偵測到 origin/wip-current 比 $originDefaultRef 新。" -ForegroundColor Yellow
+      Write-Host 'auto 模式將使用換電腦備份進度，避免拉到較舊的正式 master。' -ForegroundColor Cyan
       $selectedMode = 'wip'
     }
     elseif ($currentBranch -eq 'master' -or $currentBranch -eq 'main') {
@@ -173,7 +216,7 @@ if ($selectedMode -eq 'auto') {
       Write-Host ''
       Write-Host "偵測到你目前在工作分支：$currentBranch" -ForegroundColor Yellow
       Write-Host '如果是換電腦要接續工作，建議拉 origin/wip-current。' -ForegroundColor Cyan
-      Write-Host '如果是要回到正式主線，建議拉 origin/master。' -ForegroundColor Cyan
+      Write-Host "如果是要回到正式主線，建議拉 $originDefaultRef。" -ForegroundColor Cyan
       Write-Host ''
 
       $useWip = Read-YesNo -Message '是否要切到換電腦用進度 origin/wip-current？' -Default $true
