@@ -255,20 +255,76 @@ Sign.gs 會把這些資料塞進 SignMeeting.html
 const APP_ENTRY_URL =
   '<?= appEntryUrl ?>';
 
+const STATIC_FORM_URL =
+  'https://docs.google.com/forms/d/e/1FAIpQLSeuo0v316ZKps-IIN1tC1U_gZ0NMSmEi1XmRcrghJuqPouUDw/viewform';
+
+const STATIC_COURSE_NAME_ENTRY_ID =
+  'entry.1034195874';
+
+const STATIC_DATE_ENTRY_ID =
+  'entry.239398651';
+
+const STATIC_TOKEN_ENTRY_ID =
+  'entry.1762558419';
+
+const STATIC_NAME_ENTRY_ID =
+  'entry.874560044';
+
 const EMPLOYEE_ENTRY_ID =
-  '<?= employeeId ?>';
+  getTemplateValue('<?= employeeId ?>', 'entry.1180427629');
 
 const ROLE_ENTRY_ID =
-  '<?= roleId ?>';
+  getTemplateValue('<?= roleId ?>', 'entry.300322984');
 
 //把showSignMeetingPage(e)抓到的資料拿來用
 const staffList =
-  JSON.parse(
-    '<?!= staffList ?>'
+  parseTemplateJson(
+    '<?!= staffList ?>',
+    []
   );
 
 const EXPECTED_TOKEN =
-  '<?= expectedToken ?>';
+  getTemplateValue(
+    '<?= expectedToken ?>',
+    getQueryParam('token')
+  );
+
+function isTemplatePlaceholder(value){
+  return String(value || '').indexOf('<' + '?') >= 0;
+}
+
+function getTemplateValue(value, fallback){
+  const text =
+    String(value || '').trim();
+
+  if(!text || isTemplatePlaceholder(text)){
+    return fallback || '';
+  }
+
+  return text;
+}
+
+function parseTemplateJson(value, fallback){
+  const text =
+    String(value || '').trim();
+
+  if(!text || isTemplatePlaceholder(text)){
+    return fallback || [];
+  }
+
+  try{
+    return JSON.parse(text);
+  }
+  catch(error){
+    return fallback || [];
+  }
+}
+
+function getQueryParam(name){
+  return new URLSearchParams(
+    window.location.search || ''
+  ).get(name) || '';
+}
 
 /*
 ========================================
@@ -333,12 +389,18 @@ window.addEventListener(
     document
       .getElementById('courseInput')
       .value =
-      '<?= course ?>';
+      getTemplateValue(
+        '<?= course ?>',
+        getQueryParam('course')
+      );
 
     document
       .getElementById('dateInput')
       .value =
-      '<?= date ?>';
+      getTemplateValue(
+        '<?= date ?>',
+        getQueryParam('date')
+      );
 
     if(
       sessionStorage.getItem(
@@ -356,7 +418,10 @@ window.addEventListener(
       document
         .getElementById('tokenInput')
         .value =
-        '<?= token ?>';
+        getTemplateValue(
+          '<?= token ?>',
+          getQueryParam('token')
+        );
 
       sessionStorage.setItem(
         pageKey,
@@ -915,31 +980,69 @@ function submitName(){
   組成 Google Form 送出網址
   */
 
+  const formUrl =
+    getTemplateValue(
+      '<?= formUrl ?>',
+      STATIC_FORM_URL
+    );
+
+  const courseId =
+    getTemplateValue(
+      '<?= courseId ?>',
+      STATIC_COURSE_NAME_ENTRY_ID
+    );
+
+  const dateId =
+    getTemplateValue(
+      '<?= dateId ?>',
+      STATIC_DATE_ENTRY_ID
+    );
+
+  const tokenId =
+    getTemplateValue(
+      '<?= tokenId ?>',
+      STATIC_TOKEN_ENTRY_ID
+    );
+
+  const nameId =
+    getTemplateValue(
+      '<?= nameId ?>',
+      STATIC_NAME_ENTRY_ID
+    );
+
   const submitUrl =
-    '<?= formUrl ?>'.replace(
+    formUrl.replace(
       '/viewform',
       '/formResponse'
     )
     +
-    '?<?= courseId ?>='
+    '?' +
+    courseId +
+    '='
     +
     encodeURIComponent(
       course
     )
     +
-    '&<?= dateId ?>='
+    '&' +
+    dateId +
+    '='
     +
     encodeURIComponent(
       date
     )
     +
-    '&<?= tokenId ?>='
+    '&' +
+    tokenId +
+    '='
     +
     encodeURIComponent(
       token
     )
     +
-    '&<?= nameId ?>='
+    '&' +
+    nameId +
+    '='
     +
     encodeURIComponent(
       name

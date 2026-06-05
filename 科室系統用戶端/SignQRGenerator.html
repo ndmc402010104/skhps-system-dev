@@ -258,6 +258,7 @@ button:hover{
   const GITHUB_PAGE_MAP = {
     home:'科室系統用戶端/FrontIndex.html',
     frontIndex:'科室系統用戶端/FrontIndex.html',
+    signMeeting:'科室系統用戶端/SignMeeting.html',
     signQR:'科室系統用戶端/SignQRGenerator.html',
     hospitalSignIn:'科室系統用戶端/HospitalSignIn.html',
     dressingFront:'敷料領用登錄系統/DressingFront.html',
@@ -281,6 +282,26 @@ button:hover{
   function getGithubPageUrl(pageKey){
     const path = GITHUB_PAGE_MAP[pageKey] || GITHUB_PAGE_MAP.home;
     return window.location.origin + getGithubRepoBasePath() + path;
+  }
+
+  function getFrontendPageUrl(pageKey, params){
+    const baseUrl =
+      getGithubPageUrl(pageKey);
+
+    const url =
+      new URL(
+        baseUrl,
+        window.location.href
+      );
+
+    Object.keys(params || {}).forEach(function(key){
+      const value = params[key];
+      if(value !== undefined && value !== null && value !== ''){
+        url.searchParams.set(key, value);
+      }
+    });
+
+    return url.toString();
   }
 
   function getAppEntryUrl(){
@@ -442,6 +463,17 @@ button:hover{
   }
 
   function buildSignQRUrl(meeting){
+    if(isGithubPage()){
+      return getFrontendPageUrl(
+        'signMeeting',
+        {
+          course: meeting.course,
+          date: meeting.date,
+          token: meeting.token,
+          v: Date.now()
+        }
+      );
+    }
 
     return (
       getAppEntryUrl() +

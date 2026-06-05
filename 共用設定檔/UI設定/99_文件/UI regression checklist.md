@@ -68,6 +68,25 @@ Cursor
 [ ] 不能返回或沒有 onclick 的返回區塊 hover 不顯示 pointer
 [ ] 搜尋候選項 hover 顯示 pointer
 
+Frontend Route / Domain
+[ ] 正式 jonaminz 首頁每個入口都導向 jonaminz 網域
+[ ] 正式 jonaminz 返回首頁不跳回 github.io
+[ ] 正式 jonaminz QR code 產生頁不跳回 github.io
+[ ] 正式 jonaminz 產生的簽到 QR code URL 是 jonaminz 網域
+[ ] 正式 jonaminz 簽到頁仍留在 jonaminz 網域
+[ ] 正式 jonaminz 後台頁仍留在 jonaminz 網域
+[ ] 正式 jonaminz 敷料查詢 / 建檔頁仍留在 jonaminz 網域
+[ ] 正式 jonaminz 敷料領用頁仍留在 jonaminz 網域
+[ ] 正式 jonaminz 庫存 / 入庫 / 盤點頁仍留在 jonaminz 網域
+[ ] dev-skhps 測試版所有入口仍留在測試網域
+[ ] dev-skhps 產生的 QR code 不誤連正式版
+[ ] API endpoint 仍使用 Apps Script Web App，不被誤改成 frontend URL
+[ ] frontend page URL 不使用 Apps Script Web App endpoint
+[ ] 搜尋全專案不應殘留舊 github.io 前端跳轉硬編碼
+[ ] 搜尋全專案不應殘留舊 Apps Script 前端頁面跳轉硬編碼
+[ ] QR token、簽到送出、敷料掃描、敷料查詢、領用送出、入庫 / 盤點流程不受 route 修改影響
+[ ] QR code cursor pointer 修正仍存在，可點擊 QR code hover 顯示 pointer
+
 Loading / Toast
 [ ] Spinner 旋轉正常
 [ ] Toast 顯示位置正常
