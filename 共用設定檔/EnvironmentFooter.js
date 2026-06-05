@@ -1,8 +1,7 @@
 ﻿/*
-========================================
-EnvironmentFooter.js
-全站三段式環境頁尾
-========================================
+檔案位置：共用設定檔/EnvironmentFooter.js
+時間戳記：2026-06-05 15:39 UTC+8
+用途：全站三段式環境頁尾；修正 Apps Script 測試版切換到 dev-skhps 測試版時，路徑組合與 _top 導頁失敗問題。
 */
 
 (function(global){
@@ -12,38 +11,32 @@ EnvironmentFooter.js
     return;
   }
 
-  var document =
-    global.document;
+  var document = global.document;
+  var runtime = global.SKH_RUNTIME || {};
 
-  var runtime =
-    global.SKH_RUNTIME ||
-    {};
-
-  var environments =
-    global.SKH_ENVIRONMENTS ||
-    {
-      gasDev:{
-        key:'gasDev',
-        label:'app script測試版',
-        url:'https://script.google.com/macros/s/AKfycbwySlDY2aAbYpy5OSi85vHz1pk5g1FQfopcaCfVneE/dev',
-        version:'v2.37.0-202606051533',
-        type:'gas'
-      },
-      webDev:{
-        key:'webDev',
-        label:'測試版',
-        url:'https://dev-skhps.jonaminz.com',
-        version:'v2.37.0-202606051533',
-        type:'web'
-      },
-      webProd:{
-        key:'webProd',
-        label:'正式版',
-        url:'https://skhps.jonaminz.com',
-        version:'v2.37.0-202606051528',
-        type:'web'
-      }
-    };
+  var environments = global.SKH_ENVIRONMENTS || {
+    gasDev:{
+      key:'gasDev',
+      label:'app script測試版',
+      url:'https://script.google.com/macros/s/AKfycbwySlDY2aAbYpy5OSi85vHz1pk5g1FQfopcaCfVneE/dev',
+      version:'v2.37.0-202606051546',
+      type:'gas'
+    },
+    webDev:{
+      key:'webDev',
+      label:'測試版',
+      url:'https://dev-skhps.jonaminz.com',
+      version:'v2.37.0-202606051546',
+      type:'web'
+    },
+    webProd:{
+      key:'webProd',
+      label:'正式版',
+      url:'https://skhps.jonaminz.com',
+      version:'v2.37.0-202606051528',
+      type:'web'
+    }
+  };
 
   var order = ['gasDev', 'webDev', 'webProd'];
 
@@ -76,26 +69,28 @@ EnvironmentFooter.js
   }
 
   function detectCurrentEnv(){
-    if(runtime.currentEnv && environments[runtime.currentEnv]){
-      return runtime.currentEnv;
-    }
-
     var hostname = String(location.hostname || '').toLowerCase();
+    var href = String(location.href || '').toLowerCase();
 
-    if(hostname.indexOf('script.google.com') >= 0){
+    // 先看實際網址，不先相信 runtime.currentEnv，避免 Config 被部署時寫死造成環境誤判。
+    if(hostname.indexOf('script.google.com') >= 0 || href.indexOf('/macros/s/') >= 0){
       return 'gasDev';
     }
 
-    if(hostname.indexOf('dev-skhps.jonaminz.com') >= 0){
+    if(hostname === 'dev-skhps.jonaminz.com' || hostname.indexOf('dev-skhps.jonaminz.com') >= 0){
       return 'webDev';
     }
 
-    if(hostname.indexOf('skhps.jonaminz.com') >= 0){
+    if(hostname === 'skhps.jonaminz.com' || hostname.indexOf('skhps.jonaminz.com') >= 0){
       return 'webProd';
     }
 
     if(/[?&]appEnv=dev(?:&|#|$)/.test(location.search || '')){
       return 'gasDev';
+    }
+
+    if(runtime.currentEnv && environments[runtime.currentEnv]){
+      return runtime.currentEnv;
     }
 
     return runtime.defaultEnv || 'webDev';
@@ -109,22 +104,26 @@ EnvironmentFooter.js
     }
 
     if(env.key === 'gasDev'){
-      var gasUrl = appendParam(url, 'appEnv', 'dev');
-      var page = getGasPageParam();
-
-      if(page){
-        gasUrl = appendParam(gasUrl, 'page', page);
-      }
-
-      gasUrl = appendCurrentSearchParams(gasUrl, {
-        appEnv:true,
-        page:true
-      });
-
-      return gasUrl + (location.hash || '');
+      return buildGasTargetUrl(url);
     }
 
     return buildWebTargetUrl(url);
+  }
+
+  function buildGasTargetUrl(url){
+    var gasUrl = appendParam(url, 'appEnv', 'dev');
+    var page = getGasPageParam();
+
+    if(page){
+      gasUrl = appendParam(gasUrl, 'page', page);
+    }
+
+    gasUrl = appendCurrentSearchParams(gasUrl, {
+      appEnv:true,
+      page:true
+    });
+
+    return gasUrl + (location.hash || '');
   }
 
   function appendParam(url, key, value){
@@ -148,6 +147,7 @@ EnvironmentFooter.js
       path = path.slice(repoPrefix.length);
     }
 
+    // Apps Script Web App 的 pathname 是 /macros/s/.../dev；不能直接拿來組 GitHub Pages 路徑。
     if(path === '/' || path.indexOf('/macros/') >= 0){
       path = getWebPathForGasPage(getGasPageParam()) || '/';
     }
@@ -169,6 +169,14 @@ EnvironmentFooter.js
     if(hashIndex >= 0){
       routeHash = path.slice(hashIndex);
       path = path.slice(0, hashIndex);
+    }
+
+    if(!path){
+      path = '/';
+    }
+
+    if(path.charAt(0) !== '/'){
+      path = '/' + path;
     }
 
     return origin.replace(/\/+$/, '') +
@@ -223,13 +231,13 @@ EnvironmentFooter.js
   function getWebPathForGasPage(page){
     var key = String(page || '').toLowerCase();
     var routes = {
-      signmeeting:'科室系統用戶端/SignMeeting.html',
-      signqr:'科室系統用戶端/SignQRGenerator.html',
-      hospitalsignin:'科室系統用戶端/HospitalSignIn.html',
-      dressingfront:'敷料領用登錄系統/DressingFront.html',
-      dressinguse:'敷料領用登錄系統/DressingUse.html',
-      dressingdict:'敷料領用登錄系統/DressingFront.html#dressingDict',
-      uitest:'共用設定檔/UI設定/99_文件/skh-ui-test-page.html'
+      signmeeting:'/科室系統用戶端/SignMeeting.html',
+      signqr:'/科室系統用戶端/SignQRGenerator.html',
+      hospitalsignin:'/科室系統用戶端/HospitalSignIn.html',
+      dressingfront:'/敷料領用登錄系統/DressingFront.html',
+      dressinguse:'/敷料領用登錄系統/DressingUse.html',
+      dressingdict:'/敷料領用登錄系統/DressingFront.html#dressingDict',
+      uitest:'/共用設定檔/UI設定/99_文件/skh-ui-test-page.html'
     };
 
     return routes[key] || '';
@@ -242,15 +250,13 @@ EnvironmentFooter.js
       return pageParam;
     }
 
-    var hash =
-      String(location.hash || '').toLowerCase();
+    var hash = String(location.hash || '').toLowerCase();
 
     if(hash.indexOf('dressingdict') >= 0){
       return 'dressingdict';
     }
 
-    var path =
-      String(location.pathname || '').toLowerCase();
+    var path = String(location.pathname || '').toLowerCase();
 
     if(path.indexOf('dressingfront') >= 0){
       return 'dressingfront';
@@ -261,7 +267,7 @@ EnvironmentFooter.js
     }
 
     if(path.indexOf('dressingdict') >= 0){
-      return 'dressingDict';
+      return 'dressingdict';
     }
 
     if(path.indexOf('signqrgenerator') >= 0){
@@ -281,6 +287,29 @@ EnvironmentFooter.js
     }
 
     return '';
+  }
+
+  function navigateTop(url){
+    if(!url || url === '#'){
+      return;
+    }
+
+    try {
+      if(global.top && global.top !== global.self){
+        global.top.location.href = url;
+        return;
+      }
+    }
+    catch(error){
+      // Apps Script iframe 有時禁止直接碰 top；下面退回 location.assign。
+    }
+
+    try {
+      global.location.assign(url);
+    }
+    catch(error2){
+      global.location.href = url;
+    }
   }
 
   function renderEnvironmentFooter(options){
@@ -305,14 +334,21 @@ EnvironmentFooter.js
       var env = environments[key];
       var isActive = key === currentEnv;
       var item = document.createElement(isActive ? 'span' : 'a');
+      var targetUrl = isActive ? '' : buildTargetUrl(env);
 
       item.className = 'appVersionBadge' + (isActive ? ' is-active' : '');
       item.setAttribute('role', 'listitem');
       item.setAttribute('aria-label', env.label + ' ' + normalizeVersion(env.version));
 
       if(!isActive){
-        item.href = buildTargetUrl(env);
+        item.href = targetUrl;
+        item.dataset.targetUrl = targetUrl;
         item.target = '_top';
+        item.rel = 'noopener';
+        item.addEventListener('click', function(event){
+          event.preventDefault();
+          navigateTop(targetUrl);
+        });
       }
 
       item.innerHTML =
@@ -345,39 +381,4 @@ EnvironmentFooter.js
     renderEnvironmentFooter();
   }
 })(typeof window !== 'undefined' ? window : this);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
