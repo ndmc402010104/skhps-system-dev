@@ -561,17 +561,7 @@ function installGithubAppShellFallback(){
       '.appWaitSpinner{width:15px;height:15px;flex:0 0 auto;border:2px solid #bfdbfe;border-top-color:#2563eb;border-radius:50%;animation:appWaitSpin .72s linear infinite;}' +
       '.appWaitText{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}' +
       '@keyframes appWaitSpin{to{transform:rotate(360deg);}}' +
-      '@keyframes appWaitSweep{from{transform:translateX(-100%);}to{transform:translateX(100%);}}' +
-      '.appVersionFooter{position:fixed;left:0;right:0;bottom:0;z-index:10000;height:46px;display:flex;align-items:center;justify-content:center;padding:0 16px;box-sizing:border-box;background:rgba(248,251,255,.94);border-top:1px solid rgba(148,163,184,.38);box-shadow:0 -8px 24px rgba(15,23,42,.08);backdrop-filter:blur(10px);}' +
-      '' +
-      '.appVersionBadge{display:inline-flex;align-items:center;gap:5px;min-height:28px;padding:6px 10px;border:1px solid transparent;border-radius:999px;background:transparent;color:#64748b;font-size:11px;font-weight:800;line-height:1.1;text-decoration:none;white-space:nowrap;cursor:default;}' +
-      '' +
-      '.appVersionBadge.is-active{color:#ffffff;background:linear-gradient(135deg,#2563eb,#0f766e);border-color:transparent;box-shadow:0 8px 18px rgba(37,99,235,.20);}' +
-      '.appVersionBadgeMode{font-weight:900;}' +
-      '.appVersionText{font-weight:800;opacity:.9;}' +
-      '' +
-      '@media(max-width:600px){.appVersionFooter{height:42px;padding:0 8px}.appVersionBadge{font-size:10px;padding:5px 8px}}' +
-      '@media(min-width:1200px){.shell,.wrap,.container,.testPage{width:var(--app-shell-wide-width)!important;max-width:none!important;margin-left:auto!important;margin-right:auto!important;padding-left:0!important;padding-right:0!important;}.appHeader{padding:0 var(--app-shell-wide-inset)!important;}}' +
+      '@keyframes appWaitSweep{from{transform:translateX(-100%);}to{transform:translateX(100%);}}' +      '@media(min-width:1200px){.shell,.wrap,.container,.testPage{width:var(--app-shell-wide-width)!important;max-width:none!important;margin-left:auto!important;margin-right:auto!important;padding-left:0!important;padding-right:0!important;}.appHeader{padding:0 var(--app-shell-wide-inset)!important;}}' +
       '@media(max-width:820px){.appHeader{padding:0 16px!important;}}';
     document.head.appendChild(shellStyle);
   }
