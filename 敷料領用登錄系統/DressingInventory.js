@@ -9,7 +9,7 @@
  * 欄位：院內碼｜扣庫單位｜批號｜效期｜庫存數量
  */
 
-const DRESSING_INVENTORY_SPREADSHEET_ID = '1SJIQGgViQo6AhSDvJTNcNDx_KNXEjgTMfJh4R9SIMvk';
+const DRESSING_INVENTORY_SPREADSHEET_ID = DRESSING_SHEET_ID;
 const DRESSING_INVENTORY_SHEET_ID = 1869036956;
 const DRESSING_INVENTORY_SHEET_NAME = '批號庫存';
 const DRESSING_INVENTORY_HEADERS = ['院內碼', '扣庫單位', '批號', '效期', '庫存數量'];
@@ -51,7 +51,9 @@ const DRESSING_INVENTORY_TRANSACTION_HEADERS = [
 function listDressingInventory() {
   try {
     const sheet = getDressingInventorySheet_();
-    ensureDressingInventoryHeader_(sheet);
+    if (getSkhRuntimeEnv_() !== 'dev') {
+      ensureDressingInventoryHeader_(sheet);
+    }
 
     const lastRow = sheet.getLastRow();
     if (lastRow < 2) {
@@ -78,7 +80,7 @@ function listDressingInventory() {
 
     return { ok: true, data: data };
   } catch (error) {
-    return { ok: false, message: error && error.message ? error.message : String(error) };
+    return errorDressingInventory_(error);
   }
 }
 
@@ -89,6 +91,7 @@ function listDressingInventory() {
  */
 function addDressingInventoryStock(payload) {
   try {
+    assertSkhSheetWriteAllowed_('dressing');
     payload = payload || {};
 
     const hospitalCode = String(payload.hospitalCode || '').trim();
@@ -249,7 +252,7 @@ function addDressingInventoryStock(payload) {
       lock.releaseLock();
     }
   } catch (error) {
-    return { ok: false, message: error && error.message ? error.message : String(error) };
+    return errorDressingInventory_(error);
   }
 }
 
@@ -258,6 +261,7 @@ function addDressingInventoryStock(payload) {
  */
 function updateDressingInventoryLotMetadata(payload) {
   try {
+    assertSkhSheetWriteAllowed_('dressing');
     payload = payload || {};
 
     const hospitalCode = String(payload.hospitalCode || '').trim();
@@ -363,7 +367,7 @@ function updateDressingInventoryLotMetadata(payload) {
       lock.releaseLock();
     }
   } catch (error) {
-    return { ok: false, message: error && error.message ? error.message : String(error) };
+    return errorDressingInventory_(error);
   }
 }
 
@@ -375,6 +379,7 @@ function submitDressingUse(payload) {
   const lock = LockService.getScriptLock();
 
   try {
+    assertSkhSheetWriteAllowed_('dressing');
     const normalized = normalizeDressingUsePayload_(payload);
     lock.waitLock(10000);
 
@@ -496,10 +501,7 @@ function submitDressingUse(payload) {
       transactionIds: transactionIds
     };
   } catch (error) {
-    return {
-      ok: false,
-      message: error && error.message ? error.message : String(error)
-    };
+    return errorDressingInventory_(error);
   } finally {
     try {
       lock.releaseLock();
@@ -1023,7 +1025,7 @@ function appendDressingInventoryTransaction_(payload) {
 }
 
 function getDressingInventorySheet_() {
-  const ss = SpreadsheetApp.openById(DRESSING_INVENTORY_SPREADSHEET_ID);
+  const ss = SpreadsheetApp.openById(getSkhSheetId_('dressing', 'read'));
   const sheets = ss.getSheets();
 
   for (let i = 0; i < sheets.length; i++) {
@@ -1039,7 +1041,7 @@ function getDressingInventorySheet_() {
 }
 
 function getDressingInventoryTransactionSheet_() {
-  const ss = SpreadsheetApp.openById(DRESSING_INVENTORY_SPREADSHEET_ID);
+  const ss = SpreadsheetApp.openById(getSkhSheetId_('dressing', 'read'));
   const sheets = ss.getSheets();
 
   for (let i = 0; i < sheets.length; i++) {
@@ -1060,7 +1062,7 @@ function getDressingInventoryTransactionSheet_() {
 }
 
 function getDressingUseRecordSheet_() {
-  const ss = SpreadsheetApp.openById(DRESSING_INVENTORY_SPREADSHEET_ID);
+  const ss = SpreadsheetApp.openById(getSkhSheetId_('dressing', 'read'));
   const sheets = ss.getSheets();
 
   for (let i = 0; i < sheets.length; i++) {
@@ -1117,6 +1119,24 @@ function ensureDressingInventoryTransactionHeader_(sheet) {
     range.setValues([DRESSING_INVENTORY_TRANSACTION_HEADERS]);
     sheet.setFrozenRows(1);
   }
+}
+
+function errorDressingInventory_(error) {
+  const code =
+    error && error.code
+    ? String(error.code)
+    : '';
+
+  const message =
+    error && error.message
+    ? error.message
+    : String(error);
+
+  return {
+    ok: false,
+    code: code,
+    message: message
+  };
 }
 
 function readInventoryExpText_(value) {

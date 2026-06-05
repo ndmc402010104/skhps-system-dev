@@ -1,5 +1,5 @@
 const DRESSING_BARCODE_SHEET_ID =
-'1SJIQGgViQo6AhSDvJTNcNDx_KNXEjgTMfJh4R9SIMvk';
+DRESSING_SHEET_ID;
 
 const DRESSING_MASTER_SHEET_GID =
 1319808727;
@@ -195,12 +195,14 @@ function addDressingAliases_(obj){
 }
 
 function getDressingBarcodeSheet_(){
-  const ss = SpreadsheetApp.openById(DRESSING_BARCODE_SHEET_ID);
+  const ss = SpreadsheetApp.openById(getSkhSheetId_('dressing', 'read'));
   const sheets = ss.getSheets();
 
   for(let i = 0; i < sheets.length; i++){
     if(sheets[i].getSheetId() === DRESSING_MASTER_SHEET_GID){
-      setupDressingBarcodeHeader_(sheets[i]);
+      if(getSkhRuntimeEnv_() !== 'dev'){
+        setupDressingBarcodeHeader_(sheets[i]);
+      }
       return sheets[i];
     }
   }
@@ -451,6 +453,8 @@ function sortDressingMasterSheet_(){
 }
 
 function saveDressingBarcode_(data){
+  assertSkhSheetWriteAllowed_('dressing');
+
   const table = getDressingTable_();
 
   const originalGtin = normalizeDressingCode_(data.originalGtin);
@@ -714,6 +718,8 @@ function listDressingBarcode_(){
 }
 
 function deleteDressingBarcode_(data){
+  assertSkhSheetWriteAllowed_('dressing');
+
   const code =
     normalizeDressingCode_(
       data.gtin ||
@@ -783,6 +789,8 @@ function deleteDressingBarcode_(data){
 }
 
 function reorderDressingBarcode_(data){
+  assertSkhSheetWriteAllowed_('dressing');
+
   const order =
     String(data.barcodes || '')
       .split(',')
@@ -978,6 +986,9 @@ function errorDressingBarcode_(error, action){
   return {
     ok:false,
     action:action || '',
+    code:error && error.code
+      ? String(error.code)
+      : '',
     message:error && error.message
       ? error.message
       : String(error),

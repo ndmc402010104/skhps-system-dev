@@ -22,7 +22,7 @@ function showSignQRGeneratorPage() {
    * 不在 render 前同步讀 Calendar。
    * 頁面先開，會議清單交給 SignQRGenerator.html：
    * - Apps Script 版用 google.script.run 讀 getSignQRMeetingOptions()
-   * - GitHub 版用 JSONP API 讀 action=getSignQRMeetingOptions
+   * - 測試版用 JSONP API 讀 action=getSignQRMeetingOptions
    */
   template.options = '<option value="">會議清單載入中...</option>';
   template.appEntryUrl = getAppEntryUrlSafeForQR_();
@@ -195,3 +195,4 @@ function escapeHtmlForQROption_(value) {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 }
+

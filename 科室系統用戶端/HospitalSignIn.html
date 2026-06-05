@@ -215,7 +215,7 @@ const GITHUB_PAGE_MAP = {
 };
 
 function isGithubPage(){
-  return window.location.hostname.includes('github.io');
+  return (window.location.hostname.includes('github.io') || window.location.hostname === 'dev-skhps.jonaminz.com' || window.location.hostname === 'skhps.jonaminz.com');
 }
 
 function isAppsScriptPage(){
@@ -653,8 +653,8 @@ function installGithubAppShellFallback(){
     ghFooter.className = 'appVersionFooter';
     ghFooter.dataset.appFooter = '1';
     ghFooter.innerHTML = `
-    <div class="appVersionBadge is-active" aria-label="GitHub 版本資訊">
-      <span class="appVersionBadgeMode">GitHub 版</span>
+    <div class="appVersionBadge is-active" aria-label="環境版本資訊">
+      <span class="appVersionBadgeMode">測試版</span>
       <span class="appVersionText">v2.27.20-202606042358</span>
     </div>
   `;
@@ -783,3 +783,5 @@ window.addEventListener(
 
 </body>
 </html>
+
+

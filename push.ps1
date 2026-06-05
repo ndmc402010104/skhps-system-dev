@@ -1,9 +1,9 @@
 ﻿# 檔案位置：專案根目錄/push.ps1
-# 時間戳記：2026-06-05 08:25 UTC+8
-# 用途：三段式部署腳本；支援 dev-app script、dev-skhps、skhps 分流，避免測試版誤推正式站。
+# 時間戳記：2026-06-05 09:12 UTC+8
+# 用途：三段式部署腳本；選單 1→8 依風險由低到高排序，支援工作進度備份、dev-app script、dev-skhps、skhps 分流。
 
 param(
-  [ValidateSet('ask','dev-app','dev-skhps','skhps','dev-all','release','commit-only','push','push-github','deploy')]
+  [ValidateSet('ask','commit-only','backup-wip','dev-app','dev-skhps','dev-app-backup','dev-all','release','skhps','all','push','push-github','deploy')]
   [string]$Action = 'ask',
 
   [ValidateSet('ask','major','minor','patch','none')]
@@ -215,11 +215,11 @@ function Update-ReadmeCurrentVersions {
     [Parameter(Mandatory = $true)]
     [string]$ReadmePath,
 
-    [string]$ProdVersion,
+    [string]$GasDevVersion,
 
-    [string]$TestVersion,
+    [string]$WebDevVersion,
 
-    [string]$GitHubVersion
+    [string]$WebProdVersion
   )
 
   if (-not (Test-Path -LiteralPath $ReadmePath)) {
@@ -230,30 +230,30 @@ function Update-ReadmeCurrentVersions {
   $content = Get-Content -Path $ReadmePath -Raw -Encoding UTF8
   $updated = $content
 
-  if (-not [string]::IsNullOrWhiteSpace($ProdVersion)) {
-    $prodText = Format-ReadmeVersionText -Version $ProdVersion
+  if (-not [string]::IsNullOrWhiteSpace($GasDevVersion)) {
+    $gasDevText = Format-ReadmeVersionText -Version $GasDevVersion
     $updated = [regex]::Replace(
       $updated,
-      '(?m)^正式版\s*[:：]\s*.*$',
-      "正式版: $prodText"
+      '(?m)^app script測試版\s*[:：]\s*.*$',
+      "app script測試版: $gasDevText"
     )
   }
 
-  if (-not [string]::IsNullOrWhiteSpace($TestVersion)) {
-    $testText = Format-ReadmeVersionText -Version $TestVersion
+  if (-not [string]::IsNullOrWhiteSpace($WebDevVersion)) {
+    $webDevText = Format-ReadmeVersionText -Version $WebDevVersion
     $updated = [regex]::Replace(
       $updated,
       '(?m)^測試版\s*[:：]\s*.*$',
-      "測試版: $testText"
+      "測試版: $webDevText"
     )
   }
 
-  if (-not [string]::IsNullOrWhiteSpace($GitHubVersion)) {
-    $githubText = Format-ReadmeVersionText -Version $GitHubVersion
+  if (-not [string]::IsNullOrWhiteSpace($WebProdVersion)) {
+    $webProdText = Format-ReadmeVersionText -Version $WebProdVersion
     $updated = [regex]::Replace(
       $updated,
-      '(?m)^Github\s*[:：]\s*.*$',
-      "Github: $githubText"
+      '(?m)^正式版\s*[:：]\s*.*$',
+      "正式版: $webProdText"
     )
   }
 
@@ -419,7 +419,9 @@ function Invoke-GitPush {
     [string]$SiteName,
 
     [Parameter(Mandatory = $true)]
-    [string]$SiteUrl
+    [string]$SiteUrl,
+
+    [switch]$ForceWithLease
   )
 
   if ($NoGitHubPrompt) {
@@ -447,8 +449,14 @@ function Invoke-GitPush {
 
   try {
     Write-Host ""
-    Write-Host "推送 $SiteName：git push $RemoteName $RefSpec" -ForegroundColor Cyan
-    git push $RemoteName $RefSpec
+    if ($ForceWithLease) {
+      Write-Host "推送 $SiteName：git push --force-with-lease $RemoteName $RefSpec" -ForegroundColor Cyan
+      git push --force-with-lease $RemoteName $RefSpec
+    }
+    else {
+      Write-Host "推送 $SiteName：git push $RemoteName $RefSpec" -ForegroundColor Cyan
+      git push $RemoteName $RefSpec
+    }
 
     if ($LASTEXITCODE -ne 0) {
       throw "$SiteName 推送失敗。"
@@ -461,15 +469,36 @@ function Invoke-GitPush {
   }
 }
 
+
+function Invoke-BackupWipToOrigin {
+  Write-Host ""
+  Write-Host "==========================" -ForegroundColor Cyan
+  Write-Host "[2] 備份目前工作進度（換電腦用）" -ForegroundColor Cyan
+  Write-Host "=========================="
+  Write-Host "備份目前 HEAD 到 origin/wip-current；不更新任何網站。" -ForegroundColor Yellow
+
+  Invoke-GitPush `
+    -RemoteName 'origin' `
+    -RefSpec 'HEAD:wip-current' `
+    -SiteName 'origin/wip-current 工作進度備份' `
+    -SiteUrl 'GitHub origin/wip-current' `
+    -ForceWithLease
+
+  Write-Host ""
+  Write-Host "換電腦時可執行：" -ForegroundColor Green
+  Write-Host "git fetch origin" -ForegroundColor Cyan
+  Write-Host "git checkout -B wip-current origin/wip-current" -ForegroundColor Cyan
+}
+
 function Confirm-ProdPushOrExit {
   Write-Host ""
   Write-Host "你即將推送正式版 skhps.jonaminz.com。" -ForegroundColor Red
-  Write-Host "正式版只能從 main 分支推送。" -ForegroundColor Yellow
+  Write-Host "正式版只能從 master 分支推送。" -ForegroundColor Yellow
 
   $branch = Get-GitCurrentBranch
 
-  if ($branch -ne 'main') {
-    throw "目前分支是 '$branch'，正式版只能從 main 分支推送。請先 merge 回 main。"
+  if ($branch -ne 'master') {
+    throw "目前分支是 '$branch'，正式版只能從 master 分支推送。請先 merge 回 master。"
   }
 
   $confirm = Read-Host "請輸入 PROD 才繼續"
@@ -488,16 +517,12 @@ function Invoke-UpdateDressingFrontForConfig {
   $dressingFrontPath = Join-Path $rootPath '敷料領用登錄系統\DressingFront.html'
 
   if (-not (Test-Path -LiteralPath $dressingFrontPath)) {
-    Write-Host "找不到 DressingFront.html，略過 GitHub 版號與 API URL 自動更新。" -ForegroundColor Yellow
+    Write-Host "找不到 DressingFront.html，略過 API URL 自動更新。" -ForegroundColor Yellow
     return
   }
 
   $dfContent = Get-Content -Path $dressingFrontPath -Raw -Encoding UTF8
-  $dfNewContent = [regex]::Replace(
-    $dfContent,
-    '(<span[^>]*>GitHub 版</span>\s*<span>v\.)[^<]+(</span>)',
-    "`${1}$($Config.Version)`$2"
-  )
+  $dfNewContent = $dfContent
 
   # 自動寫入真實的 Apps Script API 部署網址。
   # dev-skhps 使用 dev DeploymentId；skhps 使用 EntryUrl / prod config。
@@ -517,7 +542,62 @@ function Invoke-UpdateDressingFrontForConfig {
 
   if ($dfContent -cne $dfNewContent) {
     Set-Content -Path $dressingFrontPath -Value $dfNewContent -Encoding UTF8
-    Write-Host "Updated GitHub version & API URL in DressingFront.html to v.$($Config.Version)" -ForegroundColor Green
+    Write-Host "Updated API URL in DressingFront.html." -ForegroundColor Green
+  }
+}
+
+function Update-EnvironmentVersionConstants {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$Version,
+
+    [bool]$UpdateGasDevVersion = $false,
+
+    [bool]$UpdateWebDevVersion = $false,
+
+    [bool]$UpdateWebProdVersion = $false
+  )
+
+  $configPath = Join-Path $rootPath '共用設定檔\Config.js'
+  $footerPath = Join-Path $rootPath '共用設定檔\EnvironmentFooter.js'
+
+  if (Test-Path -LiteralPath $configPath) {
+    $configLines = Get-Content -Path $configPath -Encoding UTF8
+
+    if ($UpdateGasDevVersion) {
+      $configLines = Set-ConfigConstValue -Lines $configLines -Name 'SKH_GAS_DEV_VERSION' -Value $Version
+    }
+
+    if ($UpdateWebDevVersion) {
+      $configLines = Set-ConfigConstValue -Lines $configLines -Name 'SKH_WEB_DEV_VERSION' -Value $Version
+    }
+
+    if ($UpdateWebProdVersion) {
+      $configLines = Set-ConfigConstValue -Lines $configLines -Name 'SKH_WEB_PROD_VERSION' -Value $Version
+    }
+
+    [System.IO.File]::WriteAllLines($configPath, $configLines, [System.Text.UTF8Encoding]::new($false))
+  }
+
+  if (Test-Path -LiteralPath $footerPath) {
+    $content = Get-Content -Path $footerPath -Raw -Encoding UTF8
+    $updated = $content
+
+    if ($UpdateGasDevVersion) {
+      $updated = [regex]::Replace($updated, "(gasDev:[\s\S]*?version:')v?[^']+(')", "`${1}v$Version`$2")
+    }
+
+    if ($UpdateWebDevVersion) {
+      $updated = [regex]::Replace($updated, "(webDev:[\s\S]*?version:')v?[^']+(')", "`${1}v$Version`$2")
+    }
+
+    if ($UpdateWebProdVersion) {
+      $updated = [regex]::Replace($updated, "(webProd:[\s\S]*?version:')v?[^']+(')", "`${1}v$Version`$2")
+    }
+
+    if ($updated -cne $content) {
+      Set-Content -Path $footerPath -Value $updated -Encoding UTF8
+    }
   }
 }
 
@@ -532,11 +612,11 @@ function Invoke-SyncVersionForEnv {
     [Parameter(Mandatory = $true)]
     [string]$ReadmePath,
 
-    [bool]$UpdateProdVersion = $false,
+    [bool]$UpdateGasDevVersion = $false,
 
-    [bool]$UpdateTestVersion = $false,
+    [bool]$UpdateWebDevVersion = $false,
 
-    [bool]$UpdateGitHubVersion = $false
+    [bool]$UpdateWebProdVersion = $false
   )
 
   $appConfig = Sync-AppVersion `
@@ -544,15 +624,21 @@ function Invoke-SyncVersionForEnv {
     -Version $Version `
     -DefaultEnv $DefaultEnv
 
-  $prodVersionForReadme = if ($UpdateProdVersion) { $appConfig.Version } else { $null }
-  $testVersionForReadme = if ($UpdateTestVersion) { $appConfig.Version } else { $null }
-  $githubVersionForReadme = if ($UpdateGitHubVersion) { $appConfig.Version } else { $null }
+  Update-EnvironmentVersionConstants `
+    -Version $appConfig.Version `
+    -UpdateGasDevVersion $UpdateGasDevVersion `
+    -UpdateWebDevVersion $UpdateWebDevVersion `
+    -UpdateWebProdVersion $UpdateWebProdVersion
+
+  $gasDevVersionForReadme = if ($UpdateGasDevVersion) { $appConfig.Version } else { $null }
+  $webDevVersionForReadme = if ($UpdateWebDevVersion) { $appConfig.Version } else { $null }
+  $webProdVersionForReadme = if ($UpdateWebProdVersion) { $appConfig.Version } else { $null }
 
   Update-ReadmeCurrentVersions `
     -ReadmePath $ReadmePath `
-    -ProdVersion $prodVersionForReadme `
-    -TestVersion $testVersionForReadme `
-    -GitHubVersion $githubVersionForReadme | Out-Null
+    -GasDevVersion $gasDevVersionForReadme `
+    -WebDevVersion $webDevVersionForReadme `
+    -WebProdVersion $webProdVersionForReadme | Out-Null
 
   Invoke-UpdateDressingFrontForConfig -Config $appConfig
 
@@ -644,27 +730,27 @@ try {
   if (Test-Path -LiteralPath $previewReadmePath) {
     $previewReadme = Get-Content -Path $previewReadmePath -Raw -Encoding UTF8
 
-    $previewProdVersion = ([regex]::Match($previewReadme, '(?m)^正式版\s*[:：]\s*(.+)$')).Groups[1].Value.Trim()
-    $previewTestVersion = ([regex]::Match($previewReadme, '(?m)^測試版\s*[:：]\s*(.+)$')).Groups[1].Value.Trim()
-    $previewGitHubVersion = ([regex]::Match($previewReadme, '(?m)^Github\s*[:：]\s*(.+)$')).Groups[1].Value.Trim()
+    $previewGasDevVersion = ([regex]::Match($previewReadme, '(?m)^app script測試版\s*[:：]\s*(.+)$')).Groups[1].Value.Trim()
+    $previewWebDevVersion = ([regex]::Match($previewReadme, '(?m)^測試版\s*[:：]\s*(.+)$')).Groups[1].Value.Trim()
+    $previewWebProdVersion = ([regex]::Match($previewReadme, '(?m)^正式版\s*[:：]\s*(.+)$')).Groups[1].Value.Trim()
 
-    if ([string]::IsNullOrWhiteSpace($previewProdVersion)) {
-      $previewProdVersion = 'README 未填'
+    if ([string]::IsNullOrWhiteSpace($previewGasDevVersion)) {
+      $previewGasDevVersion = 'README 未填'
     }
 
-    if ([string]::IsNullOrWhiteSpace($previewTestVersion)) {
-      $previewTestVersion = 'README 未填'
+    if ([string]::IsNullOrWhiteSpace($previewWebDevVersion)) {
+      $previewWebDevVersion = 'README 未填'
     }
 
-    if ([string]::IsNullOrWhiteSpace($previewGitHubVersion)) {
-      $previewGitHubVersion = 'README 未填'
+    if ([string]::IsNullOrWhiteSpace($previewWebProdVersion)) {
+      $previewWebProdVersion = 'README 未填'
     }
 
     Write-Host ""
     Write-Host "README紀錄版本" -ForegroundColor Yellow
-    Write-Host "  正式版 : $previewProdVersion" -ForegroundColor Cyan
-    Write-Host "  測試版 : $previewTestVersion" -ForegroundColor Cyan
-    Write-Host "  GitHub : $previewGitHubVersion" -ForegroundColor Cyan
+    Write-Host "  app script測試版 : $previewGasDevVersion" -ForegroundColor Cyan
+    Write-Host "  測試版           : $previewWebDevVersion" -ForegroundColor Cyan
+    Write-Host "  正式版           : $previewWebProdVersion" -ForegroundColor Cyan
   }
   else {
     Write-Host ""
@@ -703,40 +789,57 @@ switch ($Action) {
 
 if ($Action -eq 'ask') {
   Write-Host ""
-  Write-Host "三段式部署目標：" -ForegroundColor Cyan
-  Write-Host "[1] dev-app script  = Apps Script 後端功能測試 / clasp push"
-  Write-Host "[2] dev-skhps       = 測試版前端 https://dev-skhps.jonaminz.com / git push dev HEAD:main"
-  Write-Host "[3] skhps           = 正式版前端 https://skhps.jonaminz.com / git push origin main，需要 PROD"
-  Write-Host "[4] 1 + 2           = 後端測試 + 前端測試"
-  Write-Host "[5] 2 + 3           = 先測試網站，再正式網站"
-  Write-Host "[6] 1 + 2 + 3       = 全部；正式仍需 PROD"
-  Write-Host "[7] 只 commit，不部署"
+  Write-Host "三段式部署目標（1→8 依影響範圍/風險由低到高）：" -ForegroundColor Cyan
+  Write-Host "[1] 只 commit，不部署"
+  Write-Host "[2] 備份目前工作進度（換電腦用）到 origin/wip-current，不更新任何網站"
+  Write-Host "[3] dev-app script  = Apps Script 後端功能測試 / clasp push"
+  Write-Host "[4] dev-skhps       = 測試版前端 https://dev-skhps.jonaminz.com / git push --force-with-lease dev HEAD:main"
+  Write-Host "[5] 3 + 2           = dev-app script + 備份目前工作進度（換電腦用）"
+  Write-Host "[6] 3 + 4 + 2       = dev-app script + dev-skhps + 備份目前工作進度（換電腦用，日常最常用）"
+  Write-Host "[7] 4 + 8           = 先 dev-skhps，再 skhps；正式仍需 master + PROD"
+  Write-Host "[8] skhps           = 正式版 https://skhps.jonaminz.com / git push origin master:master，需要 PROD"
   Write-Host "[0] 取消"
 
   $Action = Read-MenuChoice `
     -Message "請選擇 [1]" `
     -Choices @{
-      '1' = 'dev-app'
+      '1' = 'commit-only'
+      'commit-only' = 'commit-only'
+      'commit' = 'commit-only'
+
+      '2' = 'backup-wip'
+      'backup' = 'backup-wip'
+      'backup-wip' = 'backup-wip'
+      'wip' = 'backup-wip'
+
+      '3' = 'dev-app'
       'dev-app' = 'dev-app'
       'app' = 'dev-app'
-      '2' = 'dev-skhps'
+
+      '4' = 'dev-skhps'
       'dev-skhps' = 'dev-skhps'
       'dev' = 'dev-skhps'
-      '3' = 'skhps'
+
+      '5' = 'dev-app-backup'
+      'dev-app-backup' = 'dev-app-backup'
+      'app-backup' = 'dev-app-backup'
+
+      '6' = 'dev-all'
+      'dev-all' = 'dev-all'
+      'daily' = 'dev-all'
+
+      '7' = 'release'
+      'release' = 'release'
+      'candidate' = 'release'
+
+      '8' = 'skhps'
       'skhps' = 'skhps'
       'prod' = 'skhps'
-      '4' = 'dev-all'
-      'dev-all' = 'dev-all'
-      '5' = 'release'
-      'release' = 'release'
-      '6' = 'all'
-      'all' = 'all'
-      '7' = 'commit-only'
-      'commit-only' = 'commit-only'
+
       '0' = 'cancel'
       'cancel' = 'cancel'
     } `
-    -Default 'dev-app'
+    -Default 'commit-only'
 }
 
 if ($Action -eq 'cancel') {
@@ -782,10 +885,11 @@ $sourceVersion = Get-CurrentAppVersion -RootPath $rootPath
 $version = New-AppVersion -RootPath $rootPath -Bump $Bump
 $readmePath = Join-Path $rootPath 'README.md'
 
-$needsDevApp = $Action -in @('dev-app','dev-all','all')
-$needsDevSkhps = $Action -in @('dev-skhps','dev-all','release','all')
-$needsSkhps = $Action -in @('skhps','release','all')
-$needsAnyGit = $Action -in @('dev-skhps','dev-all','skhps','release','all','commit-only')
+$needsDevApp = $Action -in @('dev-app','dev-app-backup','dev-all')
+$needsDevSkhps = $Action -in @('dev-skhps','dev-all','release')
+$needsSkhps = $Action -in @('skhps','release')
+$needsBackupWip = $Action -in @('backup-wip','dev-app-backup','dev-all')
+$needsAnyGit = $Action -in @('commit-only','backup-wip','dev-app','dev-skhps','dev-app-backup','dev-all','release','skhps')
 
 # skhps 正式版若不是舊 deploy 參數，互動詢問是否一併部署正式 Apps Script API。
 if ($needsSkhps -and -not $legacyDeployRequested -and -not $DeployProdAppScript) {
@@ -801,8 +905,8 @@ if ($needsDevApp -or $needsDevSkhps) {
     -DefaultEnv 'dev' `
     -Version $version `
     -ReadmePath $readmePath `
-    -UpdateTestVersion $true `
-    -UpdateGitHubVersion $needsDevSkhps
+    -UpdateGasDevVersion $needsDevApp `
+    -UpdateWebDevVersion $needsDevSkhps
 }
 
 if ($writeReadme -and ($needsDevApp -or $needsDevSkhps)) {
@@ -827,10 +931,6 @@ else {
   Write-Host "README version log skipped."
 }
 
-if ($needsDevApp) {
-  Invoke-DevAppScript -Config $devConfig
-}
-
 if ($needsAnyGit) {
   $defaultMsg = if ($devConfig) {
     "Bump version to v$($devConfig.Version)"
@@ -840,6 +940,10 @@ if ($needsAnyGit) {
   }
 
   Invoke-GitCommitIfNeeded -DefaultMessage $defaultMsg | Out-Null
+}
+
+if ($needsDevApp) {
+  Invoke-DevAppScript -Config $devConfig
 }
 
 if ($needsDevSkhps) {
@@ -853,7 +957,12 @@ if ($needsDevSkhps) {
     -RemoteName 'dev' `
     -RefSpec 'HEAD:main' `
     -SiteName 'dev-skhps' `
-    -SiteUrl 'https://dev-skhps.jonaminz.com'
+    -SiteUrl 'https://dev-skhps.jonaminz.com' `
+    -ForceWithLease
+}
+
+if ($needsBackupWip) {
+  Invoke-BackupWipToOrigin
 }
 
 if ($needsSkhps) {
@@ -863,8 +972,7 @@ if ($needsSkhps) {
     -DefaultEnv 'prod' `
     -Version $version `
     -ReadmePath $readmePath `
-    -UpdateProdVersion $true `
-    -UpdateGitHubVersion $true
+    -UpdateWebProdVersion $true
 
   if ($writeReadme) {
     $readmeUpdated = Update-ReadmeVersionLog `
@@ -898,7 +1006,7 @@ if ($needsSkhps) {
 
   Invoke-GitPush `
     -RemoteName 'origin' `
-    -RefSpec 'main:main' `
+    -RefSpec 'master:master' `
     -SiteName 'skhps' `
     -SiteUrl 'https://skhps.jonaminz.com'
 }
@@ -912,6 +1020,7 @@ Write-Host ""
 Write-Host "==========================" -ForegroundColor Cyan
 Write-Host "完成" -ForegroundColor Green
 Write-Host "==========================" -ForegroundColor Cyan
-Write-Host "dev-app script : Apps Script 後端功能測試"
-Write-Host "dev-skhps      : https://dev-skhps.jonaminz.com"
-Write-Host "skhps          : https://skhps.jonaminz.com"
+Write-Host "origin/wip-current : 工作進度備份（換電腦用），不更新網站"
+Write-Host "dev-app script     : Apps Script 後端功能測試"
+Write-Host "dev-skhps          : https://dev-skhps.jonaminz.com"
+Write-Host "skhps              : https://skhps.jonaminz.com"

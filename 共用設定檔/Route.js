@@ -472,28 +472,8 @@ function getVersionBadgeHtml(options){
 
   const currentEnv =
     APP_REQUEST_ENV === 'dev'
-    ? 'dev'
-    : 'prod';
-
-  const targetEnv =
-    currentEnv === 'dev'
-    ? 'prod'
-    : 'dev';
-
-  const targetUrl =
-    targetEnv === 'dev'
-    ? APP_DEV_URL
-    : APP_ENTRY_URL;
-
-  const currentLabel =
-    currentEnv === 'dev'
-    ? '測試版'
-    : '正式版';
-
-  const targetTitle =
-    currentEnv === 'dev'
-    ? '切換到正式版'
-    : '切換到目前測試版';
+    ? 'gasDev'
+    : 'webProd';
 
   return [
     '<style>',
@@ -503,41 +483,68 @@ function getVersionBadgeHtml(options){
     'right:0;',
     'bottom:0;',
     'z-index:10000;',
-    'height:42px;',
+    'min-height:42px;',
     'display:flex;',
     'align-items:center;',
     'justify-content:center;',
-    'padding:0 16px;',
+    'padding:6px 12px;',
     'box-sizing:border-box;',
     'background:rgba(248,251,255,.94);',
     'border-top:1px solid rgba(148,163,184,.38);',
     'box-shadow:0 -8px 24px rgba(15,23,42,.08);',
     'backdrop-filter:blur(10px);',
     '}',
+    '.appVersionSegment{',
+    'display:grid;',
+    'grid-template-columns:repeat(3,minmax(0,1fr));',
+    'gap:4px;',
+    'width:min(760px,100%);',
+    'padding:3px;',
+    'border:1px solid rgba(148,163,184,.38);',
+    'border-radius:999px;',
+    'background:rgba(226,232,240,.65);',
+    '}',
     '.appVersionBadge{',
-    'display:inline-flex;',
+    'display:flex;',
     'align-items:center;',
+    'justify-content:center;',
     'gap:5px;',
+    'min-width:0;',
+    'min-height:28px;',
     'font-size:11px;',
     'line-height:1.1;',
     'text-decoration:none;',
     'color:#475569;',
-    'background:rgba(255,255,255,.72);',
-    'border:1px solid rgba(148,163,184,.45);',
-    'border-radius:8px;',
-    'padding:6px 8px;',
-    'max-width:100%;',
+    'background:transparent;',
+    'border:1px solid transparent;',
+    'border-radius:999px;',
+    'padding:5px 10px;',
     'cursor:pointer;',
     'user-select:none;',
     'transition:color .16s ease,border-color .16s ease,background-color .16s ease,box-shadow .16s ease;',
     '}',
     '.appVersionBadge:hover{',
     'color:#1d4ed8;',
-    'border-color:rgba(37,99,235,.45);',
-    'background:rgba(255,255,255,.94);',
+    'border-color:rgba(37,99,235,.25);',
+    'background:rgba(255,255,255,.78);',
+    '}',
+    '.appVersionBadge.is-active{',
+    'color:#ffffff;',
+    'background:linear-gradient(135deg,#2563eb,#0f766e);',
+    'border-color:transparent;',
+    'box-shadow:0 8px 18px rgba(37,99,235,.20);',
+    'cursor:default;',
     '}',
     '.appVersionBadgeMode{',
-    'font-weight:700;',
+    'font-weight:900;',
+    'overflow:hidden;',
+    'text-overflow:ellipsis;',
+    '}',
+    '.appVersionText{',
+    'font-weight:800;',
+    'opacity:.9;',
+    'overflow:hidden;',
+    'text-overflow:ellipsis;',
     '}',
     '.appVersionBadgeSource{',
     'font-weight:600;',
@@ -549,131 +556,88 @@ function getVersionBadgeHtml(options){
     '}',
     '@media(max-width:600px){',
     '.appVersionFooter{',
-    'height:38px;',
+    'min-height:38px;',
+    'padding:4px 6px;',
+    '}',
+    '.appVersionSegment{',
+    'gap:2px;',
+    'padding:2px;',
     '}',
     '.appVersionBadge{',
-    'font-size:10px;',
-    'padding:5px 7px;',
+    'font-size:9px;',
+    'padding:4px 5px;',
+    'gap:3px;',
     '}',
     '}',
     '</style>',
-    '<div class="appVersionFooter">',
-    '<a class="appVersionBadge" href="',
-    getAppEnvUrl(
-      targetUrl,
-      targetEnv
+    '<div class="appVersionFooter" data-app-footer="1">',
+    '<div class="appVersionSegment" role="list">',
+    getEnvironmentFooterItemHtml_(
+      'gasDev',
+      'app script測試版',
+      getAppEnvUrl(APP_DEV_URL, 'dev'),
+      SKH_GAS_DEV_VERSION,
+      currentEnv,
+      ''
     ),
-    '" target="_top" data-dev-url="',
-    APP_DEV_URL,
-    '" data-prod-url="',
-    APP_ENTRY_URL,
-    '" data-version="',
-    APP_VERSION,
-    '" data-default-env="',
-    APP_DEFAULT_ENV,
-    '" title="',
-    targetTitle,
-    '">',
-    '<span class="appVersionBadgeMode" data-version-mode>',
-    currentLabel,
-    '</span>',
-    '<span>v',
-    APP_VERSION,
-    '</span>',
-    calendarSourceHtml,
-    '</a>',
+    getEnvironmentFooterItemHtml_(
+      'webDev',
+      '測試版',
+      'https://dev-skhps.jonaminz.com',
+      SKH_WEB_DEV_VERSION,
+      currentEnv,
+      ''
+    ),
+    getEnvironmentFooterItemHtml_(
+      'webProd',
+      '正式版',
+      'https://skhps.jonaminz.com',
+      SKH_WEB_PROD_VERSION,
+      currentEnv,
+      'return confirm("即將前往正式版 skhps.jonaminz.com");'
+    ),
     '</div>',
-    '<script>',
-    '(function(){',
-    'var badge=document.querySelector(".appVersionBadge");',
-    'if(!badge){return;}',
-    'var mode=badge.querySelector("[data-version-mode]");',
-    'var devUrl=badge.getAttribute("data-dev-url");',
-    'var prodUrl=badge.getAttribute("data-prod-url");',
-    'var version=badge.getAttribute("data-version");',
-    'var defaultEnv=badge.getAttribute("data-default-env")||"prod";',
-    'var baseTitle=document.title.replace(/\\s*\\[(正式版|測試版) v\\.\\d{12}\\]\\s*$/,"");',
-    'var appLocation=null;',
-    'var sources=[window.location.href,document.referrer||""];',
-    'try{sources.push(window.top.location.href);}catch(error){}',
-    'function readEnvFromText(text){',
-    'if(/[?&]appEnv=dev(?:&|#|$)/.test(text)||/\\/dev(?:[?#]|$)/.test(text)){return "dev";}',
-    'if(/[?&]appEnv=prod(?:&|#|$)/.test(text)||/\\/exec(?:[?#]|$)/.test(text)){return "prod";}',
-    'return "";',
-    '}',
-    'function detectEnv(){',
-    'for(var i=0;i<sources.length;i++){',
-    'var env=readEnvFromText(sources[i]||"");',
-    'if(env){return env;}',
-    '}',
-    'return defaultEnv;',
-    '}',
-    'function setMode(env){',
-    'var isDev=env==="dev";',
-    'var label=isDev?"測試版":"正式版";',
-    'if(mode){mode.textContent=label;}',
-    'badge.href=buildTargetUrl(isDev?prodUrl:devUrl,getAppQuery(),isDev?"prod":"dev",window.location.hash||"");',
-    'badge.title=isDev?"切換到正式版":"切換到目前測試版";',
-    'document.title=baseTitle;',
-    'badge.setAttribute("data-current-env",env);',
-    '}',
-    'function buildTargetUrl(baseUrl,query,env,hash){',
-    'var hashIndex=baseUrl.indexOf("#");',
-    'var baseHash=hashIndex>=0?baseUrl.slice(hashIndex):"";',
-    'var baseNoHash=hashIndex>=0?baseUrl.slice(0,hashIndex):baseUrl;',
-    'var queryIndex=baseNoHash.indexOf("?");',
-    'var path=queryIndex>=0?baseNoHash.slice(0,queryIndex):baseNoHash;',
-    'var params=new URLSearchParams(queryIndex>=0?baseNoHash.slice(queryIndex+1):"");',
-    'var current=new URLSearchParams((query||"").replace(/^\\?/,""));',
-    'current.forEach(function(value,key){',
-    'if(key!=="appEnv"){params.set(key,value);}',
-    '});',
-    'params.set("appEnv",env);',
-    'var text=params.toString();',
-    'return path+(text?"?"+text:"")+(hash||baseHash||"");',
-    '}',
-    'function getAppQuery(){',
-    'for(var i=0;i<sources.length;i++){',
-    'var source=sources[i]||"";',
-    'if(!/\\/(exec|dev)(?:[?#]|$)/.test(source)){continue;}',
-    'var queryIndex=source.indexOf("?");',
-    'if(queryIndex<0){continue;}',
-    'var hashIndex=source.indexOf("#",queryIndex);',
-    'return hashIndex>=0?source.slice(queryIndex,hashIndex):source.slice(queryIndex);',
-    '}',
-    'return getLocationQuery()||window.location.search||"";',
-    '}',
-    'function getLocationQuery(){',
-    'if(!appLocation||!appLocation.parameters){return "";}',
-    'var params=new URLSearchParams();',
-    'Object.keys(appLocation.parameters).forEach(function(key){',
-    'var values=appLocation.parameters[key]||[];',
-    'values.forEach(function(value){params.append(key,value);});',
-    '});',
-    'var text=params.toString();',
-    'return text?"?"+text:"";',
-    '}',
-    'setMode(detectEnv());',
-    'if(window.google&&google.script&&google.script.url){',
-    'google.script.url.getLocation(function(location){',
-    'appLocation=location;',
-    'var param=(location&&location.parameter)||{};',
-    'if(param.appEnv==="dev"||param.appEnv==="prod"){setMode(param.appEnv);}',
-    '});',
-    '}',
-    'badge.addEventListener("click",function(event){',
-    'event.preventDefault();',
-    'var currentEnv=badge.getAttribute("data-current-env")||detectEnv();',
-    'var targetEnv=currentEnv==="dev"?"prod":"dev";',
-    'var targetUrl=targetEnv==="dev"?devUrl:prodUrl;',
-    'var query=getAppQuery()||getLocationQuery();',
-    'var hash=window.location.hash||"";',
-    'window.top.location.href=buildTargetUrl(targetUrl,query,targetEnv,hash);',
-    '});',
-    '})();',
-    '</script>'
+    calendarSourceHtml,
+    '</div>'
   ].join('');
 
+}
+
+function getEnvironmentFooterItemHtml_(key, label, url, version, currentEnv, onclick){
+  const active =
+    key === currentEnv;
+
+  const tag =
+    active
+    ? 'span'
+    : 'a';
+
+  const versionText =
+    String(version || '').match(/^v/i)
+    ? String(version || '')
+    : 'v' + String(version || '');
+
+  return [
+    '<',
+    tag,
+    ' class="appVersionBadge',
+    active ? ' is-active' : '',
+    '" role="listitem"',
+    active ? '' : ' href="' + escapeAppHtml(url) + '" target="_top"',
+    onclick && !active ? ' onclick="' + escapeAppHtml(onclick) + '"' : '',
+    ' aria-label="',
+    escapeAppHtml(label + ' ' + versionText),
+    '">',
+    '<span class="appVersionBadgeMode">',
+    escapeAppHtml(label),
+    '</span>',
+    '<span class="appVersionText">',
+    escapeAppHtml(versionText),
+    '</span>',
+    '</',
+    tag,
+    '>'
+  ].join('');
 }
 
 

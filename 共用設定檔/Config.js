@@ -38,7 +38,16 @@ const APP_DEFAULT_ENV =
 const SCRIPT_ID =
 '1TN6XHQNLXN6_x4780WEZbEf8IKGaY2t0MQu_F9jT1b2dbo7L3cRV2asQ';
 const APP_VERSION =
+'2.29.0-202606050851';
+
+const SKH_GAS_DEV_VERSION =
+'2.29.0-202606050851';
+
+const SKH_WEB_DEV_VERSION =
 '2.29.0-202606050829';
+
+const SKH_WEB_PROD_VERSION =
+'2.27.18-202606041943';
 
 
 
@@ -146,6 +155,12 @@ const CALENDAR_NAME =
 const SHEET_ID =
 '184zUBhApg5CJnk7To_6FqlPcV1r-LK1kZUt2yyasD68';
 
+const SKH_MEETING_PROD_SHEET_ID =
+SHEET_ID;
+
+const SKH_MEETING_DEV_SHEET_ID =
+'';
+
 
 
 // ========================================
@@ -179,6 +194,80 @@ const BACKEND_STATUS_SHEET_NAME =
 
 const DRESSING_SHEET_ID =
 '1SJIQGgViQo6AhSDvJTNcNDx_KNXEjgTMfJh4R9SIMvk';
+
+const SKH_DRESSING_PROD_SHEET_ID =
+DRESSING_SHEET_ID;
+
+const SKH_DRESSING_DEV_SHEET_ID =
+'';
+
+const SKH_SHEET_ROUTING = {
+  meeting:{
+    prodSheetId:SKH_MEETING_PROD_SHEET_ID,
+    devSheetId:SKH_MEETING_DEV_SHEET_ID,
+    testSheetId:SKH_MEETING_DEV_SHEET_ID,
+    allowDevReadProd:true
+  },
+  dressing:{
+    prodSheetId:SKH_DRESSING_PROD_SHEET_ID,
+    devSheetId:SKH_DRESSING_DEV_SHEET_ID,
+    testSheetId:SKH_DRESSING_DEV_SHEET_ID,
+    allowDevReadProd:true
+  }
+};
+
+function getSkhRuntimeEnv_(){
+  if(typeof APP_REQUEST_ENV !== 'undefined' && APP_REQUEST_ENV === 'dev'){
+    return 'dev';
+  }
+
+  return 'prod';
+}
+
+function getSkhSheetRouting_(domain){
+  const routing =
+    SKH_SHEET_ROUTING[domain];
+
+  if(!routing){
+    throw new Error('Unknown sheet routing domain: ' + domain);
+  }
+
+  return routing;
+}
+
+function getSkhSheetId_(domain, accessMode){
+  const routing =
+    getSkhSheetRouting_(domain);
+
+  const mode =
+    accessMode === 'write'
+    ? 'write'
+    : 'read';
+
+  if(getSkhRuntimeEnv_() !== 'dev'){
+    return routing.prodSheetId;
+  }
+
+  const devSheetId =
+    String(routing.devSheetId || routing.testSheetId || '').trim();
+
+  if(devSheetId){
+    return devSheetId;
+  }
+
+  if(mode === 'read' && routing.allowDevReadProd === true){
+    return routing.prodSheetId;
+  }
+
+  const error =
+    new Error('測試 Sheet 尚未設定，已阻止寫入，避免污染正式資料。');
+  error.code = 'TEST_SHEET_NOT_CONFIGURED';
+  throw error;
+}
+
+function assertSkhSheetWriteAllowed_(domain){
+  getSkhSheetId_(domain, 'write');
+}
 
 
 

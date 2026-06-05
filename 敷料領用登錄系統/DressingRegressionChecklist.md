@@ -104,3 +104,44 @@
 5. 批號庫存讀取失敗時，庫存頁應顯示局部錯誤，仍可切換作業類型 / 庫存位置並按重新整理重試。
 6. 領用頁初始化讀取中，病歷號、領用人、主治醫師等基本資料欄位仍可輸入。
 7. 領用頁後端讀取失敗時，應顯示錯誤與重新整理提示，不應讓整頁卡在 disabled 狀態。
+
+# 三段式環境與部署 regression checklist
+
+時間戳記：2026-06-05 UTC+8
+
+## A. 頁尾環境標籤
+1. app script測試版頁面會高亮「app script測試版」。
+2. dev-skhps.jonaminz.com 會高亮「測試版」。
+3. skhps.jonaminz.com 會高亮「正式版」。
+4. 三個環境標籤永遠同時存在。
+5. 三個環境標籤各自顯示自己的版本號。
+6. 不再只顯示舊式單一網頁版模糊名稱。
+
+## B. 環境切換
+1. 從 app script測試版可點到測試版。
+2. 從 app script測試版可點到正式版。
+3. 從測試版可點到 app script測試版。
+4. 從測試版可點到正式版。
+5. 從正式版可點到 app script測試版。
+6. 從正式版可點到測試版。
+7. 手機版點擊區域足夠，不會太小。
+8. 手機版 footer 不會遮住主要操作或掃碼區。
+
+## C. 版本同步
+1. dev-app script 部署後，只更新 app script測試版版本號。
+2. dev-skhps 推送後，只更新測試版版本號。
+3. skhps 正式推送後，只更新正式版版本號。
+4. 三個版本號可以不同，不會互相覆蓋。
+5. README 當前版本紀錄與 footer 版本一致。
+
+## D. 安全性
+1. 測試版不會顯示成正式版。
+2. 正式版不會顯示成測試版。
+3. app script測試版不會顯示成正式版。
+4. 正式版只能從 master 分支推送。
+5. dev-skhps 可從目前 HEAD 推送到 dev repo main。
+6. 測試版不會寫入正式 Sheet。
+7. 正式版不會寫入測試 Sheet。
+8. devSheetId / testSheetId 尚未設定時，測試環境寫入會回傳 `TEST_SHEET_NOT_CONFIGURED`。
+9. dev 查詢若暫讀正式資料，只能透過集中設定 `allowDevReadProd: true`。
+
