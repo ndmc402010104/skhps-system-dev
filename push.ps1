@@ -1,7 +1,7 @@
 ﻿# 檔案位置：專案根目錄/push.ps1
-# 時間戳記：2026-06-05 15:32 UTC+8
-# 用途：累加式四段部署腳本；1 只跑 Apps Script，2=1+測試版前端，3=1+2+本地確認，4=1+2+3+正式版；啟動時先清除已失效 Git worktree metadata，避免 Git 反覆詢問 retry。
-# 階段：1=push app script，2=1+2 push dev-skhps，3=1+2+3 本地確認不部署正式版，4=1+2+3+4 deploy skhps。
+# 時間戳記：2026-06-05 15:40 UTC+8
+# 用途：累加式四段部署腳本；1 只跑 Apps Script，2=1+測試版前端，3=1+2+本地確認，PROD=1+2+3+正式版；主選單輸入 PROD 即確認正式上線，啟動時先清除已失效 Git worktree metadata，避免 Git 反覆詢問 retry。
+# 階段：1=push app script，2=1+2 push dev-skhps，3=1+2+3 本地確認不部署正式版，PROD=1+2+3+正式版 deploy skhps。
 
 param(
   [ValidateSet('ask','commit-only','backup-wip','dev-app','dev-skhps','dev-app-backup','dev-all','release','skhps','all','push','push-github','deploy')]
@@ -692,6 +692,9 @@ function Invoke-BackupWipToOrigin {
 }
 
 function Confirm-ProdPushOrExit {
+  param(
+    [bool]$AlreadyConfirmed = $false
+  )
   Write-Host ""
   Write-Host "你即將推送正式版 skhps.jonaminz.com。" -ForegroundColor Red
   Write-Host "正式版只能從 master 分支推送。" -ForegroundColor Yellow
@@ -700,6 +703,11 @@ function Confirm-ProdPushOrExit {
 
   if ($branch -ne 'master') {
     throw "目前分支是 '$branch'，正式版只能從 master 分支推送。請先手動確認 master 已包含要上線內容，再切回 master。"
+  }
+
+  if ($AlreadyConfirmed) {
+    Write-Host "PROD 已在主選單確認，不再二次詢問。" -ForegroundColor Green
+    return
   }
 
   $confirm = Read-Host "請輸入 PROD 才繼續"
@@ -1000,6 +1008,7 @@ if ($env:APP_VERSION_BUMP) {
 # deploy      -> skhps；並預設啟用正式 Apps Script API deploy
 $legacyDeployRequested = $false
 $devSkhpsDeployBranch = 'main'
+$prodConfirmedByMainMenu = $false
 
 switch ($Action) {
   'push' {
@@ -1035,44 +1044,62 @@ if ($Action -eq 'ask') {
   Write-Host "    = 1 + git commit + git push --force-with-lease dev HEAD:$devSkhpsDeployBranch"
   Write-Host "[3] 本地確認，不部署 skhps 正式版"
   Write-Host "    = 1 + 2 + 確認本地已 commit；不推 origin/master、不 deploy skhps、不問備份"
-  Write-Host "[4] deploy skhps 正式版"
-  Write-Host "    = 1 + 2 + 3 + 4；最後才檢查 master + PROD，推 origin/master；不問 Apps Script API"
+  Write-Host "[PROD] deploy skhps 正式版"
+  Write-Host "    = 1 + 2 + 3 + 正式版；在這裡輸入 PROD 就是確認正式上線，不再二次詢問 PROD"
   Write-Host "[0] 取消"
 
-  $Action = Read-MenuChoice `
-    -Message "請選擇 [1]" `
-    -Choices @{
-      '1' = 'dev-app'
-      'dev-app' = 'dev-app'
-      'app' = 'dev-app'
-      'gas' = 'dev-app'
+  $actionChoices = @{
+    '1' = 'dev-app'
+    'dev-app' = 'dev-app'
+    'app' = 'dev-app'
+    'gas' = 'dev-app'
 
-      '2' = 'dev-skhps'
-      'dev-skhps' = 'dev-skhps'
-      'dev-all' = 'dev-skhps'
-      'dev' = 'dev-skhps'
-      'test' = 'dev-skhps'
+    '2' = 'dev-skhps'
+    'dev-skhps' = 'dev-skhps'
+    'dev-all' = 'dev-skhps'
+    'dev' = 'dev-skhps'
+    'test' = 'dev-skhps'
 
-      '3' = 'backup-wip'
-      'backup' = 'backup-wip'
-      'backup-wip' = 'backup-wip'
-      'local' = 'backup-wip'
-      'save' = 'backup-wip'
-      'wip' = 'backup-wip'
-      'switch' = 'backup-wip'
-      'daily' = 'backup-wip'
-      'commit' = 'commit-only'
-      'commit-only' = 'commit-only'
+    '3' = 'backup-wip'
+    'backup' = 'backup-wip'
+    'backup-wip' = 'backup-wip'
+    'local' = 'backup-wip'
+    'save' = 'backup-wip'
+    'wip' = 'backup-wip'
+    'switch' = 'backup-wip'
+    'daily' = 'backup-wip'
+    'commit' = 'commit-only'
+    'commit-only' = 'commit-only'
 
-      '4' = 'release'
-      'release' = 'release'
-      'prod' = 'release'
-      'skhps' = 'release'
+    # 正式版確認改在主選單完成：輸入 PROD 直接跑正式版，不再稍後再問一次 PROD。
+    'prod' = 'release'
+    'release' = 'release'
+    'skhps' = 'release'
 
-      '0' = 'cancel'
-      'cancel' = 'cancel'
-    } `
-    -Default 'dev-app'
+    '0' = 'cancel'
+    'cancel' = 'cancel'
+  }
+
+  while ($true) {
+    $answer = Read-Host "請選擇 [1]；正式版請輸入 PROD"
+
+    if ([string]::IsNullOrWhiteSpace($answer)) {
+      $Action = 'dev-app'
+      break
+    }
+
+    $key = $answer.Trim().ToLower()
+
+    if ($actionChoices.ContainsKey($key)) {
+      $Action = $actionChoices[$key]
+      if ($key -eq 'prod') {
+        $prodConfirmedByMainMenu = $true
+      }
+      break
+    }
+
+    Write-Host "請輸入 1、2、3、PROD 或 0；正式版請輸入 PROD。" -ForegroundColor Yellow
+  }
 }
 
 if ($Action -eq 'cancel') {
@@ -1242,7 +1269,7 @@ if ($needsLocalCommitOnly) {
 }
 
 if ($needsSkhps) {
-  Confirm-ProdPushOrExit
+  Confirm-ProdPushOrExit -AlreadyConfirmed $prodConfirmedByMainMenu
 
   $prodConfig = Invoke-SyncVersionForEnv `
     -DefaultEnv 'prod' `
