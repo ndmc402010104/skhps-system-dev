@@ -1,6 +1,7 @@
 ﻿# 檔案位置：專案根目錄/push.ps1
 # 時間戳記：2026-06-05 09:55 UTC+8
-# 用途：累加式四段部署腳本；1=push app script，2=加上 dev-skhps 分支部署 + commit，3=加上換電腦用備份，4=加上正式版 master + PROD。
+# 用途：累加式四段部署腳本；先完成本地版本/commit 整理，再集中 Git push 到各遠端。
+# 階段：1=push app script，2=加上 dev-skhps 分支部署 + commit，3=加上換電腦用備份，4=加上正式版 master + PROD。
 
 param(
   [ValidateSet('ask','commit-only','backup-wip','dev-app','dev-skhps','dev-app-backup','dev-all','release','skhps','all','push','push-github','deploy')]
@@ -306,6 +307,23 @@ function Get-GitCurrentBranch {
   return $branch
 }
 
+function Get-GitHeadSha {
+  Push-Location -LiteralPath $rootPath
+
+  try {
+    $headSha = (git rev-parse HEAD).Trim()
+  }
+  finally {
+    Pop-Location
+  }
+
+  if ([string]::IsNullOrWhiteSpace($headSha)) {
+    throw "無法讀取本機 HEAD。"
+  }
+
+  return $headSha
+}
+
 function Show-GitSnapshot {
   if (-not (Test-CommandExists -Name 'git')) {
     Write-Host "找不到 git 指令，略過 Git 狀態顯示。" -ForegroundColor Yellow
@@ -478,16 +496,20 @@ function Confirm-GitRemoteRefMatchesHead {
     [string]$BranchName,
 
     [Parameter(Mandatory = $true)]
-    [string]$Label
+    [string]$Label,
+
+    [string]$ExpectedSha
   )
 
   Push-Location -LiteralPath $rootPath
 
   try {
-    $headSha = (git rev-parse HEAD).Trim()
+    if ([string]::IsNullOrWhiteSpace($ExpectedSha)) {
+      $ExpectedSha = (git rev-parse HEAD).Trim()
 
-    if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($headSha)) {
-      throw "無法讀取本機 HEAD。"
+      if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($ExpectedSha)) {
+        throw "無法讀取本機 HEAD。"
+      }
     }
 
     $remoteLine = git ls-remote $RemoteName "refs/heads/$BranchName"
@@ -502,11 +524,11 @@ function Confirm-GitRemoteRefMatchesHead {
 
     $remoteSha = (($remoteLine -split '\s+')[0]).Trim()
 
-    if ($remoteSha -ne $headSha) {
-      throw "$Label 驗證失敗：遠端 $($remoteSha.Substring(0, 7))，本機 $($headSha.Substring(0, 7))。"
+    if ($remoteSha -ne $ExpectedSha) {
+      throw "$Label 驗證失敗：遠端 $($remoteSha.Substring(0, 7))，預期 $($ExpectedSha.Substring(0, 7))。"
     }
 
-    Write-Host "$Label 已驗證：$RemoteName/$BranchName = HEAD $($headSha.Substring(0, 7))" -ForegroundColor Green
+    Write-Host "$Label 已驗證：$RemoteName/$BranchName = $($ExpectedSha.Substring(0, 7))" -ForegroundColor Green
   }
   finally {
     Pop-Location
@@ -515,15 +537,21 @@ function Confirm-GitRemoteRefMatchesHead {
 
 
 function Invoke-BackupWipToOrigin {
+  param(
+    [string]$SourceRef = 'HEAD',
+
+    [string]$ExpectedSha
+  )
+
   Write-Host ""
   Write-Host "==========================" -ForegroundColor Cyan
   Write-Host "[3] 換電腦用備份 origin/wip-current" -ForegroundColor Cyan
   Write-Host "=========================="
-  Write-Host "備份目前 HEAD 到 origin/wip-current；不更新任何網站。" -ForegroundColor Yellow
+  Write-Host "備份 $SourceRef 到 origin/wip-current；不更新任何網站。" -ForegroundColor Yellow
 
   Invoke-GitPush `
     -RemoteName 'origin' `
-    -RefSpec 'HEAD:wip-current' `
+    -RefSpec "$($SourceRef):wip-current" `
     -SiteName 'origin/wip-current 工作進度備份' `
     -SiteUrl 'GitHub origin/wip-current' `
     -ForceWithLease
@@ -531,7 +559,8 @@ function Invoke-BackupWipToOrigin {
   Confirm-GitRemoteRefMatchesHead `
     -RemoteName 'origin' `
     -BranchName 'wip-current' `
-    -Label '換電腦用備份'
+    -Label '換電腦用備份' `
+    -ExpectedSha $ExpectedSha
 
   Write-Host ""
   Write-Host "換電腦時可執行：" -ForegroundColor Green
@@ -949,6 +978,9 @@ $needsDevSkhps = $Action -in @('dev-all','all','release')
 $needsSkhps = $Action -in @('release')
 $needsBackupWip = $Action -in @('all')
 $needsAnyGit = $Action -in @('dev-all','all','release')
+$pendingGitPushes = @()
+$devPushSha = $null
+$prodPushSha = $null
 
 # skhps 正式版若不是舊 deploy 參數，互動詢問是否一併部署正式 Apps Script API。
 if ($needsSkhps -and -not $legacyDeployRequested -and -not $DeployProdAppScript) {
@@ -999,6 +1031,7 @@ if ($needsAnyGit) {
   }
 
   Invoke-GitCommitIfNeeded -DefaultMessage $defaultMsg | Out-Null
+  $devPushSha = Get-GitHeadSha
 }
 
 if ($needsDevApp) {
@@ -1006,41 +1039,53 @@ if ($needsDevApp) {
 }
 
 if ($needsDevSkhps) {
-  Write-Host ""
-  Write-Host "==========================" -ForegroundColor Cyan
-  Write-Host "[2] 加上 push dev-skhps.jonaminz.com 分支 + commit" -ForegroundColor Cyan
-  Write-Host "=========================="
-  Write-Host "測試版會推到 dev repo 的 dev-current；同時更新 main，避免 GitHub Pages 仍指向 main 時網站不更新。"
+  $pendingGitPushes += [pscustomobject]@{
+    Header = '[2] 推送 dev-skhps.jonaminz.com 分支'
+    Description = '測試版會推到 dev repo 的 dev-current；同時更新 main，避免 GitHub Pages 仍指向 main 時網站不更新。'
+    RemoteName = 'dev'
+    RefSpec = "$($devPushSha):dev-current"
+    SiteName = 'dev-skhps'
+    SiteUrl = 'https://dev-skhps.jonaminz.com'
+    ForceWithLease = $true
+    BranchName = 'dev-current'
+    Label = 'dev-skhps dev-current'
+    ExpectedSha = $devPushSha
+    Footer = $null
+  }
 
-  Invoke-GitPush `
-    -RemoteName 'dev' `
-    -RefSpec 'HEAD:dev-current' `
-    -SiteName 'dev-skhps' `
-    -SiteUrl 'https://dev-skhps.jonaminz.com' `
-    -ForceWithLease
+  $pendingGitPushes += [pscustomobject]@{
+    Header = $null
+    Description = $null
+    RemoteName = 'dev'
+    RefSpec = "$($devPushSha):main"
+    SiteName = 'dev-skhps Pages main'
+    SiteUrl = 'https://dev-skhps.jonaminz.com'
+    ForceWithLease = $true
+    BranchName = 'main'
+    Label = 'dev-skhps main'
+    ExpectedSha = $devPushSha
+    Footer = 'dev-skhps 建議在 GitHub Pages 設定為 Branch: dev-current / (root)；目前腳本也同步 main 以相容現有設定。'
+  }
 
-  Invoke-GitPush `
-    -RemoteName 'dev' `
-    -RefSpec 'HEAD:main' `
-    -SiteName 'dev-skhps Pages main' `
-    -SiteUrl 'https://dev-skhps.jonaminz.com' `
-    -ForceWithLease
-
-  Confirm-GitRemoteRefMatchesHead `
-    -RemoteName 'dev' `
-    -BranchName 'dev-current' `
-    -Label 'dev-skhps dev-current'
-
-  Confirm-GitRemoteRefMatchesHead `
-    -RemoteName 'dev' `
-    -BranchName 'main' `
-    -Label 'dev-skhps main'
-
-  Write-Host "dev-skhps 建議在 GitHub Pages 設定為 Branch: dev-current / (root)；目前腳本也同步 main 以相容現有設定。" -ForegroundColor Yellow
+  Write-Host "dev-skhps Git push 已排程，會等本地階段全部處理完成後再推出。" -ForegroundColor DarkGray
 }
 
 if ($needsBackupWip) {
-  Invoke-BackupWipToOrigin
+  $pendingGitPushes += [pscustomobject]@{
+    Header = '[3] 換電腦用備份 origin/wip-current'
+    Description = "備份 $devPushSha 到 origin/wip-current；不更新任何網站。"
+    RemoteName = 'origin'
+    RefSpec = "$($devPushSha):wip-current"
+    SiteName = 'origin/wip-current 工作進度備份'
+    SiteUrl = 'GitHub origin/wip-current'
+    ForceWithLease = $true
+    BranchName = 'wip-current'
+    Label = '換電腦用備份'
+    ExpectedSha = $devPushSha
+    Footer = "換電腦時可執行：`ngit fetch origin`ngit checkout -B wip-current origin/wip-current"
+  }
+
+  Write-Host "origin/wip-current 備份推送已排程，會等本地階段全部處理完成後再推出。" -ForegroundColor DarkGray
 }
 
 if ($needsSkhps) {
@@ -1076,22 +1121,70 @@ if ($needsSkhps) {
   }
 
   Invoke-GitCommitIfNeeded -DefaultMessage "Release skhps v$($prodConfig.Version)" | Out-Null
+  $prodPushSha = Get-GitHeadSha
 
+  $pendingGitPushes += [pscustomobject]@{
+    Header = '[4] 推送 master + PROD'
+    Description = $null
+    RemoteName = 'origin'
+    RefSpec = "$($prodPushSha):master"
+    SiteName = 'skhps'
+    SiteUrl = 'https://skhps.jonaminz.com'
+    ForceWithLease = $false
+    BranchName = 'master'
+    Label = '正式版 master'
+    ExpectedSha = $prodPushSha
+    Footer = $null
+  }
+
+  Write-Host "正式版 Git push 已排程，會等本地階段全部處理完成後再推出。" -ForegroundColor DarkGray
+}
+
+if ($pendingGitPushes.Count -gt 0) {
   Write-Host ""
   Write-Host "==========================" -ForegroundColor Cyan
-  Write-Host "[4] 加上 push master + PROD" -ForegroundColor Cyan
-  Write-Host "=========================="
+  Write-Host "集中 Git push" -ForegroundColor Cyan
+  Write-Host "==========================" -ForegroundColor Cyan
+  Write-Host "本地各階段已處理完成，現在才開始推送遠端。" -ForegroundColor Yellow
 
-  Invoke-GitPush `
-    -RemoteName 'origin' `
-    -RefSpec 'master:master' `
-    -SiteName 'skhps' `
-    -SiteUrl 'https://skhps.jonaminz.com'
+  foreach ($pendingPush in $pendingGitPushes) {
+    if ($pendingPush.Header) {
+      Write-Host ""
+      Write-Host "==========================" -ForegroundColor Cyan
+      Write-Host $pendingPush.Header -ForegroundColor Cyan
+      Write-Host "==========================" -ForegroundColor Cyan
+    }
 
-  Confirm-GitRemoteRefMatchesHead `
-    -RemoteName 'origin' `
-    -BranchName 'master' `
-    -Label '正式版 master'
+    if ($pendingPush.Description) {
+      Write-Host $pendingPush.Description -ForegroundColor Yellow
+    }
+
+    if ($pendingPush.ForceWithLease) {
+      Invoke-GitPush `
+        -RemoteName $pendingPush.RemoteName `
+        -RefSpec $pendingPush.RefSpec `
+        -SiteName $pendingPush.SiteName `
+        -SiteUrl $pendingPush.SiteUrl `
+        -ForceWithLease
+    }
+    else {
+      Invoke-GitPush `
+        -RemoteName $pendingPush.RemoteName `
+        -RefSpec $pendingPush.RefSpec `
+        -SiteName $pendingPush.SiteName `
+        -SiteUrl $pendingPush.SiteUrl
+    }
+
+    Confirm-GitRemoteRefMatchesHead `
+      -RemoteName $pendingPush.RemoteName `
+      -BranchName $pendingPush.BranchName `
+      -Label $pendingPush.Label `
+      -ExpectedSha $pendingPush.ExpectedSha
+
+    if ($pendingPush.Footer) {
+      Write-Host $pendingPush.Footer -ForegroundColor Yellow
+    }
+  }
 }
 
 if ($Action -eq 'commit-only') {
