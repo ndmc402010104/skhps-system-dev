@@ -1,7 +1,7 @@
 ﻿/*
 檔案位置：共用設定檔/EnvironmentFooter.js
-時間戳記：2026-06-05 15:39 UTC+8
-用途：全站三段式環境頁尾；修正 Apps Script 測試版切換到 dev-skhps 測試版時，路徑組合與 _top 導頁失敗問題。
+時間戳記：2026-06-06 03:23 UTC+8
+用途：全站三段式環境頁尾；提供三段式環境切換與集中 API URL 設定。
 */
 
 (function(global){
@@ -19,20 +19,23 @@
       key:'gasDev',
       label:'app script測試版',
       url:'https://script.google.com/macros/s/AKfycbwySlDY2aAbYpy5OSi85vHz1pk5g1FQfopcaCfVneE/dev',
-      version:'v2.37.0-202606051617',
+      apiUrl:'https://script.google.com/macros/s/AKfycbwySlDY2aAbYpy5OSi85vHz1pk5g1FQfopcaCfVneE/dev',
+      version:'v2.37.0-202606060329',
       type:'gas'
     },
     webDev:{
       key:'webDev',
       label:'測試版',
       url:'https://dev-skhps.jonaminz.com',
-      version:'v2.37.0-202606051617',
+      apiUrl:'https://script.google.com/macros/s/AKfycbwySlDY2aAbYpy5OSi85vHz1pk5g1FQfopcaCfVneE/dev',
+      version:'v2.37.0-202606060329',
       type:'web'
     },
     webProd:{
       key:'webProd',
       label:'正式版',
       url:'https://skhps.jonaminz.com',
+      apiUrl:'https://script.google.com/macros/s/AKfycbwbz8pXfU68j2aFeF_AaDmmG6Vco3JsPSw-PGyYeLu0AF3vCfzaZJQFOjORnwSw8Xp4/exec',
       version:'v2.37.0-202606051528',
       type:'web'
     }
@@ -237,7 +240,8 @@
       dressingfront:'/敷料領用登錄系統/DressingFront.html',
       dressinguse:'/敷料領用登錄系統/DressingUse.html',
       dressingdict:'/敷料領用登錄系統/DressingFront.html#dressingDict',
-      uitest:'/共用設定檔/UI設定/99_文件/skh-ui-test-page.html'
+      uitest:'/共用設定檔/UI設定/99_文件/skh-ui-test-page.html',
+      hisconnect:'/HisConnect/HisConnectPage.html'
     };
 
     return routes[key] || '';
@@ -284,6 +288,10 @@
 
     if(path.indexOf('skh-ui-test-page') >= 0){
       return 'uitest';
+    }
+
+    if(path.indexOf('hisconnectpage') >= 0 || path.indexOf('hisconnect') >= 0){
+      return 'hisconnect';
     }
 
     return '';
@@ -381,6 +389,7 @@
     renderEnvironmentFooter();
   }
 })(typeof window !== 'undefined' ? window : this);
+
 
 
 

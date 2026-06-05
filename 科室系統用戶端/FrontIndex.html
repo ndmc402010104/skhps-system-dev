@@ -248,7 +248,8 @@ const GITHUB_PAGE_MAP = {
   dressingInventory: '敷料領用登錄系統/DressingFront.html#inventory',
   dressingUse: '敷料領用登錄系統/DressingUse.html',
   dressingDict: '敷料領用登錄系統/DressingFront.html#dressingDict',
-  uiTest: '共用設定檔/UI設定/99_文件/skh-ui-test-page.html'
+  uiTest: '共用設定檔/UI設定/99_文件/skh-ui-test-page.html',
+  hisConnect: 'HisConnect/HisConnectPage.html'
 };
 
 function getGithubRepoBasePath(){
@@ -374,7 +375,8 @@ function goPage(page){
       dressingfront:'dressingFront',
       dressinguse:'dressingUse',
       dressingDict:'dressingDict',
-      uitest:'uiTest'
+      uitest:'uiTest',
+      hisconnect:'hisConnect'
     };
 
     const githubKey =
@@ -465,6 +467,14 @@ function goUiTest(){
 
 }
 
+function goHisConnect(){
+
+  goPage(
+    'hisconnect'
+  );
+
+}
+
 </script>
 
 </head>
@@ -545,6 +555,18 @@ onclick="goUiTest()"
   <span>
     <span class="entryTitle">SKH UI 測試中心</span>
     <span class="entryDesc">測試 Button、Alert、Table、Form、Modal、Loading 等共用樣式元件。</span>
+  </span>
+  <span class="arrow">›</span>
+</button>
+
+<button
+class="entryButton github"
+onclick="goHisConnect()"
+>
+  <span class="entryIcon">HIS</span>
+  <span>
+    <span class="entryTitle">HIS 對接測試</span>
+    <span class="entryDesc">測試 HIS/EIP hidden form bridge 與 Excel 提取流程。</span>
   </span>
   <span class="arrow">›</span>
 </button>

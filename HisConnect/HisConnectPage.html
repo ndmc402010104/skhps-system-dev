@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<!--
+檔案位置：HisConnect/HisConnectPage.html
+時間戳記：2026-06-06 03:23 UTC+8
+用途：HIS 對接測試頁；測試 HIS/EIP hidden form bridge 與 Excel 提取流程，不執行正式計價。
+-->
+<html>
+
+<head>
+<script src="https://ndmc402010104.github.io/plastic-surgery-department-system/%E5%85%B1%E7%94%A8%E8%A8%AD%E5%AE%9A%E6%AA%94/favicon.js"></script>
+<script src="../共用設定檔/EnvironmentFooter.js"></script>
+<base target="_top">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HIS 對接測試</title>
+
+<style>
+:root{
+  --bg:#f4f7fb;
+  --ink:#172033;
+  --muted:#64748b;
+  --line:#dbe4ef;
+  --primary:#2563eb;
+  --primaryDark:#1d4ed8;
+}
+
+*{
+  box-sizing:border-box;
+}
+
+body{
+  margin:0;
+  min-height:100vh;
+  font-family:Arial,"Noto Sans TC","Microsoft JhengHei",sans-serif;
+  color:var(--ink);
+  background:
+    radial-gradient(circle at top left,rgba(37,99,235,.1),transparent 30rem),
+    linear-gradient(180deg,#fbfdff 0%,var(--bg) 100%);
+}
+
+.shell{
+  width:min(1400px,100%);
+  margin:0 auto;
+  padding:118px 24px 82px;
+}
+
+.pageMap{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin-bottom:24px;
+  color:#64748b;
+  font-size:13px;
+  font-weight:700;
+}
+
+.pageMapLink{
+  border:0;
+  padding:0;
+  background:transparent;
+  color:#2563eb;
+  font:inherit;
+  cursor:pointer;
+}
+
+.pageMapCurrent{
+  color:#172033;
+}
+
+.pageMapSep{
+  color:#94a3b8;
+}
+
+.eyebrow{
+  margin:0 0 10px;
+  color:var(--primaryDark);
+  font-size:13px;
+  font-weight:800;
+}
+
+h1{
+  margin:0;
+  font-size:clamp(28px,4vw,42px);
+  line-height:1.18;
+  letter-spacing:0;
+}
+
+.pageLead{
+  margin:12px 0 0;
+  color:#475569;
+  font-size:16px;
+  line-height:1.7;
+}
+
+.panel{
+  margin-top:24px;
+  background:#ffffff;
+  border:1px solid var(--line);
+  border-radius:8px;
+  box-shadow:0 8px 24px rgba(15,23,42,.06);
+  padding:22px 24px;
+}
+
+.actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:12px;
+  margin-top:18px;
+}
+
+button{
+  min-height:46px;
+  padding:10px 18px;
+  border-radius:8px;
+  border:1px solid #d6dde7;
+  background:#ffffff;
+  color:#334155;
+  font-size:16px;
+  font-weight:800;
+  cursor:pointer;
+}
+
+button.primary{
+  color:#ffffff;
+  background:#2563eb;
+  border-color:#2563eb;
+}
+
+button:disabled{
+  opacity:.55;
+  cursor:not-allowed;
+}
+
+.status{
+  min-height:24px;
+  margin-top:14px;
+  color:#64748b;
+  font-size:14px;
+  font-weight:800;
+  line-height:1.6;
+}
+
+.status.error{
+  color:#b91c1c;
+}
+
+@media(max-width:640px){
+  .shell{
+    padding:104px 16px 72px;
+  }
+
+  .actions{
+    display:grid;
+  }
+
+  button{
+    width:100%;
+  }
+}
+</style>
+
+<script>
+const APP_ENTRY_URL =
+  '<?= appEntryUrl ?>';
+
+const APP_DEV_URL =
+  '<?= appDevUrl ?>';
+
+const APP_PROD_URL =
+  '<?= appProdUrl ?>';
+
+const APP_ENV =
+  '<?= appEnv ?>';
+
+const GITHUB_PAGE_MAP = {
+  home:'科室系統用戶端/FrontIndex.html',
+  frontIndex:'科室系統用戶端/FrontIndex.html',
+  hisConnect:'HisConnect/HisConnectPage.html'
+};
+
+function isGithubPage(){
+  return window.location.hostname.includes('github.io') ||
+    window.location.hostname === 'dev-skhps.jonaminz.com' ||
+    window.location.hostname === 'skhps.jonaminz.com';
+}
+
+function isAppsScriptPage(){
+  return !isGithubPage() &&
+    typeof google !== 'undefined' &&
+    google.script &&
+    google.script.run;
+}
+
+function getGithubRepoBasePath(){
+  if(!window.location.hostname.includes('github.io')){
+    return '/';
+  }
+
+  const parts = window.location.pathname.split('/').filter(Boolean);
+  return parts.length ? '/' + parts[0] + '/' : '/';
+}
+
+function getGithubPageUrl(pageKey){
+  const path = GITHUB_PAGE_MAP[pageKey] || GITHUB_PAGE_MAP.home;
+  return window.location.origin + getGithubRepoBasePath() + path;
+}
+
+function getCurrentAppEnv(){
+  if(window.location.hostname === 'dev-skhps.jonaminz.com'){
+    return 'dev';
+  }
+
+  if(window.location.hostname === 'skhps.jonaminz.com' || window.location.hostname.includes('github.io')){
+    return 'prod';
+  }
+
+  if(APP_ENV === 'dev' || APP_ENV === 'prod'){
+    return APP_ENV;
+  }
+
+  return 'prod';
+}
+
+function getAppEntryUrl(){
+  const env = getCurrentAppEnv();
+
+  if(isGithubPage() && window.SKH_ENVIRONMENTS){
+    const runtimeKey =
+      env === 'dev'
+        ? 'webDev'
+        : 'webProd';
+    const runtimeEnv = window.SKH_ENVIRONMENTS[runtimeKey] || {};
+    const apiUrl = String(runtimeEnv.apiUrl || '').trim();
+    if(apiUrl){
+      return apiUrl;
+    }
+  }
+
+  const value = env === 'dev' ? APP_DEV_URL : (APP_PROD_URL || APP_ENTRY_URL);
+
+  if(value && !String(value).includes('<' + '?=')){
+    return value;
+  }
+
+  try{
+    const currentUrl = new URL(window.location.href);
+    currentUrl.search = '';
+    currentUrl.hash = '';
+    return currentUrl.toString();
+  } catch(error){
+    return window.location.href.split('?')[0].split('#')[0];
+  }
+}
+
+function callAppsScriptJsonp(params){
+  params = params || {};
+  return new Promise(function(resolve, reject){
+    const callbackName =
+      '__hisBridgeCallback_' +
+      Date.now() +
+      '_' +
+      Math.random().toString(36).slice(2);
+    const query = new URLSearchParams();
+
+    Object.keys(params).forEach(function(key){
+      const value = params[key];
+      if(value !== undefined && value !== null){
+        query.set(key, typeof value === 'object' ? JSON.stringify(value) : value);
+      }
+    });
+
+    query.set('callback', callbackName);
+
+    const script = document.createElement('script');
+    const timer = setTimeout(function(){
+      cleanup();
+      reject(new Error('API 逾時，請確認 Apps Script 部署權限'));
+    }, 20000);
+
+    window[callbackName] = function(result){
+      cleanup();
+      resolve(result);
+    };
+
+    script.onerror = function(){
+      cleanup();
+      reject(new Error('API 載入失敗，請確認 Apps Script 部署網址'));
+    };
+
+    script.src = getAppEntryUrl() + '?' + query.toString();
+    document.head.appendChild(script);
+
+    function cleanup(){
+      clearTimeout(timer);
+      if(script.parentNode){
+        script.parentNode.removeChild(script);
+      }
+      try{
+        delete window[callbackName];
+      } catch(error){
+        window[callbackName] = undefined;
+      }
+    }
+  });
+}
+
+function callBackend(action, payload){
+  payload = payload || {};
+
+  if(isAppsScriptPage()){
+    return new Promise(function(resolve, reject){
+      try{
+        const runner = google.script.run
+          .withSuccessHandler(resolve)
+          .withFailureHandler(reject);
+
+        if(!runner || typeof runner[action] !== 'function'){
+          throw new Error('找不到 Apps Script 函式：' + action);
+        }
+
+        runner[action](payload);
+      } catch(error){
+        reject(error);
+      }
+    });
+  }
+
+  return callAppsScriptJsonp({
+    action:action,
+    payload:payload
+  });
+}
+
+function goHome(){
+  if(isGithubPage()){
+    window.top.location.href = getGithubPageUrl('frontIndex');
+    return;
+  }
+
+  const env = getCurrentAppEnv();
+  const url = getAppEntryUrl();
+  const separator = url.indexOf('?') >= 0 ? '&' : '?';
+  window.top.location.href = url + separator + 'appEnv=' + encodeURIComponent(env);
+}
+
+function setStatus(message, type){
+  const status = document.getElementById('hisStatus');
+  if(!status){
+    return;
+  }
+  status.textContent = message || '';
+  status.className = 'status' + (type === 'error' ? ' error' : '');
+}
+
+function writePopupError(popup, message){
+  if(!popup || popup.closed){
+    return;
+  }
+
+  popup.document.open();
+  popup.document.write(
+    '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>HIS Excel Bridge 測試</title>' +
+    '<style>body{font-family:Arial,"Noto Sans TC","Microsoft JhengHei",sans-serif;padding:24px;color:#172033;background:#f8fafc;} .error{color:#b91c1c;font-weight:800;}</style>' +
+    '</head><body><h1>HIS Excel Bridge 測試</h1><p class="error">' +
+    escapeHtml(message || 'bridge 建立失敗') +
+    '</p></body></html>'
+  );
+  popup.document.close();
+}
+
+function escapeHtml(value){
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+async function openHisExcelBridgeTest(){
+  const button = document.getElementById('hisExcelButton');
+  const popup = window.open('about:blank', '_blank');
+
+  if(!popup){
+    setStatus('瀏覽器封鎖彈出視窗，請允許後再試。', 'error');
+    alert('瀏覽器封鎖彈出視窗，請允許後再試。');
+    return;
+  }
+
+  const payload = {
+    mode:'excel-export',
+    sourcePage:'HisConnect',
+    createdAt:new Date().toISOString(),
+    debug:true,
+    runtimeMode:getCurrentAppEnv(),
+    appVersion:window.SKH_RUNTIME && window.SKH_RUNTIME.version ? window.SKH_RUNTIME.version : ''
+  };
+
+  if(button){
+    button.disabled = true;
+    button.textContent = '建立中...';
+  }
+  setStatus('正在建立 HIS Excel Bridge...');
+
+  popup.document.open();
+  popup.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>HIS Excel Bridge 測試</title></head><body><p>正在準備 HIS Excel 提取...</p></body></html>');
+  popup.document.close();
+
+  try{
+    const res = await callBackend('buildHisBridge', payload);
+
+    if(res && res.ok && res.mode === 'html'){
+      popup.document.open();
+      popup.document.write(res.html || '');
+      popup.document.close();
+      setStatus(res.message || 'HIS Excel Bridge 已建立');
+      return;
+    }
+
+    if(res && res.ok && res.mode === 'url' && res.url){
+      popup.location.href = res.url;
+      setStatus(res.message || 'HIS Excel Bridge 已建立');
+      return;
+    }
+
+    const message = (res && res.message) || '尚未設定 HIS Excel Bridge';
+    writePopupError(popup, message);
+    setStatus(message, 'error');
+    alert(message);
+  } catch(error){
+    const message = error && error.message ? error.message : String(error);
+    writePopupError(popup, message);
+    setStatus(message, 'error');
+    alert(message);
+  } finally {
+    if(button){
+      button.disabled = false;
+      button.textContent = '測試 HIS Excel';
+    }
+  }
+}
+</script>
+</head>
+
+<body>
+<main class="shell">
+
+<?!= include('共用設定檔/AppShell', { subtitle: 'HIS 對接測試', onClick: 'goHome()', maxWidth: '1400px' }) ?>
+
+<nav class="pageMap" aria-label="頁面地圖">
+  <button class="pageMapLink" onclick="goHome()">首頁</button>
+  <span class="pageMapSep">/</span>
+  <span class="pageMapCurrent">HIS 對接測試</span>
+</nav>
+
+<section>
+  <p class="eyebrow">HIS Bridge MVP</p>
+  <h1>HIS 對接測試</h1>
+  <p class="pageLead">
+    此頁用於測試 HIS/EIP hidden form bridge 與 Excel 提取流程。
+    目前只測試 Excel 提取，不做敷料計價，不自動按 HIS 儲存或確認。
+  </p>
+</section>
+
+<section class="panel" aria-label="HIS Excel 測試">
+  <h2>Excel 提取測試</h2>
+  <p class="pageLead">按下後會先開啟空白分頁，再由後端建立 bridge HTML。</p>
+  <div class="actions">
+    <button id="hisExcelButton" class="primary" type="button" onclick="openHisExcelBridgeTest()">測試 HIS Excel</button>
+    <button type="button" onclick="goHome()">返回首頁</button>
+  </div>
+  <div id="hisStatus" class="status" role="status" aria-live="polite"></div>
+</section>
+
+</main>
+</body>
+</html>

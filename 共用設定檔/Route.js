@@ -41,6 +41,10 @@ var APP_SCRIPT_PAGE_ROUTES = [
         .evaluate()
         .setTitle('SKH UI 測試中心');
     }
+  },
+  {
+    keys:['hisconnect'],
+    handler:function(){ return showHisConnectPage(); }
   }
 ];
 
@@ -54,7 +58,8 @@ var GITHUB_PAGE_ROUTES = {
   dressingInventory:'敷料領用登錄系統/DressingFront.html#inventory',
   dressingUse:'敷料領用登錄系統/DressingUse.html',
   dressingDict:'敷料領用登錄系統/DressingFront.html#dressingDict',
-  uiTest:'共用設定檔/UI設定/99_文件/skh-ui-test-page.html'
+  uiTest:'共用設定檔/UI設定/99_文件/skh-ui-test-page.html',
+  hisConnect:'HisConnect/HisConnectPage.html'
 };
 
 function doGet(e){
@@ -283,6 +288,32 @@ function doPost(e){
     }
   }
 
+  if(
+    isHisBridgeAction_(action)
+  ){
+    try{
+      const data =
+        JSON.parse(
+          e &&
+          e.postData &&
+          e.postData.contents
+          ? e.postData.contents
+          : '{}'
+        );
+
+      return jsonOutput_(
+        handleHisBridgeAction_(data) ||
+        { ok:false, message:'unknown HIS bridge action' }
+      );
+    }
+    catch(error){
+      return jsonOutput_({
+        ok:false,
+        message:error && error.message ? error.message : String(error)
+      });
+    }
+  }
+
   return jsonOutput_({
     ok:false,
     message:'unknown post action'
@@ -322,7 +353,18 @@ function isFrontendApiAction_(action){
   return [
     'getFrontendBootstrap',
     'getHospitalSignInLists',
-    'getSignQRMeetingOptions'
+    'getSignQRMeetingOptions',
+    'buildHisBridge',
+    'buildHisExcelBridge'
+  ].indexOf(action || '') >= 0;
+
+}
+
+function isHisBridgeAction_(action){
+
+  return [
+    'buildHisBridge',
+    'buildHisExcelBridge'
   ].indexOf(action || '') >= 0;
 
 }
@@ -353,6 +395,40 @@ function handleFrontendApiAction_(params){
       ok:true,
       options:getSignQRMeetingOptions()
     };
+  }
+
+  if(isHisBridgeAction_(action)){
+    return handleHisBridgeAction_(params);
+  }
+
+  return null;
+
+}
+
+function handleHisBridgeAction_(params){
+
+  params = params || {};
+  const action =
+    String(params.action || '').trim();
+
+  let payload =
+    params.payload || {};
+
+  if(typeof payload === 'string'){
+    try{
+      payload = JSON.parse(payload || '{}');
+    }
+    catch(error){
+      payload = {};
+    }
+  }
+
+  if(action === 'buildHisExcelBridge'){
+    return buildHisExcelBridge(payload);
+  }
+
+  if(action === 'buildHisBridge'){
+    return buildHisBridge(payload);
   }
 
   return null;

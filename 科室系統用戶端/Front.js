@@ -44,6 +44,38 @@ function showFrontIndex(){
 }
 
 
+function showHisConnectPage(){
+
+  const template =
+    HtmlService.createTemplateFromFile(
+      'HisConnect/HisConnectPage'
+    );
+
+  template.appEntryUrl =
+    getAppEntryUrl();
+
+  template.appDevUrl =
+    APP_DEV_URL;
+
+  template.appProdUrl =
+    APP_ENTRY_URL;
+
+  template.appEnv =
+    APP_REQUEST_ENV === 'dev'
+      ? 'dev'
+      : 'prod';
+
+  return template
+    .evaluate()
+    .setTitle(
+      getAppPageTitle(
+        'HIS 對接測試'
+      )
+    );
+
+}
+
+
 
 /*
 ========================================

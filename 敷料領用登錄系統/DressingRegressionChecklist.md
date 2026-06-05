@@ -145,3 +145,69 @@
 8. devSheetId / testSheetId 尚未設定時，測試環境寫入會回傳 `TEST_SHEET_NOT_CONFIGURED`。
 9. dev 查詢若暫讀正式資料，只能透過集中設定 `allowDevReadProd: true`。
 
+# HIS 對接測試頁與 HIS Bridge Service MVP regression checklist
+
+時間戳記：2026-06-06 03:23 UTC+8
+
+## A. 專案搜尋
+1. 已搜尋 HIS / EIP / Excel / hidden form / bookmarklet 相關程式。
+2. 搜尋結果有摘要。
+3. 敏感 value 已遮罩。
+4. 可重用設定有集中整理。
+
+## B. 新頁面與檔案
+1. 存在 `HisConnect/HisConnectPage.html`。
+2. 存在 `HisBridgeService.js`。
+3. 不存在不必要新增的 `HisConnectClient.js`。
+4. `HisConnectPage.html` 有標準檔案位置 / 時間戳記 / 用途註解。
+5. `HisBridgeService.js` 有標準檔案位置 / 時間戳記 / 用途註解。
+6. `HisConnectPage.html` 顯示「HIS 對接測試」。
+7. `HisConnectPage.html` 有「測試 HIS Excel」按鈕。
+8. `HisConnectPage.html` 有「返回首頁」按鈕。
+
+## C. 首頁入口
+1. 首頁「CSS 測試」後面出現「HIS 對接測試」按鈕。
+2. 按鈕樣式與首頁既有按鈕一致。
+3. 點擊後進入 `HisConnect/HisConnectPage.html`。
+4. CSS 測試按鈕仍可正常使用。
+5. 手機版按鈕可點。
+
+## D. Bridge 建立
+1. 在 HisConnectPage 點「測試 HIS Excel」會開新分頁。
+2. popup 被擋時有提示。
+3. bridge page 可顯示 debug 狀態。
+4. bridge page console log 不印敏感值。
+5. 後端未設定時顯示「尚未設定 HIS Excel Bridge」。
+
+## E. Excel 提取
+1. 設定完整且 `HIS_EXCEL_AUTO_SUBMIT=true` 時，bridge page 會自動 submit hidden form。
+2. submit 後顯示已送出提取資訊。
+3. 瀏覽器允許時，Excel 下載會開始。
+4. submit 後會嘗試自動關閉 bridge page。
+5. `window.close` 失敗時有手動關閉提示。
+6. target mode 可支援 `download-iframe` / `self`。
+
+## F. 安全
+1. GitHub Pages 前端搜尋不到 `_AUTOWEB_COM_FILE` 完整值。
+2. GitHub Pages 前端搜尋不到 HIS token / 密碼。
+3. `HisConnectPage.html` 不含 HIS sensitive config。
+4. HIS sensitive config 只在後端或 Script Properties。
+5. 不會 iframe 嵌入 HIS 操作頁。
+6. 不會跨網域 click HIS 頁面按鈕。
+7. 不會自動計價。
+8. 不會自動按 HIS 儲存/確認。
+
+## G. 三環境
+1. dev-app script 可測。
+2. dev-skhps 可測。
+3. skhps 未設定時安全失敗。
+4. 不硬指向錯誤 endpoint。
+5. 三環境都有列入測試說明。
+
+## H. 不回歸
+1. 首頁其他按鈕仍可用。
+2. 領用頁沒有被本任務破壞。
+3. 掃描流程沒有被本任務破壞。
+4. backend router / action registry 不影響既有 action。
+5. 既有 CSS 測試頁仍可用。
+
