@@ -8,7 +8,7 @@ Google Apps Script × Google Sheets × GitHub
 
 # 當前版本號
 
-app script測試版: v2.29.0-202606050851
+app script測試版: v2.29.0-202606050854
 
 測試版: v2.29.0-202606050829
 
@@ -637,6 +637,7 @@ Design System 不只是樣式
 
 把資料變成系統
 ```
+
 
 
 

@@ -8,6 +8,13 @@ EnvironmentFooter.js
 (function(global){
   'use strict';
 
+  if(!global || typeof global.document === 'undefined'){
+    return;
+  }
+
+  var document =
+    global.document;
+
   var runtime =
     global.SKH_RUNTIME ||
     {};
@@ -19,7 +26,7 @@ EnvironmentFooter.js
         key:'gasDev',
         label:'app script測試版',
         url:'https://script.google.com/macros/s/AKfycbwySlDY2aAbYpy5OSi85vHz1pk5g1FQfopcaCfVneE/dev',
-        version:'v2.29.0-202606050851',
+        version:'v2.29.0-202606050854',
         type:'gas'
       },
       webDev:{
@@ -246,5 +253,6 @@ EnvironmentFooter.js
   else {
     renderEnvironmentFooter();
   }
-})(window);
+})(typeof window !== 'undefined' ? window : this);
+
 
