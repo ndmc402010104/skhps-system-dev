@@ -20,7 +20,7 @@
       label:'app script測試版',
       url:'https://script.google.com/macros/s/AKfycbwySlDY2aAbYpy5OSi85vHz1pk5g1FQfopcaCfVneE/dev',
       apiUrl:'https://script.google.com/macros/s/AKfycbwySlDY2aAbYpy5OSi85vHz1pk5g1FQfopcaCfVneE/dev',
-      version:'v2.37.0-202606060329',
+      version:'v2.37.0-202606060339',
       type:'gas'
     },
     webDev:{
@@ -28,7 +28,7 @@
       label:'測試版',
       url:'https://dev-skhps.jonaminz.com',
       apiUrl:'https://script.google.com/macros/s/AKfycbwySlDY2aAbYpy5OSi85vHz1pk5g1FQfopcaCfVneE/dev',
-      version:'v2.37.0-202606060329',
+      version:'v2.37.0-202606060339',
       type:'web'
     },
     webProd:{
@@ -389,6 +389,7 @@
     renderEnvironmentFooter();
   }
 })(typeof window !== 'undefined' ? window : this);
+
 
 
 

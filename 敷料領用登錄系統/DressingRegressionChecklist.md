@@ -196,6 +196,8 @@
 6. 不會跨網域 click HIS 頁面按鈕。
 7. 不會自動計價。
 8. 不會自動按 HIS 儲存/確認。
+9. HIS bridge 測試登入帳號由後端 `HIS_BRIDGE_ACCOUNT_ID` 或預設 `M015081` 提供，不寫入公開前端。
+10. 送出後若顯示找不到網頁，bridge page 會提示檢查 AnyConnect/VPN。
 
 ## G. 三環境
 1. dev-app script 可測。

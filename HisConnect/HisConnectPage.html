@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
 檔案位置：HisConnect/HisConnectPage.html
-時間戳記：2026-06-06 03:23 UTC+8
+時間戳記：2026-06-06 03:38 UTC+8
 用途：HIS 對接測試頁；測試 HIS/EIP hidden form bridge 與 Excel 提取流程，不執行正式計價。
 -->
 <html>
@@ -423,7 +423,7 @@ async function openHisExcelBridgeTest(){
       return;
     }
 
-    const message = (res && res.message) || '尚未設定 HIS Excel Bridge';
+    const message = (res && res.message) || '尚未設定 HIS Excel Bridge 後端參數，請先補 Apps Script Script Properties。若已設定但送出後顯示找不到網頁，請確認已連線 AnyConnect/VPN。';
     writePopupError(popup, message);
     setStatus(message, 'error');
     alert(message);

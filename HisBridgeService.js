@@ -1,6 +1,6 @@
 /*
 檔案位置：HisBridgeService.js
-時間戳記：2026-06-06 03:23 UTC+8
+時間戳記：2026-06-06 03:38 UTC+8
 用途：HIS Bridge 後端服務；集中管理 HIS/EIP hidden form bridge 設定、產生 Excel 提取 bridge HTML，避免敏感資訊暴露於公開前端。
 */
 
@@ -14,6 +14,8 @@ const HIS_BRIDGE_CONFIG_KEYS = [
   'HIS_BRIDGE_PREV_PAGE',
   'HIS_BRIDGE_COM_FILE',
   'HIS_BRIDGE_QUERYTABLE',
+  'HIS_BRIDGE_ACCOUNT_ID',
+  'HIS_BRIDGE_PASSWORD',
   'HIS_EXCEL_ACTION_URL',
   'HIS_EXCEL_METHOD',
   'HIS_EXCEL_URI',
@@ -54,7 +56,7 @@ function buildHisBridge(payload){
     return {
       ok:false,
       code:'HIS_EXCEL_BRIDGE_NOT_CONFIGURED',
-      message:'尚未設定 HIS Excel Bridge'
+      message:'尚未設定 HIS Excel Bridge 後端參數，請先在 Apps Script Script Properties 補齊 HIS/EIP bridge 設定。若已設定但送出後顯示找不到網頁，請確認已連線 AnyConnect/VPN。'
     };
   }
 
@@ -93,6 +95,7 @@ function getHisBridgeConfig_(){
   config.HIS_EXCEL_AUTO_CLOSE_MS = parseHisBridgeInteger_(config.HIS_EXCEL_AUTO_CLOSE_MS, 2500);
   config.HIS_EXCEL_TARGET_MODE = normalizeHisBridgeTargetMode_(config.HIS_EXCEL_TARGET_MODE || 'download-iframe');
   config.HIS_BRIDGE_DEBUG = parseHisBridgeBoolean_(config.HIS_BRIDGE_DEBUG, false);
+  config.HIS_BRIDGE_ACCOUNT_ID = config.HIS_BRIDGE_ACCOUNT_ID || 'M015081';
 
   return config;
 }
@@ -134,6 +137,7 @@ function buildHisExcelBridgeHtml_(config, payload){
     'p{line-height:1.7;}',
     '.meta{display:grid;gap:8px;margin:16px 0;padding:14px;border:1px solid #e2e8f0;border-radius:8px;background:#f8fafc;font-size:14px;}',
     '.label{font-weight:900;color:#475569;}',
+    '.notice{margin:12px 0;padding:12px 14px;border:1px solid #fde68a;border-radius:8px;background:#fffbeb;color:#92400e;font-weight:800;}',
     'button{min-height:44px;padding:10px 16px;border-radius:8px;border:1px solid #2563eb;background:#2563eb;color:#fff;font-size:16px;font-weight:800;cursor:pointer;}',
     'button:disabled{opacity:.55;cursor:not-allowed;}',
     '.muted{color:#64748b;}',
@@ -143,6 +147,7 @@ function buildHisExcelBridgeHtml_(config, payload){
     '<main class="card">',
     '<h1>HIS Excel Bridge 測試</h1>',
     '<p id="bridgeStatus">正在準備 HIS Excel 提取</p>',
+    '<div class="notice">送出後若出現「找不到網頁」或 HIS/EIP 無法開啟，通常是尚未連線 AnyConnect/VPN；請連線後再重新測試。</div>',
     '<div class="meta">',
     '<div><span class="label">mode：</span>excel-export</div>',
     '<div><span class="label">autoSubmit：</span>' + escapeHisHtml_(autoSubmit ? 'true' : 'false') + '</div>',
@@ -175,11 +180,11 @@ function buildHisExcelBridgeHtml_(config, payload){
     'var btn=document.getElementById("submitBtn");',
     'if(btn){btn.disabled=true;}',
     'if(debug && window.console){console.log("[HIS Bridge] submit summary",payloadSummary);}',
-    'setStatus("已送出提取資訊，若瀏覽器允許，Excel 下載將開始。");',
+    'setStatus("已送出提取資訊，若瀏覽器允許，Excel 下載將開始。若跳出頁面顯示找不到網頁，請先連線 AnyConnect/VPN 後再試。");',
     'form.submit();',
     'setTimeout(function(){',
     'window.close();',
-    'setHint("下載請求已送出，請手動關閉此視窗。");',
+    'setHint("下載請求已送出。若沒有下載或看到找不到網頁，請確認 AnyConnect/VPN 已連線，再手動關閉此視窗重試。");',
     '},autoCloseMs);',
     '};',
     'if(debug && window.console){console.log("[HIS Bridge] ready summary",payloadSummary);}',
@@ -208,6 +213,11 @@ function buildHisExcelFormConfig_(config){
   const fields = [];
 
   if(!useDirectExcelAction){
+    addHisHiddenField_(fields, 'AccountID', config.HIS_BRIDGE_ACCOUNT_ID);
+    addHisHiddenFieldAllowEmpty_(fields, 'PassWord', config.HIS_BRIDGE_PASSWORD);
+    addHisHiddenFieldAllowEmpty_(fields, 'ValidateCode', '');
+    addHisHiddenField_(fields, 'Password_Length', '1');
+    addHisHiddenField_(fields, 'Password_Mode', '0');
     addHisHiddenField_(fields, '_AUTOWEB_PROJECT_', config.HIS_BRIDGE_PROJECT);
     addHisHiddenField_(fields, '_AUTOWEB_USER_ID_', config.HIS_BRIDGE_USER_ID);
     addHisHiddenField_(fields, '_AUTOWEB_CODE_PAGE_', config.HIS_BRIDGE_CODE_PAGE);
@@ -236,6 +246,13 @@ function addHisHiddenField_(fields, name, value){
   fields.push({
     name:String(name),
     value:String(value)
+  });
+}
+
+function addHisHiddenFieldAllowEmpty_(fields, name, value){
+  fields.push({
+    name:String(name),
+    value:value === undefined || value === null ? '' : String(value)
   });
 }
 
