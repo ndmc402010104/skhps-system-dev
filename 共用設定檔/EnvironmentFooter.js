@@ -1,6 +1,6 @@
 /*
 檔案位置：共用設定檔/EnvironmentFooter.js
-時間戳記：2026-06-06 03:44 UTC+8
+時間戳記：2026-06-06 10:32 UTC+8
 用途：全站三段式環境頁尾；提供三段式環境切換、集中 API URL 設定與 GitHub Pages 跨環境版本摘要。
 */
 
@@ -14,13 +14,29 @@
   var document = global.document;
   var runtime = global.SKH_RUNTIME || {};
 
+  if(global.__SKH_ENVIRONMENT_FOOTER_SCRIPT_LOADED__ && global.renderEnvironmentFooter){
+    global.__SKH_ENVIRONMENT_FOOTER_LOADING__ = false;
+    try {
+      global.renderEnvironmentFooter();
+    }
+    catch(error){
+      if(global.console && typeof global.console.warn === 'function'){
+        global.console.warn('[environment-footer] duplicate render skipped', error);
+      }
+    }
+    return;
+  }
+
+  global.__SKH_ENVIRONMENT_FOOTER_SCRIPT_LOADED__ = true;
+  global.__SKH_ENVIRONMENT_FOOTER_LOADING__ = false;
+
   var environments = global.SKH_ENVIRONMENTS || {
     gasDev:{
       key:'gasDev',
       label:'app script測試版',
       url:'https://script.google.com/macros/s/AKfycbwySlDY2aAbYpy5OSi85vHz1pk5g1FQfopcaCfVneE/dev',
       apiUrl:'https://script.google.com/macros/s/AKfycbwySlDY2aAbYpy5OSi85vHz1pk5g1FQfopcaCfVneE/dev',
-      version:'v2.37.0-202606061016',
+      version:'v2.37.0-202606061105',
       type:'gas'
     },
     webDev:{
@@ -28,7 +44,7 @@
       label:'測試版',
       url:'https://dev-skhps.jonaminz.com',
       apiUrl:'https://script.google.com/macros/s/AKfycbwySlDY2aAbYpy5OSi85vHz1pk5g1FQfopcaCfVneE/dev',
-      version:'v2.37.0-202606061016',
+      version:'v2.37.0-202606061105',
       type:'web'
     },
     webProd:{
@@ -42,6 +58,9 @@
   };
 
   var order = ['gasDev', 'webDev', 'webProd'];
+  var manifestPromise = null;
+  var manifestData = null;
+  var manifestApplied = false;
 
   function ensureStyle(){
     if(document.getElementById('skhEnvironmentFooterStyle')){
@@ -69,6 +88,141 @@
       return 'v未設定';
     }
     return /^v/i.test(text) ? text : 'v' + text;
+  }
+
+  function hasValue(value){
+    return String(value || '').trim() !== '';
+  }
+
+  function getManifestSection(manifest, key){
+    if(!manifest){
+      return null;
+    }
+
+    if(key === 'webDev'){
+      return manifest.dev || manifest.webDev || null;
+    }
+
+    if(key === 'webProd'){
+      return manifest.prod || manifest.webProd || null;
+    }
+
+    if(key === 'gasDev'){
+      return manifest.gasDev || null;
+    }
+
+    return manifest[key] || null;
+  }
+
+  function applyVersionManifest(manifest){
+    if(!manifest || typeof manifest !== 'object'){
+      return;
+    }
+
+    manifestData = manifest;
+    manifestApplied = true;
+    global.__SKH_ENVIRONMENT_FOOTER_MANIFEST_LOADED__ = true;
+
+    order.forEach(function(key){
+      var section = getManifestSection(manifest, key);
+      var env = environments[key];
+
+      if(!section || !env){
+        return;
+      }
+
+      if(hasValue(section.version)){
+        env.version = normalizeVersion(section.version);
+        env.versionSource = 'manifest';
+      }
+
+      if(hasValue(section.updatedAt)){
+        env.updatedAt = String(section.updatedAt).trim();
+      }
+
+      if(hasValue(section.url)){
+        env.manifestUrl = String(section.url).trim();
+      }
+
+      if(hasValue(section.env)){
+        env.manifestEnv = String(section.env).trim();
+      }
+    });
+  }
+
+  function getGithubRepoBasePath(){
+    var path = String(location.pathname || '/');
+    var parts;
+
+    if(String(location.hostname || '').toLowerCase().indexOf('github.io') < 0){
+      return '/';
+    }
+
+    parts = path.split('/').filter(Boolean);
+    return parts.length ? '/' + parts[0] + '/' : '/';
+  }
+
+  function getVersionManifestUrls(){
+    var hostname = String(location.hostname || '').toLowerCase();
+    var urls = [];
+
+    if(hostname === 'dev-skhps.jonaminz.com'){
+      urls.push('https://dev-skhps.jonaminz.com/version.json');
+      urls.push('https://skhps.jonaminz.com/version.json');
+      return urls;
+    }
+
+    if(hostname === 'skhps.jonaminz.com'){
+      urls.push('https://skhps.jonaminz.com/version.json');
+      urls.push('https://dev-skhps.jonaminz.com/version.json');
+      return urls;
+    }
+
+    if(hostname.indexOf('github.io') >= 0){
+      urls.push(location.origin + getGithubRepoBasePath() + 'version.json');
+      urls.push('https://dev-skhps.jonaminz.com/version.json');
+      urls.push('https://skhps.jonaminz.com/version.json');
+      return urls;
+    }
+
+    if(hostname.indexOf('script.google.com') >= 0 || String(location.href || '').indexOf('/macros/s/') >= 0){
+      urls.push('https://dev-skhps.jonaminz.com/version.json');
+      urls.push('https://skhps.jonaminz.com/version.json');
+      return urls;
+    }
+
+    urls.push('/version.json');
+    urls.push('https://dev-skhps.jonaminz.com/version.json');
+    urls.push('https://skhps.jonaminz.com/version.json');
+    return urls;
+  }
+
+  function fetchManifestFromUrls(urls, index){
+    var url = urls[index];
+
+    if(!url){
+      return Promise.reject(new Error('version.json load failed: no manifest url available'));
+    }
+
+    return fetch(url + (url.indexOf('?') >= 0 ? '&' : '?') + 't=' + Date.now(), { cache:'no-store' })
+      .then(function(res){
+        if(!res.ok){
+          throw new Error('version.json load failed: ' + res.status + ' ' + url);
+        }
+        return res.json();
+      })
+      .then(function(manifest){
+        if(manifest && typeof manifest === 'object'){
+          manifest.__manifestSourceUrl = url;
+        }
+        return manifest;
+      })
+      .catch(function(error){
+        if(index + 1 < urls.length){
+          return fetchManifestFromUrls(urls, index + 1);
+        }
+        throw error;
+      });
   }
 
   function detectCurrentEnv(){
@@ -398,12 +552,21 @@
   }
 
   function loadVersionManifest(){
-    return fetch('/version.json?t=' + Date.now(), { cache:'no-store' }).then(function(res){
-      if(!res.ok){
-        throw new Error('version.json load failed: ' + res.status);
-      }
-      return res.json();
+    if(manifestPromise){
+      return manifestPromise;
+    }
+
+    manifestPromise = fetchManifestFromUrls(getVersionManifestUrls(), 0).then(function(manifest){
+      applyVersionManifest(manifest);
+      return manifest;
+    }).catch(function(error){
+      global.__SKH_ENVIRONMENT_FOOTER_MANIFEST_LOADED__ = false;
+      manifestPromise = null;
+      throw error;
     });
+
+    global.__SKH_ENVIRONMENT_FOOTER_MANIFEST_PROMISE__ = manifestPromise;
+    return manifestPromise;
   }
 
   function renderVersionFooter(){
@@ -428,12 +591,13 @@
     }
 
     loadVersionManifest().then(function(manifest){
+      applyVersionManifest(manifest);
       if(env === 'prod'){
         footer.textContent =
           '正式版｜本頁 ' +
           pageVersion +
           '｜測試版最新版 ' +
-          normalizeVersion(manifest && manifest.dev && manifest.dev.version ? manifest.dev.version : 'unknown');
+          normalizeVersion(getManifestSection(manifest, 'webDev') && getManifestSection(manifest, 'webDev').version ? getManifestSection(manifest, 'webDev').version : environments.webDev.version);
         return;
       }
 
@@ -442,7 +606,7 @@
           '測試版｜本頁 ' +
           pageVersion +
           '｜正式版最新版 ' +
-          normalizeVersion(manifest && manifest.prod && manifest.prod.version ? manifest.prod.version : 'unknown');
+          normalizeVersion(getManifestSection(manifest, 'webProd') && getManifestSection(manifest, 'webProd').version ? getManifestSection(manifest, 'webProd').version : environments.webProd.version);
         return;
       }
 
@@ -475,12 +639,14 @@
 
     var currentEnv = options.currentEnv || detectCurrentEnv();
     var footer =
+      document.querySelector('[data-skh-environment-footer="true"]') ||
       document.querySelector('[data-app-footer="1"]') ||
       document.querySelector('.appVersionFooter') ||
       document.createElement('div');
 
     footer.className = 'appVersionFooter';
     footer.dataset.appFooter = '1';
+    footer.dataset.skhEnvironmentFooter = 'true';
     footer.innerHTML = '';
 
     var segment = document.createElement('div');
@@ -496,6 +662,23 @@
       item.className = 'appVersionBadge' + (isActive ? ' is-active' : '');
       item.setAttribute('role', 'listitem');
       item.setAttribute('aria-label', env.label + ' ' + normalizeVersion(env.version));
+      item.dataset.skhEnvironmentKey = key;
+      item.dataset.skhVersionSource = env.versionSource || 'fallback';
+
+      if(env.updatedAt){
+        item.dataset.skhVersionUpdatedAt = env.updatedAt;
+      }
+
+      if(env.manifestUrl){
+        item.dataset.skhManifestUrl = env.manifestUrl;
+      }
+
+      item.title =
+        env.label +
+        ' ' +
+        normalizeVersion(env.version) +
+        (env.updatedAt ? '｜更新 ' + env.updatedAt : '') +
+        (env.versionSource === 'manifest' ? '｜version.json' : '｜fallback');
 
       if(!isActive){
         item.href = targetUrl;
@@ -521,6 +704,22 @@
       document.body.appendChild(footer);
     }
 
+    global.__SKH_ENVIRONMENT_FOOTER_RENDERED__ = true;
+
+    if(!manifestApplied && !options.skipManifestLoad && typeof fetch === 'function'){
+      loadVersionManifest().then(function(manifest){
+        applyVersionManifest(manifest);
+        renderEnvironmentFooter(Object.assign({}, options, {
+          skipManifestLoad:true
+        }));
+        renderVersionFooter();
+      }).catch(function(error){
+        if(global.console && typeof global.console.warn === 'function'){
+          global.console.warn('[environment-footer] version manifest load failed', error);
+        }
+      });
+    }
+
     return footer;
   }
 
@@ -533,14 +732,18 @@
   global.renderEnvironmentFooter = renderEnvironmentFooter;
 
   if(document.readyState === 'loading'){
+    if(!global.__SKH_ENVIRONMENT_FOOTER_DOM_READY_LISTENER__){
+      global.__SKH_ENVIRONMENT_FOOTER_DOM_READY_LISTENER__ = true;
     document.addEventListener('DOMContentLoaded', function(){
       renderEnvironmentFooter();
     });
+    }
   }
   else {
     renderEnvironmentFooter();
   }
 })(typeof window !== 'undefined' ? window : this);
+
 
 
 

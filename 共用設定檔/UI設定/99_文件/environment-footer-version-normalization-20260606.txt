@@ -1,0 +1,37 @@
+檔案位置：共用設定檔/UI設定/99_文件/environment-footer-version-normalization-20260606.txt
+時間戳記：2026-06-06 10:59 UTC+8
+用途：記錄 EnvironmentFooter 載入規則與 version manifest 顯示來源收斂。
+
+一、目前載入方式
+1. 多數前端頁面在 head 直接載入 favicon.js，favicon.js 會在 GitHub Pages/custom domain 自動注入 EnvironmentFooter.js。
+2. FrontIndex、SignQRGenerator、HospitalSignIn、DressingUse、DressingFront、DressingDict、skh-ui-test-page 有 GitHub fallback 動態建立 EnvironmentFooter.js script。
+3. HisConnectPage 原本同時載入 favicon.js 與 ../共用設定檔/EnvironmentFooter.js；本輪改為 EnvironmentFooter.js 在前，並加上 data-skh-environment-footer-script。
+4. Apps Script HTML 透過 AppShell.html -> getVersionBadgeHtml() 產生內嵌 appVersionFooter。
+5. Route.js/getVersionBadgeHtml() 仍保留內嵌 footer HTML 與 navigation fallback；本輪不刪除，僅讓 EnvironmentFooter.js 優先接管既有 .appVersionFooter / data-app-footer 容器。
+
+二、目前 version 來源
+1. version.json 目前有 updatedAt、prod、dev、gasDev。
+2. prod/dev/gasDev 欄位皆使用 label、env、version、updatedAt；prod/dev 有 url，gasDev 本輪補上 url 與更新 note。
+3. EnvironmentFooter.js 會優先讀 version.json，讀取成功後用 manifest 更新 gasDev/webDev/webProd 的 version。
+4. 若 manifest 缺某一環境欄位，該環境保留 EnvironmentFooter.js 內建 fallback version。
+5. 若 manifest 讀取失敗，三欄 footer 仍使用 EnvironmentFooter.js 內建 environments 版本，並 console.warn。
+6. Apps Script 頁面不再用 /version.json，會優先讀 https://dev-skhps.jonaminz.com/version.json，再 fallback https://skhps.jonaminz.com/version.json。
+7. dev-skhps 會優先讀 https://dev-skhps.jonaminz.com/version.json。
+8. skhps 會優先讀 https://skhps.jonaminz.com/version.json。
+9. github.io repo path 會先讀 location.origin + repo base path + version.json，再 fallback custom domains。
+
+三、本輪處理
+1. EnvironmentFooter.js 加入 __SKH_ENVIRONMENT_FOOTER_SCRIPT_LOADED__、__SKH_ENVIRONMENT_FOOTER_LOADING__、__SKH_ENVIRONMENT_FOOTER_RENDERED__、__SKH_ENVIRONMENT_FOOTER_MANIFEST_LOADED__。
+2. renderEnvironmentFooter() 會先找 [data-skh-environment-footer="true"]，再找 [data-app-footer="1"] / .appVersionFooter，不新增第二個 footer。
+3. footer DOM 會標記 data-skh-environment-footer="true"，並保留 .appVersionFooter、.appVersionSegment、.appVersionBadge。
+4. appVersionBadge 增加 data-skh-version-source、data-skh-version-updated-at、data-skh-manifest-url 與 title，不改視覺。
+5. favicon.js 與頁面 fallback 建立 script 前會檢查 renderEnvironmentFooter、loading flag、data-skh-environment-footer-script、既有 EnvironmentFooter.js src。
+6. 建立 script 時加入 data-skh-environment-footer-script="true"，onload 後只呼叫一次 renderEnvironmentFooter，onerror 只 console.warn。
+7. push.ps1 的 dev-app script 階段會同步 version.json 的 gasDev 欄位。
+8. Update-VersionManifest.ps1 支援 dev/prod/gasDev，保留 -Env alias，並用 EnvName 避免 PowerShell $Env 命名混淆。
+
+四、仍保留到下一輪
+1. Route.js/getVersionBadgeHtml() 的內嵌 footer HTML 尚未重構，避免影響 Apps Script 頁面。
+2. 各頁 GitHub fallback header 未調整。
+3. footer 視覺、三欄比例、fixed position、z-index、body padding 未調整。
+4. route map、goHome/goPage、後端 action、業務流程未調整。

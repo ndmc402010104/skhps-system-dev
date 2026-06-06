@@ -4509,15 +4509,24 @@ if ((window.location.hostname.includes('github.io') || window.location.hostname 
   `;
   document.body.prepend(ghHeader);
 
-  if(!document.querySelector('script[data-skh-environment-footer-fallback]')){
+  if(
+    !window.renderEnvironmentFooter &&
+    !window.__SKH_ENVIRONMENT_FOOTER_LOADING__ &&
+    !document.querySelector('script[data-skh-environment-footer-script="true"], script[data-skh-environment-footer-fallback], script[data-skh-environment-footer]') &&
+    !Array.prototype.some.call(document.scripts || [], function(script){ return String(script.src || '').indexOf('EnvironmentFooter.js') >= 0; })
+  ){
+    window.__SKH_ENVIRONMENT_FOOTER_LOADING__ = true;
     const footerScript = document.createElement('script');
     footerScript.src = window.location.hostname.includes('github.io')
       ? 'https://ndmc402010104.github.io/plastic-surgery-department-system/%E5%85%B1%E7%94%A8%E8%A8%AD%E5%AE%9A%E6%AA%94/EnvironmentFooter.js'
       : '/%E5%85%B1%E7%94%A8%E8%A8%AD%E5%AE%9A%E6%AA%94/EnvironmentFooter.js';
     footerScript.src += '?v=' + Date.now();
     footerScript.defer = true;
+    footerScript.dataset.skhEnvironmentFooterScript = 'true';
     footerScript.setAttribute('data-skh-environment-footer', '1');
     footerScript.setAttribute('data-skh-environment-footer-fallback', '1');
+    footerScript.onload = function(){ window.__SKH_ENVIRONMENT_FOOTER_LOADING__ = false; if(window.renderEnvironmentFooter){ window.renderEnvironmentFooter(); } };
+    footerScript.onerror = function(error){ window.__SKH_ENVIRONMENT_FOOTER_LOADING__ = false; if(window.console && window.console.warn){ window.console.warn('[footer] EnvironmentFooter.js load failed', error); } };
     document.head.appendChild(footerScript);
   }
 }

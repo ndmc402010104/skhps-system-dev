@@ -905,7 +905,7 @@ function Invoke-SyncVersionForEnv {
 function Update-VersionManifestForPublish {
   param(
     [Parameter(Mandatory = $true)]
-    [ValidateSet('dev', 'prod')]
+    [ValidateSet('dev', 'prod', 'gasDev')]
     [string]$Env,
 
     [Parameter(Mandatory = $true)]
@@ -940,7 +940,7 @@ function Update-VersionManifestForPublish {
     -NoProfile `
     -ExecutionPolicy Bypass `
     -File $helperPath `
-    -Env $Env `
+    -EnvName $Env `
     -Version $versionText
 
   if ($LASTEXITCODE -ne 0) {
@@ -963,6 +963,8 @@ function Invoke-DevAppScript {
   Invoke-Clasp -Arguments @('push') -WorkingDirectory $rootPath
 
   Write-Host "dev-app script push completed with version $($Config.Description)" -ForegroundColor Green
+
+  Update-VersionManifestForPublish -Env 'gasDev' -Version $Config.Version
 }
 
 function Invoke-ProdAppScriptDeploy {

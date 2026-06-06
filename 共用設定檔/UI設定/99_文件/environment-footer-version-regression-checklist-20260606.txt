@@ -1,0 +1,52 @@
+檔案位置：共用設定檔/UI設定/99_文件/environment-footer-version-regression-checklist-20260606.txt
+時間戳記：2026-06-06 10:59 UTC+8
+用途：EnvironmentFooter 載入防重複與 version.json 顯示來源 regression checklist。
+
+Footer 載入防重複
+1. EnvironmentFooter.js 不重複載入。
+2. favicon.js 自動載入與頁面 fallback 同時存在時，不重複 append script。
+3. renderEnvironmentFooter() 連續呼叫 3 次，只出現一個 footer DOM。
+4. DOM 中最多一個 [data-skh-environment-footer="true"]。
+5. DOM 中最多一個 .appVersionFooter；Apps Script 內嵌 getVersionBadgeHtml() footer 若被 EnvironmentFooter.js 接管，需確認不是疊第二個。
+6. Footer 視覺不變。
+7. Footer 文字不變，除了版本資料來源正確更新。
+8. Footer 三欄 layout 不變。
+9. 手機版 footer 不重複疊在一起。
+10. 手機版 footer 不遮住主要操作區，比本輪修改前不得更糟。
+
+Version manifest
+11. dev-skhps 頁面可讀取 https://dev-skhps.jonaminz.com/version.json。
+12. skhps 頁面可讀取 https://skhps.jonaminz.com/version.json。
+13. Apps Script dev 頁面不會錯誤讀取 script.google.com/version.json。
+14. 正式版 footer 可顯示最新 dev-skhps version。
+15. 正式版 footer 可顯示最新 gasDev version。
+16. 測試版 footer 可顯示 prod version。
+17. gasDev footer 可顯示 dev/prod version；若跨來源失敗，有清楚 fallback。
+18. version.json 某環境缺欄位時，只該欄位 fallback，不整個 footer 失敗。
+19. version.json 讀取失敗時，footer fallback 仍可顯示。
+20. EnvironmentFooter.js 硬編碼 fallback 與 manifest 顯示優先序清楚。
+21. push.ps1 更新 dev version 後，version.json dev 欄位正確。
+22. dev-app script push 後，version.json gasDev 欄位正確。
+23. release / push.ps1 正式版流程更新正式版後，version.json prod 欄位正確。
+24. prod/dev/gasDev 不互相覆蓋。
+
+頁面不受影響
+25. FrontIndex 不受影響。
+26. DressingUse 不受影響。
+27. DressingFront 不受影響。
+28. SignQRGenerator 不受影響。
+29. HospitalSignIn 不受影響。
+30. HisConnectPage 不受影響。
+31. Console 不應出現因重複 render 造成的錯誤。
+32. 不得改變任何 route URL。
+33. 不得新增任何真實 API 呼叫。
+34. 不得改變任何 Apps Script action。
+
+手動測試指令
+1. renderEnvironmentFooter(); renderEnvironmentFooter(); renderEnvironmentFooter();
+2. document.querySelectorAll('[data-skh-environment-footer="true"]').length 應為 1。
+3. document.querySelectorAll('.appVersionFooter').length 應為 1；若 Apps Script 內嵌 footer 例外，需記錄原因。
+4. document.querySelectorAll('script[data-skh-environment-footer-script="true"]').length 應不超過 1。
+5. Array.from(document.scripts).filter(function(s){ return String(s.src || '').indexOf('EnvironmentFooter.js') >= 0; }).length 應不超過 1。
+6. 檢查三欄 .appVersionBadge 的 data-skh-version-source；version.json 成功時應為 manifest。
+7. 暫時阻擋 version.json 或改用離線環境時，footer 應 fallback 並只 console.warn。

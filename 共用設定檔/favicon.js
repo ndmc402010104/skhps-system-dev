@@ -43,10 +43,23 @@
     hostname === "dev-skhps.jonaminz.com" ||
     hostname === "skhps.jonaminz.com";
 
-  if(
-    shouldLoadFooter &&
-    !document.querySelector('script[data-skh-environment-footer]')
-  ){
+  function hasEnvironmentFooterScript(){
+    if(window.renderEnvironmentFooter || window.__SKH_ENVIRONMENT_FOOTER_LOADING__){
+      return true;
+    }
+
+    if(document.querySelector('script[data-skh-environment-footer-script="true"], script[data-skh-environment-footer]')){
+      return true;
+    }
+
+    return Array.prototype.some.call(document.scripts || [], function(script){
+      return String(script.src || "").indexOf("EnvironmentFooter.js") >= 0;
+    });
+  }
+
+  if(shouldLoadFooter && !hasEnvironmentFooterScript()){
+    window.__SKH_ENVIRONMENT_FOOTER_LOADING__ = true;
+
     var footerScript =
       document.createElement("script");
 
@@ -56,7 +69,20 @@
       : "/%E5%85%B1%E7%94%A8%E8%A8%AD%E5%AE%9A%E6%AA%94/EnvironmentFooter.js";
     footerScript.src += "?v=" + Date.now();
     footerScript.defer = true;
+    footerScript.dataset.skhEnvironmentFooterScript = "true";
     footerScript.setAttribute("data-skh-environment-footer", "1");
+    footerScript.onload = function(){
+      window.__SKH_ENVIRONMENT_FOOTER_LOADING__ = false;
+      if(window.renderEnvironmentFooter){
+        window.renderEnvironmentFooter();
+      }
+    };
+    footerScript.onerror = function(error){
+      window.__SKH_ENVIRONMENT_FOOTER_LOADING__ = false;
+      if(window.console && typeof window.console.warn === "function"){
+        window.console.warn("[favicon] EnvironmentFooter.js load failed", error);
+      }
+    };
 
     document.head.appendChild(footerScript);
   }

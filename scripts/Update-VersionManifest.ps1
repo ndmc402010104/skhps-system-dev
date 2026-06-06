@@ -1,11 +1,12 @@
 # 檔案位置：scripts/Update-VersionManifest.ps1
-# 時間戳記：2026-06-06 03:44 UTC+8
-# 用途：更新 GitHub Pages version.json manifest；dev 只更新 dev 區塊，prod 只更新 prod 區塊。
+# 時間戳記：2026-06-06 10:32 UTC+8
+# 用途：更新 GitHub Pages version.json manifest；dev 更新 dev 區塊，prod 更新 prod 區塊，gasDev 更新 Apps Script 測試版區塊。
 
 param(
   [Parameter(Mandatory = $true)]
-  [ValidateSet('dev', 'prod')]
-  [string]$Env,
+  [Alias('Env')]
+  [ValidateSet('dev', 'prod', 'gasDev')]
+  [string]$EnvName,
 
   [Parameter(Mandatory = $true)]
   [string]$Version
@@ -77,7 +78,7 @@ function Ensure-Property {
   )
 
   if ($Object.PSObject.Properties.Name -contains $Name) {
-    $Object.$Name = $Value
+    $Object.PSObject.Properties[$Name].Value = $Value
     return
   }
 
@@ -133,19 +134,35 @@ if (-not ($manifest.PSObject.Properties.Name -contains 'gasDev') -or $null -eq $
     -Note 'Apps Script 測試版第一階段不讀 version.json，只顯示本頁版本。')
 }
 
-if ($Env -eq 'dev') {
-  Ensure-Property -Object $manifest.dev -Name 'label' -Value '測試版'
-  Ensure-Property -Object $manifest.dev -Name 'env' -Value 'dev'
-  Ensure-Property -Object $manifest.dev -Name 'version' -Value $versionText
-  Ensure-Property -Object $manifest.dev -Name 'updatedAt' -Value $stamp
-  Ensure-Property -Object $manifest.dev -Name 'url' -Value 'https://dev-skhps.jonaminz.com/'
+$targetEnvKey = $EnvName.Trim()
+
+if ($targetEnvKey -match '^(?i)dev$') {
+    Ensure-Property -Object $manifest -Name 'dev' -Value (New-ManifestSection `
+      -Label '測試版' `
+      -EnvName 'dev' `
+      -VersionText $versionText `
+      -UpdatedAt $stamp `
+      -Url 'https://dev-skhps.jonaminz.com/')
 }
-elseif ($Env -eq 'prod') {
-  Ensure-Property -Object $manifest.prod -Name 'label' -Value '正式版'
-  Ensure-Property -Object $manifest.prod -Name 'env' -Value 'prod'
-  Ensure-Property -Object $manifest.prod -Name 'version' -Value $versionText
-  Ensure-Property -Object $manifest.prod -Name 'updatedAt' -Value $stamp
-  Ensure-Property -Object $manifest.prod -Name 'url' -Value 'https://skhps.jonaminz.com/'
+elseif ($targetEnvKey -match '^(?i)gasdev$') {
+    Ensure-Property -Object $manifest -Name 'gasDev' -Value (New-ManifestSection `
+      -Label 'Apps Script 測試版' `
+      -EnvName 'gasDev' `
+      -VersionText $versionText `
+      -UpdatedAt $stamp `
+      -Url 'https://script.google.com/macros/s/AKfycbwySlDY2aAbYpy5OSi85vHz1pk5g1FQfopcaCfVneE/dev' `
+      -Note 'Apps Script 測試版由 dev-app script push 更新；GitHub Pages footer 優先讀取此 manifest。')
+}
+elseif ($targetEnvKey -match '^(?i)prod$') {
+    Ensure-Property -Object $manifest -Name 'prod' -Value (New-ManifestSection `
+      -Label '正式版' `
+      -EnvName 'prod' `
+      -VersionText $versionText `
+      -UpdatedAt $stamp `
+      -Url 'https://skhps.jonaminz.com/')
+}
+else {
+  throw "不支援的 version manifest env：$EnvName"
 }
 
 $json = $manifest | ConvertTo-Json -Depth 8
@@ -156,5 +173,5 @@ if ($LASTEXITCODE -ne 0) {
   throw 'git add version.json 失敗'
 }
 
-Write-Host "version.json 已更新：$Env $versionText ($stamp)" -ForegroundColor Green
+Write-Host "version.json 已更新：$EnvName $versionText ($stamp)" -ForegroundColor Green
 
