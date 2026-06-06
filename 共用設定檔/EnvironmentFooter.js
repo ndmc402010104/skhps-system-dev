@@ -1,6 +1,6 @@
 /*
 檔案位置：共用設定檔/EnvironmentFooter.js
-時間戳記：2026-06-06 11:24 UTC+8
+時間戳記：2026-06-06 15:55 UTC+8
 用途：全站三段式環境頁尾；提供三段式環境切換、集中 API URL 設定與 GitHub Pages 跨環境版本摘要。
 */
 
@@ -37,7 +37,7 @@
       shortLabel:'AS 測試',
       url:'https://script.google.com/macros/s/AKfycbwySlDY2aAbYpy5OSi85vHz1pk5g1FQfopcaCfVneE/dev',
       apiUrl:'https://script.google.com/macros/s/AKfycbwySlDY2aAbYpy5OSi85vHz1pk5g1FQfopcaCfVneE/dev',
-      version:'v2.37.0-202606061543',
+      version:'v2.37.0-202606061548',
       type:'gas'
     },
     webDev:{
@@ -46,7 +46,7 @@
       shortLabel:'測試版',
       url:'https://dev-skhps.jonaminz.com',
       apiUrl:'https://script.google.com/macros/s/AKfycbwySlDY2aAbYpy5OSi85vHz1pk5g1FQfopcaCfVneE/dev',
-      version:'v2.37.0-202606061543',
+      version:'v2.37.0-202606061548',
       type:'web'
     },
     webProd:{
@@ -519,6 +519,8 @@
   function getWebPathForGasPage(page){
     var key = String(page || '').toLowerCase();
     var routes = {
+      frontindex:'/科室系統用戶端/FrontIndex.html',
+      home:'/科室系統用戶端/FrontIndex.html',
       signmeeting:'/科室系統用戶端/SignMeeting.html',
       signqr:'/科室系統用戶端/SignQRGenerator.html',
       hospitalsignin:'/科室系統用戶端/HospitalSignIn.html',
@@ -577,6 +579,10 @@
 
     if(path.indexOf('hisconnectpage') >= 0 || path.indexOf('hisconnect') >= 0){
       return 'hisconnect';
+    }
+
+    if(path.indexOf('/macros/') >= 0){
+      return 'frontindex';
     }
 
     return '';
@@ -890,6 +896,7 @@
     renderEnvironmentFooter();
   }
 })(typeof window !== 'undefined' ? window : this);
+
 
 
 
