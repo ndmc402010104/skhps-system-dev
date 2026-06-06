@@ -37,7 +37,7 @@
       shortLabel:'AS 測試',
       url:'https://script.google.com/macros/s/AKfycbwySlDY2aAbYpy5OSi85vHz1pk5g1FQfopcaCfVneE/dev',
       apiUrl:'https://script.google.com/macros/s/AKfycbwySlDY2aAbYpy5OSi85vHz1pk5g1FQfopcaCfVneE/dev',
-      version:'v2.37.0-202606061134',
+      version:'v2.37.0-202606061543',
       type:'gas'
     },
     webDev:{
@@ -46,7 +46,7 @@
       shortLabel:'測試版',
       url:'https://dev-skhps.jonaminz.com',
       apiUrl:'https://script.google.com/macros/s/AKfycbwySlDY2aAbYpy5OSi85vHz1pk5g1FQfopcaCfVneE/dev',
-      version:'v2.37.0-202606061134',
+      version:'v2.37.0-202606061543',
       type:'web'
     },
     webProd:{
@@ -129,7 +129,15 @@
     return manifest[key] || null;
   }
 
-  function applyVersionManifest(manifest){
+  function isManifestKeyAllowed(key, allowedKeys){
+    if(!allowedKeys || !allowedKeys.length){
+      return true;
+    }
+
+    return allowedKeys.indexOf(key) >= 0;
+  }
+
+  function applyVersionManifest(manifest, allowedKeys){
     if(!manifest || typeof manifest !== 'object'){
       return;
     }
@@ -141,6 +149,10 @@
     order.forEach(function(key){
       var section = getManifestSection(manifest, key);
       var env = environments[key];
+
+      if(!isManifestKeyAllowed(key, allowedKeys)){
+        return;
+      }
 
       if(!section || !env){
         return;
@@ -212,6 +224,82 @@
     return urls;
   }
 
+  function getVersionManifestSources(){
+    var hostname = String(location.hostname || '').toLowerCase();
+    var href = String(location.href || '').toLowerCase();
+
+    if(hostname === 'dev-skhps.jonaminz.com'){
+      return [
+        {
+          url:'https://dev-skhps.jonaminz.com/version.json',
+          keys:['webDev', 'gasDev']
+        },
+        {
+          url:'https://skhps.jonaminz.com/version.json',
+          keys:['webProd']
+        }
+      ];
+    }
+
+    if(hostname === 'skhps.jonaminz.com'){
+      return [
+        {
+          url:'https://skhps.jonaminz.com/version.json',
+          keys:['webProd']
+        },
+        {
+          url:'https://dev-skhps.jonaminz.com/version.json',
+          keys:['webDev', 'gasDev']
+        }
+      ];
+    }
+
+    if(hostname.indexOf('script.google.com') >= 0 || href.indexOf('/macros/s/') >= 0){
+      return [
+        {
+          url:'https://dev-skhps.jonaminz.com/version.json',
+          keys:['webDev', 'gasDev']
+        },
+        {
+          url:'https://skhps.jonaminz.com/version.json',
+          keys:['webProd']
+        }
+      ];
+    }
+
+    if(hostname.indexOf('github.io') >= 0){
+      return [
+        {
+          url:location.origin + getGithubRepoBasePath() + 'version.json',
+          keys:[]
+        },
+        {
+          url:'https://dev-skhps.jonaminz.com/version.json',
+          keys:['webDev', 'gasDev']
+        },
+        {
+          url:'https://skhps.jonaminz.com/version.json',
+          keys:['webProd']
+        }
+      ];
+    }
+
+    return [
+      {
+        url:'/version.json',
+        keys:[]
+      },
+      {
+        url:'https://dev-skhps.jonaminz.com/version.json',
+        keys:['webDev', 'gasDev']
+      },
+      {
+        url:'https://skhps.jonaminz.com/version.json',
+        keys:['webProd']
+      }
+    ];
+  }
+
   function fetchManifestFromUrls(urls, index){
     var url = urls[index];
 
@@ -237,6 +325,30 @@
           return fetchManifestFromUrls(urls, index + 1);
         }
         throw error;
+      });
+  }
+
+  function fetchVersionManifestSource(source){
+    var url = source && source.url;
+
+    if(!url){
+      return Promise.reject(new Error('version.json load failed: no manifest url available'));
+    }
+
+    return fetch(url + (url.indexOf('?') >= 0 ? '&' : '?') + 't=' + Date.now(), { cache:'no-store' })
+      .then(function(res){
+        if(!res.ok){
+          throw new Error('version.json load failed: ' + res.status + ' ' + url);
+        }
+        return res.json();
+      })
+      .then(function(manifest){
+        if(manifest && typeof manifest === 'object'){
+          manifest.__manifestSourceUrl = url;
+        }
+
+        applyVersionManifest(manifest, source.keys || []);
+        return manifest;
       });
   }
 
@@ -571,9 +683,26 @@
       return manifestPromise;
     }
 
-    manifestPromise = fetchManifestFromUrls(getVersionManifestUrls(), 0).then(function(manifest){
-      applyVersionManifest(manifest);
-      return manifest;
+    manifestPromise = Promise.all(
+      getVersionManifestSources().map(function(source){
+        return fetchVersionManifestSource(source).catch(function(error){
+          if(global.console && typeof global.console.warn === 'function'){
+            global.console.warn('[environment-footer] version manifest source failed', source.url, error);
+          }
+
+          return null;
+        });
+      })
+    ).then(function(manifests){
+      var loaded = manifests.filter(function(manifest){
+        return !!manifest;
+      });
+
+      if(!loaded.length){
+        throw new Error('version.json load failed: no manifest source loaded');
+      }
+
+      return loaded[0];
     }).catch(function(error){
       global.__SKH_ENVIRONMENT_FOOTER_MANIFEST_LOADED__ = false;
       manifestPromise = null;
@@ -606,7 +735,6 @@
     }
 
     loadVersionManifest().then(function(manifest){
-      applyVersionManifest(manifest);
       if(env === 'prod'){
         footer.textContent =
           '正式版｜本頁 ' +
@@ -728,7 +856,6 @@
 
     if(!manifestApplied && !options.skipManifestLoad && typeof fetch === 'function'){
       loadVersionManifest().then(function(manifest){
-        applyVersionManifest(manifest);
         renderEnvironmentFooter(Object.assign({}, options, {
           skipManifestLoad:true
         }));
@@ -763,6 +890,7 @@
     renderEnvironmentFooter();
   }
 })(typeof window !== 'undefined' ? window : this);
+
 
 
 
