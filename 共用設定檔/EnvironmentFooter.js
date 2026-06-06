@@ -55,7 +55,7 @@
       shortLabel:'正式版',
       url:'https://skhps.jonaminz.com',
       apiUrl:'https://script.google.com/macros/s/AKfycbwbz8pXfU68j2aFeF_AaDmmG6Vco3JsPSw-PGyYeLu0AF3vCfzaZJQFOjORnwSw8Xp4/exec',
-      version:'v2.37.0-202606051528',
+      version:'v2.37.0-202606061115',
       type:'web'
     }
   };
@@ -751,6 +751,7 @@
     renderEnvironmentFooter();
   }
 })(typeof window !== 'undefined' ? window : this);
+
 
 
 
