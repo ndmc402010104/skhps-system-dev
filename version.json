@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-06-06 11:20 UTC+8",
+  "updatedAt": "2026-06-06 11:25 UTC+8",
   "prod": {
     "label": "正式版",
     "env": "prod",
@@ -10,15 +10,15 @@
   "dev": {
     "label": "測試版",
     "env": "dev",
-    "version": "v2.37.0-202606061119",
-    "updatedAt": "2026-06-06 11:20 UTC+8",
+    "version": "v2.37.0-202606061125",
+    "updatedAt": "2026-06-06 11:25 UTC+8",
     "url": "https://dev-skhps.jonaminz.com/"
   },
   "gasDev": {
     "label": "Apps Script 測試版",
     "env": "gasDev",
-    "version": "v2.37.0-202606061119",
-    "updatedAt": "2026-06-06 11:20 UTC+8",
+    "version": "v2.37.0-202606061125",
+    "updatedAt": "2026-06-06 11:25 UTC+8",
     "url": "https://script.google.com/macros/s/AKfycbwySlDY2aAbYpy5OSi85vHz1pk5g1FQfopcaCfVneE/dev",
     "note": "Apps Script 測試版由 dev-app script push 更新；GitHub Pages footer 優先讀取此 manifest。"
   }
