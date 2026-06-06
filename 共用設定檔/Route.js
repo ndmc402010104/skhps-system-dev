@@ -8,6 +8,9 @@ Route.gs
 var APP_REQUEST_ENV =
   APP_DEFAULT_ENV;
 
+var APP_REQUEST_PAGE =
+  'frontindex';
+
 var APP_SCRIPT_PAGE_ROUTES = [
   {
     keys:['signmeeting'],
@@ -147,6 +150,9 @@ function doGet(e){
     page =
       e.parameter.page;
   }
+
+  APP_REQUEST_PAGE =
+    page || 'frontindex';
 
   const adminPageKey =
     ADMIN_PAGE_PREFIX +
@@ -611,6 +617,7 @@ function getSharedEnvironmentFooterHtml_(showCalendarSource){
       defaultEnv: footerEnv,
       env: APP_REQUEST_ENV,
       mode: footerMode,
+      pageKey: APP_REQUEST_PAGE,
       version: APP_VERSION
     }),
     ');',

@@ -37,7 +37,7 @@
       shortLabel:'AS 測試',
       url:'https://script.google.com/macros/s/AKfycbwySlDY2aAbYpy5OSi85vHz1pk5g1FQfopcaCfVneE/dev',
       apiUrl:'https://script.google.com/macros/s/AKfycbwySlDY2aAbYpy5OSi85vHz1pk5g1FQfopcaCfVneE/dev',
-      version:'v2.37.0-202606061616',
+      version:'v2.37.0-202606061619',
       type:'gas'
     },
     webDev:{
@@ -46,7 +46,7 @@
       shortLabel:'測試版',
       url:'https://dev-skhps.jonaminz.com',
       apiUrl:'https://script.google.com/macros/s/AKfycbwySlDY2aAbYpy5OSi85vHz1pk5g1FQfopcaCfVneE/dev',
-      version:'v2.37.0-202606061616',
+      version:'v2.37.0-202606061619',
       type:'web'
     },
     webProd:{
@@ -406,13 +406,15 @@
   function buildWebTargetUrl(origin){
     var path = String(location.pathname || '/');
     var repoPrefix = '/plastic-surgery-department-system';
+    var currentEnv = detectCurrentEnv();
 
     if(path.indexOf(repoPrefix + '/') === 0){
       path = path.slice(repoPrefix.length);
     }
 
     // Apps Script Web App 的 pathname 是 /macros/s/.../dev；不能直接拿來組 GitHub Pages 路徑。
-    if(path === '/' || path.indexOf('/macros/') >= 0){
+    // 部分 Apps Script iframe 會回報 /userCodeAppPanel，也必須改用 page key 對應前端頁。
+    if(currentEnv === 'gasDev' || currentEnv === 'gasExec' || path === '/' || path.indexOf('/macros/') >= 0 || path.indexOf('/userCodeAppPanel') >= 0){
       path = getWebPathForGasPage(getGasPageParam()) || '/';
     }
 
@@ -517,6 +519,10 @@
       return pageParam;
     }
 
+    if(runtime.pageKey){
+      return runtime.pageKey;
+    }
+
     var hash = String(location.hash || '').toLowerCase();
 
     if(hash.indexOf('dressingdict') >= 0){
@@ -557,7 +563,7 @@
       return 'hisconnect';
     }
 
-    if(path.indexOf('/macros/') >= 0){
+    if(path.indexOf('/macros/') >= 0 || path.indexOf('/usercodeapppanel') >= 0){
       return 'frontindex';
     }
 
@@ -878,6 +884,7 @@
     renderEnvironmentFooter();
   }
 })(typeof window !== 'undefined' ? window : this);
+
 
 
 
