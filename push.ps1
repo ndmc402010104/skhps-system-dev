@@ -1,5 +1,5 @@
 ﻿# 檔案位置：專案根目錄/push.ps1
-# 時間戳記：2026-06-06 03:44 UTC+8
+# 時間戳記：2026-06-06 10:23 UTC+8
 # 用途：累加式四段部署腳本；1 只跑 Apps Script，2=1+測試版前端，3=1+2+本地確認，PROD=1+2+3+正式版；主選單輸入 PROD 即確認正式上線；README 後集中輸入測試版 commit，正式版 commit 使用預設值不再詢問；GitHub Pages 發布會同步 version.json。
 # 階段：1=push app script，2=1+2 push dev-skhps，3=1+2+3 本地確認不部署正式版，PROD=1+2+3+正式版 deploy skhps。
 
@@ -11,6 +11,12 @@ param(
   [string]$Bump = 'ask',
 
   [string[]]$Note = @(),
+
+  # 非互動模式可直接指定測試版 Git commit message，避免 Read-Host 無法吃 pipeline stdin。
+  [string]$DevCommitMessage = '',
+
+  # 非互動模式可直接指定本地 commit-only Git commit message。
+  [string]$LocalCommitMessage = '',
 
   [switch]$NoSaveAllPrompt,
 
@@ -504,11 +510,11 @@ function Invoke-GitCommitIfNeeded {
   Write-Host "Git commit" -ForegroundColor Cyan
   Write-Host "=========================="
 
-  $finalCommitMessage = $CommitMessage
+  $finalCommitMessage = [string]$CommitMessage
 
   if (-not $NoPrompt -and [string]::IsNullOrWhiteSpace($finalCommitMessage)) {
     $skipText = if ($AllowSkip) { '，輸入 skip 略過 commit' } else { '' }
-    $finalCommitMessage = Read-Host "Git commit message（直接按 Enter 使用 '$DefaultMessage'$skipText）"
+    $finalCommitMessage = [string](Read-Host "Git commit message（直接按 Enter 使用 '$DefaultMessage'$skipText）")
   }
   elseif ($NoPrompt) {
     Write-Host "使用預設 commit message：$DefaultMessage" -ForegroundColor DarkGray
@@ -1223,18 +1229,18 @@ else {
 $readmePath = Join-Path $rootPath 'README.md'
 
 # 集中輸入 commit 訊息：README 問完後一次問完，不要流程跑到一半才一直卡住等輸入。
-$devCommitMessage = ''
-$localOnlyCommitMessage = ''
+$devCommitMessage = [string]$DevCommitMessage
+$localOnlyCommitMessage = [string]$LocalCommitMessage
 
-if ($needsDevSkhps -and -not $NoGitHubPrompt) {
+if ($needsDevSkhps -and -not $NoGitHubPrompt -and [string]::IsNullOrWhiteSpace($devCommitMessage)) {
   $defaultDevCommitMessage = "Bump dev-skhps to v$version"
   Write-Host ""
-  $devCommitMessage = Read-Host "測試版 Git commit message（直接按 Enter 使用 '$defaultDevCommitMessage'，輸入 skip 略過測試版 commit）"
+  $devCommitMessage = [string](Read-Host "測試版 Git commit message（直接按 Enter 使用 '$defaultDevCommitMessage'，輸入 skip 略過測試版 commit）")
 }
 
-if ($needsLocalCommitOnly -and -not $NoGitHubPrompt) {
+if ($needsLocalCommitOnly -and -not $NoGitHubPrompt -and [string]::IsNullOrWhiteSpace($localOnlyCommitMessage)) {
   Write-Host ""
-  $localOnlyCommitMessage = Read-Host "本地 Git commit message（直接按 Enter 使用 'Save local work'，輸入 skip 略過 commit）"
+  $localOnlyCommitMessage = [string](Read-Host "本地 Git commit message（直接按 Enter 使用 'Save local work'，輸入 skip 略過 commit）")
 }
 
 $devConfig = $null
