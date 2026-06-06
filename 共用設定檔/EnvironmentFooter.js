@@ -1,6 +1,6 @@
 /*
 檔案位置：共用設定檔/EnvironmentFooter.js
-時間戳記：2026-06-06 15:55 UTC+8
+時間戳記：2026-06-06 15:58 UTC+8
 用途：全站三段式環境頁尾；提供三段式環境切換、集中 API URL 設定與 GitHub Pages 跨環境版本摘要。
 */
 
@@ -37,7 +37,7 @@
       shortLabel:'AS 測試',
       url:'https://script.google.com/macros/s/AKfycbwySlDY2aAbYpy5OSi85vHz1pk5g1FQfopcaCfVneE/dev',
       apiUrl:'https://script.google.com/macros/s/AKfycbwySlDY2aAbYpy5OSi85vHz1pk5g1FQfopcaCfVneE/dev',
-      version:'v2.37.0-202606061551',
+      version:'v2.37.0-202606061616',
       type:'gas'
     },
     webDev:{
@@ -46,7 +46,7 @@
       shortLabel:'測試版',
       url:'https://dev-skhps.jonaminz.com',
       apiUrl:'https://script.google.com/macros/s/AKfycbwySlDY2aAbYpy5OSi85vHz1pk5g1FQfopcaCfVneE/dev',
-      version:'v2.37.0-202606061551',
+      version:'v2.37.0-202606061616',
       type:'web'
     },
     webProd:{
@@ -73,16 +73,16 @@
     var style = document.createElement('style');
     style.id = 'skhEnvironmentFooterStyle';
     style.textContent =
-      '.appVersionFooter{position:fixed;left:0;right:0;bottom:0;z-index:10000;min-height:42px;display:flex;align-items:center;justify-content:center;padding:6px 12px;box-sizing:border-box;background:rgba(248,251,255,.94);border-top:1px solid rgba(148,163,184,.38);box-shadow:0 -8px 24px rgba(15,23,42,.08);backdrop-filter:blur(10px);}' +
-      '.appVersionSegment{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;width:min(1120px,calc(100vw - 24px));min-width:0;padding:3px;border:1px solid rgba(148,163,184,.38);border-radius:999px;background:rgba(226,232,240,.65);}' +
-      '.appVersionBadge{display:flex;align-items:center;justify-content:center;flex-wrap:nowrap;gap:7px;min-width:0;max-width:100%;min-height:28px;padding:5px 12px;border:1px solid transparent;border-radius:999px;background:transparent;color:#475569;font-size:11px;font-weight:800;line-height:1.1;text-align:center;text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;transition:color .16s ease,border-color .16s ease,background-color .16s ease,box-shadow .16s ease;}' +
+      '.appVersionFooter{position:fixed;left:0;right:0;bottom:0;z-index:10000;min-height:36px;display:flex;align-items:center;justify-content:center;padding:3px 8px;box-sizing:border-box;background:rgba(248,251,255,.94);border-top:1px solid rgba(148,163,184,.38);box-shadow:0 -8px 24px rgba(15,23,42,.08);backdrop-filter:blur(10px);}' +
+      '.appVersionSegment{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px;width:min(1120px,calc(100vw - 16px));min-width:0;padding:2px;border:1px solid rgba(148,163,184,.38);border-radius:999px;background:rgba(226,232,240,.65);}' +
+      '.appVersionBadge{display:flex;align-items:center;justify-content:center;flex-wrap:nowrap;gap:5px;min-width:0;max-width:100%;min-height:24px;padding:4px 10px;border:1px solid transparent;border-radius:999px;background:transparent;color:#475569;font-size:10px;font-weight:800;line-height:1.1;text-align:center;text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;transition:color .16s ease,border-color .16s ease,background-color .16s ease,box-shadow .16s ease;}' +
       '.appVersionBadge:hover{color:#1d4ed8;background:rgba(255,255,255,.78);border-color:rgba(37,99,235,.25);}' +
       '.appVersionBadge.is-active{color:#ffffff;background:linear-gradient(135deg,#2563eb,#0f766e);border-color:transparent;box-shadow:0 8px 18px rgba(37,99,235,.20);cursor:default;}' +
       '.appVersionBadgeMode{flex:0 1 auto;min-width:0;max-width:100%;font-weight:900;overflow:hidden;text-overflow:ellipsis;}' +
       '.appVersionText{flex:0 1 auto;min-width:0;max-width:100%;font-weight:800;opacity:.9;overflow:hidden;text-overflow:ellipsis;}' +
       '.appVersionText:empty{display:none;}' +
-      '@media(max-width:820px){.appVersionSegment{grid-template-columns:repeat(3,minmax(0,1fr));width:calc(100vw - 12px)}.appVersionBadge{font-size:10px;padding:5px 7px;gap:4px}}' +
-      '@media(max-width:600px){.appVersionFooter{min-height:38px;padding:4px 4px}.appVersionSegment{gap:2px;padding:2px;width:calc(100vw - 8px)}.appVersionBadge{min-height:28px;padding:4px 4px;font-size:8.5px;gap:3px}.appVersionBadgeMode,.appVersionText{max-width:100%}}';
+      '@media(max-width:820px){.appVersionSegment{grid-template-columns:repeat(3,minmax(0,1fr));width:calc(100vw - 10px)}.appVersionBadge{font-size:9px;padding:4px 6px;gap:3px}}' +
+      '@media(max-width:600px){.appVersionFooter{min-height:34px;padding:3px 3px}.appVersionSegment{gap:2px;padding:2px;width:calc(100vw - 6px)}.appVersionBadge{min-height:23px;padding:3px 4px;font-size:8.5px;gap:3px}.appVersionBadgeMode,.appVersionText{max-width:100%}}';
     document.head.appendChild(style);
   }
 
@@ -227,42 +227,26 @@
   function getVersionManifestSources(){
     var hostname = String(location.hostname || '').toLowerCase();
     var href = String(location.href || '').toLowerCase();
+    var currentEnv = detectCurrentEnv();
 
-    if(hostname === 'dev-skhps.jonaminz.com'){
+    if(currentEnv === 'gasDev' || currentEnv === 'gasExec' || hostname.indexOf('script.google.com') >= 0 || href.indexOf('/macros/s/') >= 0){
+      return [];
+    }
+
+    if(currentEnv === 'webDev' || hostname === 'dev-skhps.jonaminz.com'){
       return [
         {
           url:'https://dev-skhps.jonaminz.com/version.json',
-          keys:['webDev', 'gasDev']
-        },
-        {
-          url:'https://skhps.jonaminz.com/version.json',
-          keys:['webProd']
+          keys:['gasDev']
         }
       ];
     }
 
-    if(hostname === 'skhps.jonaminz.com'){
-      return [
-        {
-          url:'https://skhps.jonaminz.com/version.json',
-          keys:['webProd']
-        },
-        {
-          url:'https://dev-skhps.jonaminz.com/version.json',
-          keys:['webDev', 'gasDev']
-        }
-      ];
-    }
-
-    if(hostname.indexOf('script.google.com') >= 0 || href.indexOf('/macros/s/') >= 0){
+    if(currentEnv === 'webProd' || hostname === 'skhps.jonaminz.com'){
       return [
         {
           url:'https://dev-skhps.jonaminz.com/version.json',
           keys:['webDev', 'gasDev']
-        },
-        {
-          url:'https://skhps.jonaminz.com/version.json',
-          keys:['webProd']
         }
       ];
     }
@@ -271,15 +255,11 @@
       return [
         {
           url:location.origin + getGithubRepoBasePath() + 'version.json',
-          keys:[]
+          keys:['gasDev']
         },
         {
           url:'https://dev-skhps.jonaminz.com/version.json',
-          keys:['webDev', 'gasDev']
-        },
-        {
-          url:'https://skhps.jonaminz.com/version.json',
-          keys:['webProd']
+          keys:['gasDev']
         }
       ];
     }
@@ -287,15 +267,11 @@
     return [
       {
         url:'/version.json',
-        keys:[]
+        keys:['gasDev']
       },
       {
         url:'https://dev-skhps.jonaminz.com/version.json',
-        keys:['webDev', 'gasDev']
-      },
-      {
-        url:'https://skhps.jonaminz.com/version.json',
-        keys:['webProd']
+        keys:['gasDev']
       }
     ];
   }
@@ -689,8 +665,17 @@
       return manifestPromise;
     }
 
+    var sources = getVersionManifestSources();
+
+    if(!sources.length){
+      global.__SKH_ENVIRONMENT_FOOTER_MANIFEST_LOADED__ = false;
+      manifestPromise = Promise.resolve(null);
+      global.__SKH_ENVIRONMENT_FOOTER_MANIFEST_PROMISE__ = manifestPromise;
+      return manifestPromise;
+    }
+
     manifestPromise = Promise.all(
-      getVersionManifestSources().map(function(source){
+      sources.map(function(source){
         return fetchVersionManifestSource(source).catch(function(error){
           if(global.console && typeof global.console.warn === 'function'){
             global.console.warn('[environment-footer] version manifest source failed', source.url, error);
@@ -839,9 +824,6 @@
         item.dataset.targetUrl = targetUrl;
         item.target = '_top';
         item.rel = 'noopener';
-        item.addEventListener('click', function(event){
-          envNavigation.navigateToKey(key, event);
-        });
       }
 
       item.innerHTML =
@@ -896,6 +878,8 @@
     renderEnvironmentFooter();
   }
 })(typeof window !== 'undefined' ? window : this);
+
+
 
 
 
