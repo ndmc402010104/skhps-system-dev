@@ -1,13 +1,13 @@
 檔案位置：共用設定檔/UI設定/99_文件/environment-footer-display-regression-checklist-20260606.txt
-時間戳記：2026-06-06 11:16 UTC+8
-用途：Footer 手機版環境按鈕顯示文字縮短後的 regression checklist；確認不影響跳轉、版本來源與業務功能。
+時間戳記：2026-06-06 11:24 UTC+8
+用途：Footer 手機版環境按鈕顯示文字與可見版本縮短後的 regression checklist；確認不影響跳轉、版本來源與業務功能。
 
 一、Footer 手機版顯示
 1. 手機版 footer 三欄不被完整版本號撐爆。
-2. 手機版 footer 顯示短文字：AS 測試 / 測試版 / 正式版。
+2. 手機版 footer 顯示短文字與可見短版號，例如：AS 測試 061124 / 測試版 061124 / 正式版 061115。
 3. 三欄寬度穩定，不因版本號長短改變比例。
 4. active 環境樣式維持不變。
-5. 完整版本號保留在 title 或 data-version。
+5. 完整版本號保留在 title 或 data-version，畫面仍可看到短版號。
 6. footer href 不變。
 7. footer 跳轉邏輯不變。
 8. version.json 不變。
@@ -37,7 +37,7 @@ document.querySelectorAll('.appVersionSegment').forEach((el, i) => {
 });
 
 四、預期結果
-1. text 只顯示 AS 測試、測試版、正式版。
+1. text 顯示 AS 測試、測試版、正式版，且保留可見短版號。
 2. title 含完整版本號與 version.json/fallback 來源。
 3. data-version 或 data-environment-version 含完整版本號。
 4. href 與本輪修改前相同。

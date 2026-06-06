@@ -1,6 +1,6 @@
 /*
 檔案位置：共用設定檔/EnvironmentFooter.js
-時間戳記：2026-06-06 11:16 UTC+8
+時間戳記：2026-06-06 11:24 UTC+8
 用途：全站三段式環境頁尾；提供三段式環境切換、集中 API URL 設定與 GitHub Pages 跨環境版本摘要。
 */
 
@@ -37,7 +37,7 @@
       shortLabel:'AS 測試',
       url:'https://script.google.com/macros/s/AKfycbwySlDY2aAbYpy5OSi85vHz1pk5g1FQfopcaCfVneE/dev',
       apiUrl:'https://script.google.com/macros/s/AKfycbwySlDY2aAbYpy5OSi85vHz1pk5g1FQfopcaCfVneE/dev',
-      version:'v2.37.0-202606061116',
+      version:'v2.37.0-202606061118',
       type:'gas'
     },
     webDev:{
@@ -46,7 +46,7 @@
       shortLabel:'測試版',
       url:'https://dev-skhps.jonaminz.com',
       apiUrl:'https://script.google.com/macros/s/AKfycbwySlDY2aAbYpy5OSi85vHz1pk5g1FQfopcaCfVneE/dev',
-      version:'v2.37.0-202606061116',
+      version:'v2.37.0-202606061118',
       type:'web'
     },
     webProd:{
@@ -92,6 +92,17 @@
       return 'v未設定';
     }
     return /^v/i.test(text) ? text : 'v' + text;
+  }
+
+  function getCompactVersionText(version){
+    var text = normalizeVersion(version);
+    var timestampMatch = text.match(/-(\d{8})(\d{4})$/);
+
+    if(timestampMatch){
+      return timestampMatch[1].slice(4) + timestampMatch[2];
+    }
+
+    return text.replace(/^v/i, '');
   }
 
   function hasValue(value){
@@ -663,6 +674,7 @@
       var item = document.createElement(isActive ? 'span' : 'a');
       var targetUrl = isActive ? '' : buildTargetUrl(env);
       var fullVersion = normalizeVersion(env.version);
+      var compactVersion = getCompactVersionText(env.version);
       var displayLabel = String(env.shortLabel || env.label || '').trim();
 
       item.className = 'appVersionBadge' + (isActive ? ' is-active' : '');
@@ -702,7 +714,7 @@
         '<span class="appVersionBadgeMode"></span>' +
         '<span class="appVersionText"></span>';
       item.querySelector('.appVersionBadgeMode').textContent = displayLabel || env.label;
-      item.querySelector('.appVersionText').textContent = '';
+      item.querySelector('.appVersionText').textContent = compactVersion;
       segment.appendChild(item);
     });
 
@@ -751,6 +763,7 @@
     renderEnvironmentFooter();
   }
 })(typeof window !== 'undefined' ? window : this);
+
 
 
 
