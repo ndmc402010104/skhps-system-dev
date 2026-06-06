@@ -539,6 +539,16 @@ function getVersionBadgeHtml(options){
 }
 
 function getSharedEnvironmentFooterHtml_(showCalendarSource){
+  const footerEnv =
+    APP_REQUEST_ENV === 'dev'
+    ? 'gasDev'
+    : 'webProd';
+
+  const footerMode =
+    APP_REQUEST_ENV === 'dev'
+    ? 'gas'
+    : 'github';
+
   const footerScriptUrl =
     (
       APP_REQUEST_ENV === 'dev'
@@ -561,6 +571,17 @@ function getSharedEnvironmentFooterHtml_(showCalendarSource){
 
   return [
     calendarSourceScript,
+    '<script>',
+    'window.SKH_RUNTIME=Object.assign({},window.SKH_RUNTIME||{},',
+    JSON.stringify({
+      currentEnv: footerEnv,
+      defaultEnv: footerEnv,
+      env: APP_REQUEST_ENV,
+      mode: footerMode,
+      version: APP_VERSION
+    }),
+    ');',
+    '</script>',
     '<script src="',
     escapeAppHtml(footerScriptUrl),
     '" data-skh-environment-footer-script="true" data-skh-environment-footer="1" defer></script>'
