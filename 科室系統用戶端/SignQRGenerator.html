@@ -267,7 +267,7 @@ button:hover{
   };
 
   function isGithubPage(){
-    return (window.location.hostname.includes('github.io') || window.location.hostname === 'dev-skhps.jonaminz.com' || window.location.hostname === 'skhps.jonaminz.com');
+    return (window.location.hostname.indexOf('script.google.com') < 0);
   }
 
   function getGithubRepoBasePath(){
@@ -311,7 +311,15 @@ button:hover{
     }
 
     if(isGithubPage()){
-      return 'https://script.google.com/macros/s/AKfycbwbz8pXfU68j2aFeF_AaDmmG6Vco3JsPSw-PGyYeLu0AF3vCfzaZJQFOjORnwSw8Xp4/exec';
+      return (
+        window.SKH_ENVIRONMENTS &&
+        window.SKH_ENVIRONMENTS.webProd &&
+        window.SKH_ENVIRONMENTS.webProd.apiUrl
+      ) || (
+        window.SKH_ENVIRONMENTS &&
+        window.SKH_ENVIRONMENTS.gasDev &&
+        window.SKH_ENVIRONMENTS.gasDev.apiUrl
+      ) || '';
     }
 
     try{

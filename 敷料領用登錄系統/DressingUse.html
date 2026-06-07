@@ -682,9 +682,9 @@ const GITHUB_PAGE_MAP = {
   dressingDict: '敷料領用登錄系統/DressingFront.html#dressingDict',
   uiTest: '共用設定檔/UI設定/99_文件/skh-ui-test-page.html'
 };
-if (APP_ENTRY_URL.includes('<' + '?=') || APP_ENTRY_URL.trim() === '') APP_ENTRY_URL = 'https://script.google.com/macros/s/AKfycbwbz8pXfU68j2aFeF_AaDmmG6Vco3JsPSw-PGyYeLu0AF3vCfzaZJQFOjORnwSw8Xp4/exec';
-if (APP_PROD_URL.includes('<' + '?=') || APP_PROD_URL.trim() === '') APP_PROD_URL = 'https://script.google.com/macros/s/AKfycbwbz8pXfU68j2aFeF_AaDmmG6Vco3JsPSw-PGyYeLu0AF3vCfzaZJQFOjORnwSw8Xp4/exec';
-function isGithubPage(){ return (window.location.hostname.includes('github.io') || window.location.hostname === 'dev-skhps.jonaminz.com' || window.location.hostname === 'skhps.jonaminz.com'); }
+if (APP_ENTRY_URL.includes('<' + '?=') || APP_ENTRY_URL.trim() === '') APP_ENTRY_URL = (window.SKH_ENVIRONMENTS && window.SKH_ENVIRONMENTS.webProd && window.SKH_ENVIRONMENTS.webProd.apiUrl) || '';
+if (APP_PROD_URL.includes('<' + '?=') || APP_PROD_URL.trim() === '') APP_PROD_URL = (window.SKH_ENVIRONMENTS && window.SKH_ENVIRONMENTS.webProd && window.SKH_ENVIRONMENTS.webProd.apiUrl) || '';
+function isGithubPage(){ return (window.location.hostname.indexOf('script.google.com') < 0); }
 function getGithubRepoBasePath(){
   if(!window.location.hostname.includes('github.io')){
     return '/';
@@ -1571,7 +1571,7 @@ async function handleScannedCode(decoded){ await closeUseScanner(); if(!dataRead
 
 
 function installGithubAppShellFallback(){
-  if(!(window.location.hostname.includes('github.io') || window.location.hostname === 'dev-skhps.jonaminz.com' || window.location.hostname === 'skhps.jonaminz.com')){
+  if(!(window.location.hostname.indexOf('script.google.com') < 0)){
     return;
   }
 

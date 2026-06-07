@@ -295,12 +295,19 @@ function getGithubRepoBasePath(){
 }
 
 
+function isGithubPage(){
+
+  return window.location.hostname.indexOf('script.google.com') < 0;
+
+}
+
+
 function getGithubPageUrl(pageKey){
 
   const path =
     GITHUB_PAGE_MAP[pageKey] || GITHUB_PAGE_MAP.home;
 
-  if((window.location.hostname.includes('github.io') || window.location.hostname === 'dev-skhps.jonaminz.com' || window.location.hostname === 'skhps.jonaminz.com')){
+  if(isGithubPage()){
     return window.location.origin +
       getGithubRepoBasePath() +
       path;
@@ -315,11 +322,11 @@ function getGithubPageUrl(pageKey){
 
 function getCurrentAppEnv(){
 
-  if(window.location.hostname === 'dev-skhps.jonaminz.com'){
+  if(window.location.hostname.indexOf('dev-') === 0){
     return 'dev';
   }
 
-  if(window.location.hostname === 'skhps.jonaminz.com' || window.location.hostname.includes('github.io')){
+  if(isGithubPage()){
     return 'prod';
   }
 
@@ -396,7 +403,7 @@ function buildAppPageUrl(baseUrl, page, env){
 
 function goPage(page){
 
-  if((window.location.hostname.includes('github.io') || window.location.hostname === 'dev-skhps.jonaminz.com' || window.location.hostname === 'skhps.jonaminz.com')){
+  if(isGithubPage()){
     const githubRouteKeyByAppPage = {
       signqr:'signQR',
       hospitalsignin:'hospitalSignIn',
@@ -434,7 +441,7 @@ function goPage(page){
 
 function goHome(){
 
-  if((window.location.hostname.includes('github.io') || window.location.hostname === 'dev-skhps.jonaminz.com' || window.location.hostname === 'skhps.jonaminz.com')){
+  if(isGithubPage()){
     window.top.location.href =
       getGithubPageUrl('frontIndex');
     return;
@@ -471,7 +478,7 @@ function goHospitalSignIn(){
 
 function goDressingFront(){
 
-  if((window.location.hostname.includes('github.io') || window.location.hostname === 'dev-skhps.jonaminz.com' || window.location.hostname === 'skhps.jonaminz.com')){
+  if(isGithubPage()){
     window.top.location.href =
       getGithubPageUrl('dressingFront');
     return;
@@ -617,7 +624,7 @@ onclick="goHisConnect()"
 // 如果是 GitHub Pages，因為 GAS 的標籤無法執行，我們手動加上專屬的 Footer 與 Header 標籤
 
 
-if ((window.location.hostname.includes('github.io') || window.location.hostname === 'dev-skhps.jonaminz.com' || window.location.hostname === 'skhps.jonaminz.com')) {
+if (isGithubPage()) {
   const ghShellStyle = document.createElement('style');
   ghShellStyle.textContent = `
     :root{

@@ -1,4 +1,4 @@
-/*
+﻿/*
 檔案位置：共用設定檔/EnvironmentFooter.js
 時間戳記：2026-06-06 15:58 UTC+8
 用途：全站三段式環境頁尾；提供三段式環境切換、集中 API URL 設定與 GitHub Pages 跨環境版本摘要。
@@ -30,35 +30,7 @@
   global.__SKH_ENVIRONMENT_FOOTER_SCRIPT_LOADED__ = true;
   global.__SKH_ENVIRONMENT_FOOTER_LOADING__ = false;
 
-  var environments = global.SKH_ENVIRONMENTS || {
-    gasDev:{
-      key:'gasDev',
-      label:'app script測試版',
-      shortLabel:'AS 測試',
-      url:'https://script.google.com/macros/s/AKfycbwySlDY2aAbYpy5OSi85vHz1pk5g1FQfopcaCfVneE/dev',
-      apiUrl:'https://script.google.com/macros/s/AKfycbwySlDY2aAbYpy5OSi85vHz1pk5g1FQfopcaCfVneE/dev',
-      version:'v2.37.0-202606061619',
-      type:'gas'
-    },
-    webDev:{
-      key:'webDev',
-      label:'測試版',
-      shortLabel:'測試版',
-      url:'https://dev-skhps.jonaminz.com',
-      apiUrl:'https://script.google.com/macros/s/AKfycbwySlDY2aAbYpy5OSi85vHz1pk5g1FQfopcaCfVneE/dev',
-      version:'v2.37.0-202606061619',
-      type:'web'
-    },
-    webProd:{
-      key:'webProd',
-      label:'正式版',
-      shortLabel:'正式版',
-      url:'https://skhps.jonaminz.com',
-      apiUrl:'https://script.google.com/macros/s/AKfycbwbz8pXfU68j2aFeF_AaDmmG6Vco3JsPSw-PGyYeLu0AF3vCfzaZJQFOjORnwSw8Xp4/exec',
-      version:'v2.37.0-202606061548',
-      type:'web'
-    }
-  };
+  var environments = global.SKH_ENVIRONMENTS || createDefaultEnvironments();
 
   var order = ['gasDev', 'webDev', 'webProd'];
   var manifestPromise = null;
@@ -189,38 +161,117 @@
     return parts.length ? '/' + parts[0] + '/' : '/';
   }
 
+  function createDefaultEnvironments(){
+    return {
+      gasDev:{
+        key:'gasDev',
+        label:'app script測試版',
+        shortLabel:'AS 測試',
+        url:'',
+        apiUrl:'',
+        version:'v2.37.1-202606080200',
+        type:'gas'
+      },
+      webDev:{
+        key:'webDev',
+        label:'測試版',
+        shortLabel:'測試版',
+        url:getWebOrigin('dev'),
+        apiUrl:'',
+        version:'v2.37.1-202606080200',
+        type:'web'
+      },
+      webProd:{
+        key:'webProd',
+        label:'正式版',
+        shortLabel:'正式版',
+        url:getWebOrigin('prod'),
+        apiUrl:'',
+        version:'v未設定',
+        type:'web'
+      }
+    };
+  }
+
+  function getWebOrigin(target){
+    var envKey = target === 'dev' ? 'webDev' : 'webProd';
+    var explicit = target === 'dev' ? global.SKH_WEB_DEV_ORIGIN : global.SKH_WEB_PROD_ORIGIN;
+    var configured = global.SKH_ENVIRONMENTS && global.SKH_ENVIRONMENTS[envKey] && global.SKH_ENVIRONMENTS[envKey].url;
+    var hostname = String(location.hostname || '').toLowerCase();
+    var protocol = String(location.protocol || 'https:');
+
+    if(hasValue(explicit)){
+      return String(explicit).replace(/\/+$/, '');
+    }
+
+    if(hasValue(configured)){
+      return String(configured).replace(/\/+$/, '');
+    }
+
+    if(hostname.indexOf('github.io') >= 0){
+      return location.origin + getGithubRepoBasePath().replace(/\/+$/, '');
+    }
+
+    if(isScriptHost() || !hostname){
+      return '';
+    }
+
+    if(target === 'dev'){
+      return protocol + '//' + (hostname.indexOf('dev-') === 0 ? hostname : 'dev-' + hostname);
+    }
+
+    return protocol + '//' + hostname.replace(/^dev-/, '');
+  }
+
+  function isScriptHost(){
+    var hostname = String(location.hostname || '').toLowerCase();
+    return hostname.indexOf('script.google.com') >= 0 || String(location.href || '').indexOf('/macros/s/') >= 0;
+  }
+
+  function isDevWebHost(){
+    return String(location.hostname || '').toLowerCase().indexOf('dev-') === 0;
+  }
+
+  function getManifestUrlForOrigin(origin){
+    if(!hasValue(origin)){
+      return '';
+    }
+
+    return String(origin).replace(/\/+$/, '') + '/version.json';
+  }
+
   function getVersionManifestUrls(){
     var hostname = String(location.hostname || '').toLowerCase();
     var urls = [];
 
-    if(hostname === 'dev-skhps.jonaminz.com'){
-      urls.push('https://dev-skhps.jonaminz.com/version.json');
-      urls.push('https://skhps.jonaminz.com/version.json');
+    if(isDevWebHost()){
+      urls.push(getManifestUrlForOrigin(getWebOrigin('dev')));
+      urls.push(getManifestUrlForOrigin(getWebOrigin('prod')));
       return urls;
     }
 
-    if(hostname === 'skhps.jonaminz.com'){
-      urls.push('https://skhps.jonaminz.com/version.json');
-      urls.push('https://dev-skhps.jonaminz.com/version.json');
+    if(!isScriptHost() && hostname.indexOf('github.io') < 0){
+      urls.push(getManifestUrlForOrigin(getWebOrigin('prod')));
+      urls.push(getManifestUrlForOrigin(getWebOrigin('dev')));
       return urls;
     }
 
     if(hostname.indexOf('github.io') >= 0){
       urls.push(location.origin + getGithubRepoBasePath() + 'version.json');
-      urls.push('https://dev-skhps.jonaminz.com/version.json');
-      urls.push('https://skhps.jonaminz.com/version.json');
+      urls.push(getManifestUrlForOrigin(getWebOrigin('dev')));
+      urls.push(getManifestUrlForOrigin(getWebOrigin('prod')));
       return urls;
     }
 
-    if(hostname.indexOf('script.google.com') >= 0 || String(location.href || '').indexOf('/macros/s/') >= 0){
-      urls.push('https://dev-skhps.jonaminz.com/version.json');
-      urls.push('https://skhps.jonaminz.com/version.json');
+    if(isScriptHost()){
+      urls.push(getManifestUrlForOrigin(getWebOrigin('dev')));
+      urls.push(getManifestUrlForOrigin(getWebOrigin('prod')));
       return urls;
     }
 
     urls.push('/version.json');
-    urls.push('https://dev-skhps.jonaminz.com/version.json');
-    urls.push('https://skhps.jonaminz.com/version.json');
+    urls.push(getManifestUrlForOrigin(getWebOrigin('dev')));
+    urls.push(getManifestUrlForOrigin(getWebOrigin('prod')));
     return urls;
   }
 
@@ -229,23 +280,23 @@
     var href = String(location.href || '').toLowerCase();
     var currentEnv = detectCurrentEnv();
 
-    if(currentEnv === 'gasDev' || currentEnv === 'gasExec' || hostname.indexOf('script.google.com') >= 0 || href.indexOf('/macros/s/') >= 0){
+    if(currentEnv === 'gasDev' || currentEnv === 'gasExec' || isScriptHost()){
       return [];
     }
 
-    if(currentEnv === 'webDev' || hostname === 'dev-skhps.jonaminz.com'){
+    if(currentEnv === 'webDev' || isDevWebHost()){
       return [
         {
-          url:'https://dev-skhps.jonaminz.com/version.json',
+          url:getManifestUrlForOrigin(getWebOrigin('dev')),
           keys:['gasDev']
         }
       ];
     }
 
-    if(currentEnv === 'webProd' || hostname === 'skhps.jonaminz.com'){
+    if(currentEnv === 'webProd'){
       return [
         {
-          url:'https://dev-skhps.jonaminz.com/version.json',
+          url:getManifestUrlForOrigin(getWebOrigin('dev')),
           keys:['webDev', 'gasDev']
         }
       ];
@@ -258,7 +309,7 @@
           keys:['gasDev']
         },
         {
-          url:'https://dev-skhps.jonaminz.com/version.json',
+          url:getManifestUrlForOrigin(getWebOrigin('dev')),
           keys:['gasDev']
         }
       ];
@@ -270,7 +321,7 @@
         keys:['gasDev']
       },
       {
-        url:'https://dev-skhps.jonaminz.com/version.json',
+        url:getManifestUrlForOrigin(getWebOrigin('dev')),
         keys:['gasDev']
       }
     ];
@@ -337,15 +388,15 @@
       return 'gasDev';
     }
 
-    if(hostname.indexOf('script.google.com') >= 0 || href.indexOf('/macros/s/') >= 0){
+    if(isScriptHost()){
       return 'gasExec';
     }
 
-    if(hostname === 'dev-skhps.jonaminz.com' || hostname.indexOf('dev-skhps.jonaminz.com') >= 0){
+    if(isDevWebHost()){
       return 'webDev';
     }
 
-    if(hostname === 'skhps.jonaminz.com' || hostname.indexOf('skhps.jonaminz.com') >= 0){
+    if(hostname && hostname.indexOf('github.io') < 0){
       return 'webProd';
     }
 
@@ -884,6 +935,9 @@
     renderEnvironmentFooter();
   }
 })(typeof window !== 'undefined' ? window : this);
+
+
+
 
 
 

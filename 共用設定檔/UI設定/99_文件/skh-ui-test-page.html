@@ -48,7 +48,7 @@ const GITHUB_PAGE_MAP = {
 };
 
 function isGithubPage(){
-  return (window.location.hostname.includes('github.io') || window.location.hostname === 'dev-skhps.jonaminz.com' || window.location.hostname === 'skhps.jonaminz.com');
+  return (window.location.hostname.indexOf('script.google.com') < 0);
 }
 
 function getGithubRepoBasePath(){

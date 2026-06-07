@@ -180,8 +180,7 @@ const GITHUB_PAGE_MAP = {
 
 function isGithubPage(){
   return window.location.hostname.includes('github.io') ||
-    window.location.hostname === 'dev-skhps.jonaminz.com' ||
-    window.location.hostname === 'skhps.jonaminz.com';
+    window.location.hostname.indexOf('script.google.com') < 0;
 }
 
 function isAppsScriptPage(){
@@ -206,11 +205,11 @@ function getGithubPageUrl(pageKey){
 }
 
 function getCurrentAppEnv(){
-  if(window.location.hostname === 'dev-skhps.jonaminz.com'){
+  if(window.location.hostname.indexOf('dev-') === 0){
     return 'dev';
   }
 
-  if(window.location.hostname === 'skhps.jonaminz.com' || window.location.hostname.includes('github.io')){
+  if(isGithubPage()){
     return 'prod';
   }
 

@@ -558,8 +558,8 @@ function getSharedEnvironmentFooterHtml_(showCalendarSource){
   const footerScriptUrl =
     (
       APP_REQUEST_ENV === 'dev'
-        ? 'https://dev-skhps.jonaminz.com'
-        : 'https://skhps.jonaminz.com'
+        ? SKH_WEB_DEV_ORIGIN
+        : SKH_WEB_PROD_ORIGIN
     ) +
     '/%E5%85%B1%E7%94%A8%E8%A8%AD%E5%AE%9A%E6%AA%94/EnvironmentFooter.js?v=' +
     encodeURIComponent(APP_VERSION || '');
@@ -593,7 +593,7 @@ function getSharedEnvironmentFooterHtml_(showCalendarSource){
         key:'webDev',
         label:'測試版',
         shortLabel:'測試版',
-        url:'https://dev-skhps.jonaminz.com',
+        url:SKH_WEB_DEV_ORIGIN,
         apiUrl:APP_DEV_URL,
         version:SKH_WEB_DEV_VERSION,
         type:'web'
@@ -602,7 +602,7 @@ function getSharedEnvironmentFooterHtml_(showCalendarSource){
         key:'webProd',
         label:'正式版',
         shortLabel:'正式版',
-        url:'https://skhps.jonaminz.com',
+        url:SKH_WEB_PROD_ORIGIN,
         apiUrl:APP_ENTRY_URL,
         version:SKH_WEB_PROD_VERSION,
         type:'web'

@@ -38,10 +38,18 @@
   var hostname =
     String(window.location.hostname || "").toLowerCase();
 
+  function getGithubRepoBasePath(){
+    var parts =
+      String(window.location.pathname || "/")
+        .split("/")
+        .filter(Boolean);
+
+    return parts.length ? "/" + parts[0] + "/" : "/";
+  }
+
   var shouldLoadFooter =
     hostname.indexOf("github.io") >= 0 ||
-    hostname === "dev-skhps.jonaminz.com" ||
-    hostname === "skhps.jonaminz.com";
+    hostname.indexOf("script.google.com") < 0;
 
   function hasEnvironmentFooterScript(){
     if(window.renderEnvironmentFooter || window.__SKH_ENVIRONMENT_FOOTER_LOADING__){
@@ -65,7 +73,7 @@
 
     footerScript.src =
       hostname.indexOf("github.io") >= 0
-      ? "https://ndmc402010104.github.io/plastic-surgery-department-system/%E5%85%B1%E7%94%A8%E8%A8%AD%E5%AE%9A%E6%AA%94/EnvironmentFooter.js"
+      ? window.location.origin + getGithubRepoBasePath() + "%E5%85%B1%E7%94%A8%E8%A8%AD%E5%AE%9A%E6%AA%94/EnvironmentFooter.js"
       : "/%E5%85%B1%E7%94%A8%E8%A8%AD%E5%AE%9A%E6%AA%94/EnvironmentFooter.js";
     footerScript.src += "?v=" + Date.now();
     footerScript.defer = true;
