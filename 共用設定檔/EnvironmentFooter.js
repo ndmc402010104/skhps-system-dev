@@ -167,9 +167,9 @@
         key:'gasDev',
         label:'app script測試版',
         shortLabel:'AS 測試',
-        url:'',
-        apiUrl:'',
-        version:'v2.37.1-202606080200',
+        url:global.APP_DEV_URL || 'https://script.google.com/macros/s/AKfycbwySlDY2aAbYpy5OSi85vHz1pk5g1FQfopcaCfVneE/dev',
+        apiUrl:global.APP_DEV_URL || 'https://script.google.com/macros/s/AKfycbwySlDY2aAbYpy5OSi85vHz1pk5g1FQfopcaCfVneE/dev',
+        version:'v2.37.2-202606091938',
         type:'gas'
       },
       webDev:{
@@ -177,8 +177,8 @@
         label:'測試版',
         shortLabel:'測試版',
         url:getWebOrigin('dev'),
-        apiUrl:'',
-        version:'v2.37.1-202606080200',
+        apiUrl:global.APP_DEV_URL || 'https://script.google.com/macros/s/AKfycbwySlDY2aAbYpy5OSi85vHz1pk5g1FQfopcaCfVneE/dev',
+        version:'v2.37.2-202606091938',
         type:'web'
       },
       webProd:{
@@ -186,7 +186,7 @@
         label:'正式版',
         shortLabel:'正式版',
         url:getWebOrigin('prod'),
-        apiUrl:'',
+        apiUrl:global.APP_ENTRY_URL || 'https://script.google.com/macros/s/AKfycbwbz8pXfU68j2aFeF_AaDmmG6Vco3JsPSw-PGyYeLu0AF3vCfzaZJQFOjORnwSw8Xp4/exec',
         version:'v未設定',
         type:'web'
       }
@@ -195,7 +195,7 @@
 
   function getWebOrigin(target){
     var envKey = target === 'dev' ? 'webDev' : 'webProd';
-    var explicit = target === 'dev' ? global.SKH_WEB_DEV_ORIGIN : global.SKH_WEB_PROD_ORIGIN;
+    var explicit = target === 'dev' ? (global.SKH_WEB_DEV_ORIGIN || 'https://dev-skhps.jonaminz.com') : (global.SKH_WEB_PROD_ORIGIN || 'https://skhps.jonaminz.com');
     var configured = global.SKH_ENVIRONMENTS && global.SKH_ENVIRONMENTS[envKey] && global.SKH_ENVIRONMENTS[envKey].url;
     var hostname = String(location.hostname || '').toLowerCase();
     var protocol = String(location.protocol || 'https:');
@@ -935,6 +935,7 @@
     renderEnvironmentFooter();
   }
 })(typeof window !== 'undefined' ? window : this);
+
 
 
 
