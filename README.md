@@ -8,7 +8,7 @@ Google Apps Script × Google Sheets × GitHub
 
 # 當前版本號
 
-app script測試版: v2.37.2-202606091938
+app script測試版: v2.37.3-202606091939
 
 測試版: v2.37.2-202606091938
 

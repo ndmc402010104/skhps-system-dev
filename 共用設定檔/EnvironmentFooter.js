@@ -169,7 +169,7 @@
         shortLabel:'AS 測試',
         url:global.APP_DEV_URL || 'https://script.google.com/macros/s/AKfycbwySlDY2aAbYpy5OSi85vHz1pk5g1FQfopcaCfVneE/dev',
         apiUrl:global.APP_DEV_URL || 'https://script.google.com/macros/s/AKfycbwySlDY2aAbYpy5OSi85vHz1pk5g1FQfopcaCfVneE/dev',
-        version:'v2.37.2-202606091938',
+        version:'v2.37.3-202606091939',
         type:'gas'
       },
       webDev:{
@@ -935,6 +935,7 @@
     renderEnvironmentFooter();
   }
 })(typeof window !== 'undefined' ? window : this);
+
 
 
 
